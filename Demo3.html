@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Interactive SGD Classifier: SGD vs Momentum vs Adam</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:16px; }
+    .row { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+    #dataPlot { width: 720px; height: 520px; }
+    #lossPlot { width: 720px; height: 520px; }
+    .panel { width: 330px; }
+    label { display:block; margin-top:10px; }
+    input[type=range], select { width:100%; }
+    button { margin-top:10px; width:100%; padding:10px; }
+    .small { color:#555; font-size:13px; line-height:1.35; }
+  </style>
+</head>
+<body>
+<h2>Interactive 2D classification + minibatch training (SGD / Momentum / Adam)</h2>
+
+<div class="row">
+  <div id="dataPlot"></div>
+  <div id="lossPlot"></div>
+
+  <div class="panel">
+    <label>Add points as class:</label>
+    <select id="cls">
+      <option value="1">Class +1</option>
+      <option value="0">Class 0</option>
+    </select>
+
+    <label>Optimizer</label>
+    <select id="opt">
+      <option value="sgd">SGD</option>
+      <option value="mom">SGD + Momentum</option>
+      <option value="adam">Adam</option>
+    </select>
+
+    <label>Learning rate η: <span id="etaVal"></span></label>
+    <input id="eta" type="range" min="0.001" max="1.0" step="0.001" value="0.05"/>
+
+    <label>Batch size b: <span id="bVal"></span></label>
+    <input id="b" type="range" min="1" max="128" step="1" value="16"/>
+
+    <label>Momentum γ (if used): <span id="gamVal"></span></label>
+    <input id="gam" type="range" min="0.0" max="0.99" step="0.01" value="0.9"/>
+
+    <label>Weight decay λ: <span id="wdVal"></span></label>
+    <input id="wd" type="range" min="0.0" max="1.0" step="0.001" value="0.01"/>
+
+    <label>Steps per click-run: <span id="stepsVal"></span></label>
+    <input id="steps" type="range" min="10" max="2000" step="10" value="300"/>
+
+    <button id="train">Train</button>
+    <button id="resetW">Reset weights</button>
+    <button id="clear">Clear data</button>
+
+    <p class="small">
+      Click on the left plot to add points. Then hit Train.
+      Watch how batch size affects smoothness, and how momentum/Adam behave.
+      Weight decay pulls weights toward zero (often helps generalization).
+    </p>
+  </div>
+</div>
+
+<script>
+  // Data: points in R^2 with labels y in {0,1}
+  let X = [];
+  let Y = [];
+
+  // Model: logistic regression p(y=1|x) = sigmoid(w·x + b)
+  let w = [0.0, 0.0];
+  let bb = 0.0;
+
+  // Optimizer state
+  let v = [0,0], vb=0;        // momentum
+  let m=[0,0], mm=0, vv=[0,0], vvb=0; // adam
+
+  function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+  function dot(a,b){ return a[0]*b[0] + a[1]*b[1]; }
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1]]; }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
+  function scale(c,a){ return [c*a[0], c*a[1]]; }
+
+  function lossAndGradBatch(batchIdx, wd){
+    // Average logistic loss + L2 weight decay (not on bias)
+    let L=0;
+    let gw=[0,0], gb=0;
+    for(const i of batchIdx){
+      const x = X[i];
+      const y = Y[i];
+      const z = dot(w,x) + bb;
+      const p = sigmoid(z);
+      // loss: -y log p - (1-y) log(1-p)
+      const eps=1e-12;
+      L += -y*Math.log(p+eps) - (1-y)*Math.log(1-p+eps);
+      // grad: (p-y)*x for w, (p-y) for b
+      const d = (p - y);
+      gw[0] += d*x[0];
+      gw[1] += d*x[1];
+      gb += d;
+    }
+    const bs = Math.max(1, batchIdx.length);
+    L /= bs;
+    gw = scale(1/bs, gw);
+    gb /= bs;
+
+    // L2 decay: add (wd)*w to gradient (decoupled weight decay is also common; this is the “classic” form)
+    gw[0] += wd*w[0];
+    gw[1] += wd*w[1];
+    L += 0.5*wd*(w[0]*w[0]+w[1]*w[1]);
+
+    return {L, gw, gb};
+  }
+
+  function randInt(n){ return Math.floor(Math.random()*n); }
+  function sampleBatch(bsz){
+    const n = X.length;
+    const idx=[];
+    for(let i=0;i<Math.min(bsz,n);i++) idx.push(randInt(n));
+    return idx;
+  }
+
+  let losses = [];
+
+  function trainSteps(steps, eta, bsz, gamma, opt, wd){
+    const beta1=0.9, beta2=0.999, eps=1e-8;
+    for(let t=0;t<steps;t++){
+      if(X.length===0) break;
+      const idx = sampleBatch(bsz);
+      const out = lossAndGradBatch(idx, wd);
+      losses.push(out.L);
+
+      if(opt==="sgd"){
+        w = sub(w, scale(eta, out.gw));
+        bb -= eta*out.gb;
+      } else if(opt==="mom"){
+        v = sub(scale(gamma, v), scale(eta, out.gw));
+        vb = gamma*vb - eta*out.gb;
+        w = add(w, v);
+        bb += vb;
+      } else if(opt==="adam"){
+        // Adam on w and b
+        m = add(scale(beta1,m), scale(1-beta1, out.gw));
+        vv = add(scale(beta2,vv), [ (1-beta2)*out.gw[0]*out.gw[0], (1-beta2)*out.gw[1]*out.gw[1] ]);
+        mm = beta1*mm + (1-beta1)*out.gb;
+        vvb = beta2*vvb + (1-beta2)*out.gb*out.gb;
+
+        const t1 = losses.length;
+        const mh = scale(1/(1-Math.pow(beta1,t1)), m);
+        const vh = [ vv[0]/(1-Math.pow(beta2,t1)), vv[1]/(1-Math.pow(beta2,t1)) ];
+        const mbh = mm/(1-Math.pow(beta1,t1));
+        const vbh = vvb/(1-Math.pow(beta2,t1));
+
+        const stepw = [ mh[0]/(Math.sqrt(vh[0])+eps), mh[1]/(Math.sqrt(vh[1])+eps) ];
+        w = sub(w, scale(eta, stepw));
+        bb -= eta * (mbh/(Math.sqrt(vbh)+eps));
+      }
+    }
+  }
+
+  // Decision boundary line: w1 x + w2 y + b = 0
+  function boundaryLine(){
+    const x1=-3.5, x2=3.5;
+    const w1=w[0], w2=w[1];
+    if(Math.abs(w2) < 1e-6){
+      // vertical-ish boundary
+      const x = (-bb)/Math.max(1e-6,w1);
+      return {x:[x,x], y:[-3.5,3.5]};
+    }
+    const y1 = -(w1*x1 + bb)/w2;
+    const y2 = -(w1*x2 + bb)/w2;
+    return {x:[x1,x2], y:[y1,y2]};
+  }
+
+  // Plotting
+  function renderData(){
+    const xs0=[], ys0=[], xs1=[], ys1=[];
+    for(let i=0;i<X.length;i++){
+      if(Y[i]===0){ xs0.push(X[i][0]); ys0.push(X[i][1]); }
+      else { xs1.push(X[i][0]); ys1.push(X[i][1]); }
+    }
+    const line = boundaryLine();
+
+    Plotly.newPlot("dataPlot", [
+      {type:"scatter", mode:"markers", x:xs0, y:ys0, name:"class 0", marker:{size:9}},
+      {type:"scatter", mode:"markers", x:xs1, y:ys1, name:"class +1", marker:{size:9}},
+      {type:"scatter", mode:"lines", x:line.x, y:line.y, name:"boundary", line:{width:3}}
+    ], {
+      margin:{l:45,r:10,b:40,t:40},
+      title:"Click to add points",
+      xaxis:{title:"x1", range:[-3.6,3.6]},
+      yaxis:{title:"x2", range:[-3.6,3.6], scaleanchor:"x"},
+      showlegend:true
+    }, {displayModeBar:false});
+
+    document.getElementById("dataPlot").on('plotly_click', (data)=>{
+      const p = data.points[0];
+      // Plotly click returns nearest point; for empty space we use relayout? easiest: use plotly_click on background isn't supported well.
+      // Workaround: shift-click adds near clicked point; or use double click? We'll allow adding near a point. For clean adding, just click near center.
+    });
+  }
+
+  function renderLoss(){
+    const t = Array.from({length: losses.length}, (_,i)=>i+1);
+    Plotly.newPlot("lossPlot", [
+      {type:"scatter", mode:"lines", x:t, y:losses, name:"loss"}
+    ], {
+      margin:{l:60,r:10,b:40,t:40},
+      title:"Training loss over steps",
+      xaxis:{title:"update step"},
+      yaxis:{title:"loss"}
+    }, {displayModeBar:false});
+  }
+
+  // Add points by clicking coordinates: use Plotly's event has only point hits; instead we implement manual add by capturing mouse position.
+  function installClickToAdd(){
+    const div = document.getElementById("dataPlot");
+    div.on('plotly_click', null);
+    div.addEventListener("click", (ev)=>{
+      // map pixel -> data coords
+      const rect = div.getBoundingClientRect();
+      const px = ev.clientX - rect.left;
+      const py = ev.clientY - rect.top;
+
+      const fullLayout = div._fullLayout;
+      if(!fullLayout) return;
+      const xaxis = fullLayout.xaxis;
+      const yaxis = fullLayout.yaxis;
+
+      const x = xaxis.p2c ? xaxis.p2c(px) : xaxis.range[0]; // fallback
+      const y = yaxis.p2c ? yaxis.p2c(py) : yaxis.range[0];
+
+      // NOTE: p2c maps pixel->"calc"; better: use axis.p2l (pixel->linear). Plotly has p2l.
+      const xx = xaxis.p2l(px);
+      const yy = yaxis.p2l(py);
+
+      const label = +document.getElementById("cls").value;
+      X.push([xx, yy]);
+      Y.push(label);
+      renderAll();
+    }, {passive:true});
+  }
+
+  function renderAll(){
+    renderData();
+    renderLoss();
+  }
+
+  // UI
+  const eta=document.getElementById("eta");
+  const b=document.getElementById("b");
+  const gam=document.getElementById("gam");
+  const steps=document.getElementById("steps");
+  const wd=document.getElementById("wd");
+  const opt=document.getElementById("opt");
+
+  const etaVal=document.getElementById("etaVal");
+  const bVal=document.getElementById("bVal");
+  const gamVal=document.getElementById("gamVal");
+  const stepsVal=document.getElementById("stepsVal");
+  const wdVal=document.getElementById("wdVal");
+
+  function updateLabels(){
+    etaVal.textContent=(+eta.value).toFixed(3);
+    bVal.textContent=(+b.value).toFixed(0);
+    gamVal.textContent=(+gam.value).toFixed(2);
+    stepsVal.textContent=(+steps.value).toFixed(0);
+    wdVal.textContent=(+wd.value).toFixed(3);
+  }
+  [eta,b,gam,steps,wd,opt].forEach(el=>el.oninput=()=>{ updateLabels(); });
+
+  document.getElementById("train").onclick=()=>{
+    updateLabels();
+    trainSteps(+steps.value, +eta.value, +b.value, +gam.value, opt.value, +wd.value);
+    renderAll();
+  };
+
+  document.getElementById("resetW").onclick=()=>{
+    w=[0,0]; bb=0;
+    v=[0,0]; vb=0;
+    m=[0,0]; mm=0; vv=[0,0]; vvb=0;
+    losses=[];
+    renderAll();
+  };
+
+  document.getElementById("clear").onclick=()=>{
+    X=[]; Y=[];
+    losses=[];
+    renderAll();
+  };
+
+  updateLabels();
+  renderAll();
+  installClickToAdd();
+</script>
+</body>
+</html>
