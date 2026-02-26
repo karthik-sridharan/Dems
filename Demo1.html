@@ -2,217 +2,426 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Optimization Demo: GD vs Momentum vs Newton (Quadratic)</title>
-  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quadratic Ravine Demo with Noisy SGD</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
-    .row { display:flex; gap:16px; align-items:flex-start; }
-    #plot { width: 900px; height: 620px; }
-    .panel { width: 320px; }
-    label { display:block; margin-top:10px; }
-    input[type=range] { width: 100%; }
-    button { margin-top: 12px; width: 100%; padding: 10px; }
-    select { width:100%; padding:8px; }
-    .small { color:#555; font-size: 13px; line-height:1.35; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 8px 0; }
+    .small { color: #444; font-size: 13px; line-height: 1.35; }
+    .wrap { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .left { flex: 1 1 760px; min-width: 320px; }
+    .right { width: min(360px, 100%); }
+    canvas { width: 100%; display: block; border: 1px solid #d8d8d8; border-radius: 8px; background: #fff; }
+    #contourCanvas { height: 520px; }
+    #lossCanvas { height: 220px; margin-top: 12px; }
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    input[type=range], select { width: 100%; }
+    button { width: 100%; padding: 10px; margin-top: 10px; font-size: 14px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .box { background: #f7f7f7; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; line-height: 1.35; }
+    .legend { margin-top: 10px; font-size: 14px; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 6px; }
+    code { background: #f3f3f3; padding: 1px 4px; border-radius: 4px; }
   </style>
 </head>
 <body>
-<h2>GD vs Momentum vs Nesterov vs Newton on a Rotated Quadratic</h2>
-<div class="row">
-  <div id="plot"></div>
-  <div class="panel">
-    <label>Algorithm</label>
-    <select id="alg">
-      <option value="gd">Gradient Descent</option>
-      <option value="mom">Momentum (Heavy-ball)</option>
-      <option value="nag">Nesterov</option>
-      <option value="newton">Newton (exact for quadratic)</option>
-    </select>
-
-    <label>Step size η: <span id="etaVal"></span></label>
-    <input id="eta" type="range" min="0.001" max="0.2" step="0.001" value="0.03"/>
-
-    <label>Momentum γ: <span id="gamVal"></span></label>
-    <input id="gam" type="range" min="0.0" max="0.99" step="0.01" value="0.9"/>
-
-    <label>Condition number κ: <span id="kappaVal"></span></label>
-    <input id="kappa" type="range" min="1" max="200" step="1" value="80"/>
-
-    <label>Rotation (deg): <span id="rotVal"></span></label>
-    <input id="rot" type="range" min="0" max="80" step="1" value="35"/>
-
-    <label>Iterations T: <span id="TVal"></span></label>
-    <input id="T" type="range" min="5" max="120" step="1" value="45"/>
-
-    <button id="run">Run</button>
-    <button id="reset">Reset start point</button>
-
-    <p class="small">
-      Click on the plot to set the start point. Newton solves a quadratic in one step (in exact arithmetic),
-      while GD oscillates in ravines; momentum smooths the oscillation.
-    </p>
+  <h2>Quadratic ravine demo: GD, momentum, Nesterov, Newton, and noisy SGD</h2>
+  <div class="small">
+    Click on the contour plot to set a new start point. The new SGD option performs
+    <code>x_{t+1}=x_t-\eta(\nabla f(x_t)+\sigma \xi_t)</code> where \(\xi_t \sim \mathcal N(0, I)\) independently each step.
   </div>
-</div>
+
+  <div class="wrap">
+    <div class="left">
+      <canvas id="contourCanvas" width="900" height="520"></canvas>
+      <canvas id="lossCanvas" width="900" height="220"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>trajectory
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>current point
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#16a34a;"></span>optimum
+      </div>
+    </div>
+
+    <div class="right">
+      <label>Algorithm</label>
+      <select id="alg">
+        <option value="gd">Gradient Descent</option>
+        <option value="mom">Momentum (Heavy-ball)</option>
+        <option value="nag">Nesterov</option>
+        <option value="newton">Newton</option>
+        <option value="sgd">SGD (GD + Gaussian noise)</option>
+      </select>
+
+      <label>Step size η: <span id="etaVal"></span></label>
+      <input id="eta" type="range" min="0.001" max="0.20" step="0.001" value="0.030"/>
+
+      <label>Momentum γ: <span id="gamVal"></span></label>
+      <input id="gam" type="range" min="0.00" max="0.99" step="0.01" value="0.90"/>
+
+      <label>Noise scale σ (SGD only): <span id="sigVal"></span></label>
+      <input id="sig" type="range" min="0.00" max="2.00" step="0.01" value="0.35"/>
+
+      <label>Condition number κ: <span id="kappaVal"></span></label>
+      <input id="kappa" type="range" min="1" max="200" step="1" value="80"/>
+
+      <label>Rotation (deg): <span id="rotVal"></span></label>
+      <input id="rot" type="range" min="0" max="80" step="1" value="35"/>
+
+      <label>Iterations T: <span id="TVal"></span></label>
+      <input id="T" type="range" min="5" max="150" step="1" value="45"/>
+
+      <div class="row2">
+        <button id="runBtn">Run / Resample</button>
+        <button id="resetBtn">Reset start</button>
+      </div>
+
+      <div class="box" id="summary"></div>
+
+      <div class="box">
+        <b>Suggested settings</b><br/>
+        GD: η ≈ 1/κ (small and stable).<br/>
+        Momentum/Nesterov: try η slightly larger and γ around 0.8–0.95.<br/>
+        Noisy SGD: start with σ ≈ 0.2–0.5 to see visible jitter while still drifting toward the minimizer.
+      </div>
+    </div>
+  </div>
 
 <script>
-  // --- Linear algebra helpers (2D) ---
-  function rotM(theta){
-    const c=Math.cos(theta), s=Math.sin(theta);
-    return [[c,-s],[s,c]];
-  }
-  function matMul(A,B){
-    return [
-      [A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
-      [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]
-    ];
-  }
-  function matTVec(A,x){
-    return [A[0][0]*x[0]+A[0][1]*x[1], A[1][0]*x[0]+A[1][1]*x[1]];
-  }
-  function dot(a,b){ return a[0]*b[0]+a[1]*b[1]; }
-  function add(a,b){ return [a[0]+b[0], a[1]+b[1]]; }
-  function sub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
-  function scale(c,a){ return [c*a[0], c*a[1]]; }
+(() => {
+  const contourCanvas = document.getElementById("contourCanvas");
+  const lossCanvas = document.getElementById("lossCanvas");
+  const cctx = contourCanvas.getContext("2d");
+  const lctx = lossCanvas.getContext("2d");
 
-  function inv2(A){
-    const det = A[0][0]*A[1][1]-A[0][1]*A[1][0];
-    return [[ A[1][1]/det, -A[0][1]/det],[-A[1][0]/det, A[0][0]/det]];
-  }
+  const algEl = document.getElementById("alg");
+  const etaEl = document.getElementById("eta");
+  const gamEl = document.getElementById("gam");
+  const sigEl = document.getElementById("sig");
+  const kappaEl = document.getElementById("kappa");
+  const rotEl = document.getElementById("rot");
+  const TEl = document.getElementById("T");
 
-  // --- Quadratic f(x)=0.5 x^T Q x, grad=Qx ---
-  function makeQ(kappa, deg){
-    const theta = deg*Math.PI/180;
-    const R = rotM(theta);
-    const RT = [[R[0][0],R[1][0]],[R[0][1],R[1][1]]];
-    const D = [[1,0],[0,kappa]];
-    return matMul(matMul(RT,D),R);
-  }
-  function f(Q,x){ return 0.5*dot(x, matTVec(Q,x)); }
-  function g(Q,x){ return matTVec(Q,x); }
-
-  // --- Run algorithms ---
-  function runAlg(Q, x0, alg, eta, gamma, T){
-    let x = x0.slice();
-    let v = [0,0];
-    const xs = [x.slice()];
-    const Qinv = inv2(Q);
-    for(let t=0;t<T;t++){
-      if(alg==="gd"){
-        x = sub(x, scale(eta, g(Q,x)));
-      } else if(alg==="mom"){
-        v = sub(scale(gamma, v), scale(eta, g(Q,x)));
-        x = add(x, v);
-      } else if(alg==="nag"){
-        const y = add(x, scale(gamma, v));
-        v = sub(scale(gamma, v), scale(eta, g(Q,y)));
-        x = add(x, v);
-      } else if(alg==="newton"){
-        // x <- x - Q^{-1} Q x = 0 (one step)
-        const step = matTVec(Qinv, g(Q,x));
-        x = sub(x, step);
-      }
-      xs.push(x.slice());
-    }
-    return xs;
-  }
-
-  // --- Plot grid ---
-  let start = [3.0, 2.0];
-
-  function gridData(Q){
-    const xs = [];
-    const ys = [];
-    const z = [];
-    const n=120;
-    const lo=-3.5, hi=3.5;
-    for(let i=0;i<n;i++){
-      xs.push(lo + (hi-lo)*i/(n-1));
-      ys.push(lo + (hi-lo)*i/(n-1));
-    }
-    for(let j=0;j<n;j++){
-      const row=[];
-      for(let i=0;i<n;i++){
-        row.push(f(Q, [xs[i], ys[j]]));
-      }
-      z.push(row);
-    }
-    return {xs, ys, z};
-  }
-
-  function updateLabels(){
-    etaVal.textContent = (+eta.value).toFixed(3);
-    gamVal.textContent = (+gam.value).toFixed(2);
-    kappaVal.textContent = (+kappa.value).toFixed(0);
-    rotVal.textContent = (+rot.value).toFixed(0);
-    TVal.textContent = (+T.value).toFixed(0);
-  }
-
-  const eta = document.getElementById("eta");
-  const gam = document.getElementById("gam");
-  const kappa = document.getElementById("kappa");
-  const rot = document.getElementById("rot");
-  const T = document.getElementById("T");
-  const alg = document.getElementById("alg");
   const etaVal = document.getElementById("etaVal");
   const gamVal = document.getElementById("gamVal");
+  const sigVal = document.getElementById("sigVal");
   const kappaVal = document.getElementById("kappaVal");
   const rotVal = document.getElementById("rotVal");
   const TVal = document.getElementById("TVal");
 
-  function render(){
-    updateLabels();
-    const Q = makeQ(+kappa.value, +rot.value);
-    const gd = gridData(Q);
-    const xs = runAlg(Q, start, alg.value, +eta.value, +gam.value, +T.value);
-    const xtrace = xs.map(p=>p[0]);
-    const ytrace = xs.map(p=>p[1]);
+  const runBtn = document.getElementById("runBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const summary = document.getElementById("summary");
 
-    const contour = {
-      type: "contour",
-      x: gd.xs,
-      y: gd.ys,
-      z: gd.z,
-      contours: { coloring: "lines" },
-      line: { width: 1 },
-      showscale: false
-    };
-    const path = {
-      type:"scatter",
-      mode:"lines+markers",
-      x: xtrace,
-      y: ytrace,
-      marker: { size: 6 },
-      line: { width: 3 },
-      name: "trajectory"
-    };
-    const opt = {
-      type:"scatter",
-      mode:"markers",
-      x:[0], y:[0],
-      marker:{ size: 12, symbol:"star" },
-      name:"optimum"
-    };
-    Plotly.newPlot("plot", [contour, path, opt], {
-      margin:{l:40,r:10,b:40,t:40},
-      title: "Click to set start point",
-      xaxis:{title:"x1", range:[-3.6,3.6]},
-      yaxis:{title:"x2", range:[-3.6,3.6], scaleanchor:"x"},
-      showlegend:false
-    }, {displayModeBar:false});
+  let start = [3.0, 2.0];
+  let sim = null;
 
-    const plotDiv = document.getElementById("plot");
-    plotDiv.on('plotly_click', (data) => {
-      const p = data.points[0];
-      start = [p.x, p.y];
-      render();
-    });
+  function updateLabels() {
+    etaVal.textContent = Number(etaEl.value).toFixed(3);
+    gamVal.textContent = Number(gamEl.value).toFixed(2);
+    sigVal.textContent = Number(sigEl.value).toFixed(2);
+    kappaVal.textContent = String(kappaEl.value);
+    rotVal.textContent = String(rotEl.value);
+    TVal.textContent = String(TEl.value);
   }
 
-  document.getElementById("run").onclick = render;
-  document.getElementById("reset").onclick = () => { start = [3.0,2.0]; render(); };
-  [eta,gam,kappa,rot,T,alg].forEach(el => el.oninput = render);
+  function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
 
-  render();
+  function rotM(theta) {
+    const c = Math.cos(theta), s = Math.sin(theta);
+    return [[c, -s], [s, c]];
+  }
+
+  function matMul(A, B) {
+    return [
+      [A[0][0]*B[0][0] + A[0][1]*B[1][0], A[0][0]*B[0][1] + A[0][1]*B[1][1]],
+      [A[1][0]*B[0][0] + A[1][1]*B[1][0], A[1][0]*B[0][1] + A[1][1]*B[1][1]]
+    ];
+  }
+
+  function matVec(A, x) {
+    return [A[0][0]*x[0] + A[0][1]*x[1], A[1][0]*x[0] + A[1][1]*x[1]];
+  }
+
+  function inv2(A) {
+    const det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+    return [[ A[1][1]/det, -A[0][1]/det], [ -A[1][0]/det, A[0][0]/det ]];
+  }
+
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1]; }
+  function add(a, b) { return [a[0]+b[0], a[1]+b[1]]; }
+  function sub(a, b) { return [a[0]-b[0], a[1]-b[1]]; }
+  function scale(c, a) { return [c*a[0], c*a[1]]; }
+  function norm(a) { return Math.sqrt(dot(a,a)); }
+
+  function makeQ(kappa, deg) {
+    const theta = deg * Math.PI / 180;
+    const R = rotM(theta);
+    const RT = [[R[0][0], R[1][0]], [R[0][1], R[1][1]]];
+    const D = [[1, 0], [0, kappa]];
+    return matMul(matMul(RT, D), R);
+  }
+
+  function f(Q, x) {
+    const qx = matVec(Q, x);
+    return 0.5 * dot(x, qx);
+  }
+
+  function g(Q, x) {
+    return matVec(Q, x);
+  }
+
+  function run() {
+    const alg = algEl.value;
+    const eta = Number(etaEl.value);
+    const gamma = Number(gamEl.value);
+    const sigma = Number(sigEl.value);
+    const kappa = Number(kappaEl.value);
+    const deg = Number(rotEl.value);
+    const T = Number(TEl.value);
+
+    const Q = makeQ(kappa, deg);
+    const Qinv = inv2(Q);
+
+    let x = [start[0], start[1]];
+    let v = [0, 0];
+    const xs = [x.slice()];
+    const fs = [f(Q, x)];
+    let diverged = false;
+
+    for (let t = 0; t < T; t++) {
+      if (alg === "gd") {
+        x = sub(x, scale(eta, g(Q, x)));
+      } else if (alg === "mom") {
+        v = sub(scale(gamma, v), scale(eta, g(Q, x)));
+        x = add(x, v);
+      } else if (alg === "nag") {
+        const y = add(x, scale(gamma, v));
+        v = sub(scale(gamma, v), scale(eta, g(Q, y)));
+        x = add(x, v);
+      } else if (alg === "newton") {
+        const step = matVec(Qinv, g(Q, x));
+        x = sub(x, step);
+      } else if (alg === "sgd") {
+        const noise = [sigma * randn(), sigma * randn()];
+        const noisyGrad = add(g(Q, x), noise);
+        x = sub(x, scale(eta, noisyGrad));
+      }
+
+      if (!isFinite(x[0]) || !isFinite(x[1]) || norm(x) > 1e5) {
+        diverged = true;
+        break;
+      }
+      xs.push(x.slice());
+      fs.push(f(Q, x));
+
+      if (alg === "newton") {
+        while (xs.length < T + 1) {
+          xs.push([0,0]);
+          fs.push(0);
+        }
+        break;
+      }
+    }
+
+    sim = { Q, xs, fs, diverged };
+    draw();
+  }
+
+  function worldToScreen(x, y, W, H, margin, xmin, xmax, ymin, ymax) {
+    const sx = margin.l + (x - xmin) / (xmax - xmin) * (W - margin.l - margin.r);
+    const sy = H - margin.b - (y - ymin) / (ymax - ymin) * (H - margin.t - margin.b);
+    return [sx, sy];
+  }
+
+  function screenToWorld(px, py, W, H, margin, xmin, xmax, ymin, ymax) {
+    const x = xmin + (px - margin.l) / (W - margin.l - margin.r) * (xmax - xmin);
+    const y = ymin + (H - margin.b - py) / (H - margin.t - margin.b) * (ymax - ymin);
+    return [x, y];
+  }
+
+  function drawAxes(ctx, W, H, margin, xmin, xmax, ymin, ymax, xlabel, ylabel) {
+    ctx.strokeStyle = "#d0d0d0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    if (xmin <= 0 && 0 <= xmax) {
+      const p = worldToScreen(0, 0, W, H, margin, xmin, xmax, ymin, ymax);
+      ctx.moveTo(p[0], margin.t);
+      ctx.lineTo(p[0], H - margin.b);
+    }
+    if (ymin <= 0 && 0 <= ymax) {
+      const p = worldToScreen(0, 0, W, H, margin, xmin, xmax, ymin, ymax);
+      ctx.moveTo(margin.l, p[1]);
+      ctx.lineTo(W - margin.r, p[1]);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#666";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(xlabel, W - margin.r - 10, H - 8);
+    ctx.save();
+    ctx.translate(12, margin.t + 10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(ylabel, 0, 0);
+    ctx.restore();
+  }
+
+  function drawEllipseLevelSet(ctx, kappa, theta, level, W, H, margin, xmin, xmax, ymin, ymax) {
+    // For 0.5 * (u^2 + kappa v^2) = level => u^2/(2 level) + v^2/(2 level / kappa) = 1
+    const a = Math.sqrt(Math.max(0, 2 * level));
+    const b = Math.sqrt(Math.max(0, 2 * level / kappa));
+    const c = Math.cos(theta), s = Math.sin(theta);
+
+    ctx.beginPath();
+    const N = 220;
+    for (let i = 0; i <= N; i++) {
+      const t = 2 * Math.PI * i / N;
+      const u = a * Math.cos(t);
+      const v = b * Math.sin(t);
+      // x = R^T [u,v]
+      const x = c * u + s * v;
+      const y = -s * u + c * v;
+      const p = worldToScreen(x, y, W, H, margin, xmin, xmax, ymin, ymax);
+      if (i === 0) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.stroke();
+  }
+
+  function draw() {
+    if (!sim) return;
+    const { Q, xs, fs, diverged } = sim;
+
+    const W = contourCanvas.width, H = contourCanvas.height;
+    const LW = lossCanvas.width, LH = lossCanvas.height;
+    cctx.clearRect(0, 0, W, H);
+    lctx.clearRect(0, 0, LW, LH);
+
+    const margin = { l: 58, r: 20, t: 26, b: 42 };
+    const xmin = -3.6, xmax = 3.6, ymin = -3.6, ymax = 3.6;
+
+    drawAxes(cctx, W, H, margin, xmin, xmax, ymin, ymax, "x1", "x2");
+    cctx.fillStyle = "#111";
+    cctx.font = "14px system-ui, sans-serif";
+    cctx.fillText("Contours and trajectory", margin.l, 18);
+
+    // Draw level sets analytically as ellipses.
+    const kappa = Number(kappaEl.value);
+    const theta = Number(rotEl.value) * Math.PI / 180;
+    cctx.strokeStyle = "#c8c8c8";
+    cctx.lineWidth = 1;
+    const levels = [0.2, 0.5, 1, 2, 4, 7, 11, 16, 22, 30, 40];
+    for (const lev of levels) {
+      drawEllipseLevelSet(cctx, kappa, theta, lev, W, H, margin, xmin, xmax, ymin, ymax);
+    }
+
+    // Draw trajectory.
+    cctx.strokeStyle = "#2563eb";
+    cctx.lineWidth = 2.5;
+    cctx.beginPath();
+    for (let i = 0; i < xs.length; i++) {
+      const p = worldToScreen(xs[i][0], xs[i][1], W, H, margin, xmin, xmax, ymin, ymax);
+      if (i === 0) cctx.moveTo(p[0], p[1]);
+      else cctx.lineTo(p[0], p[1]);
+    }
+    cctx.stroke();
+
+    // Path markers.
+    cctx.fillStyle = "#2563eb";
+    for (let i = 0; i < xs.length; i++) {
+      const p = worldToScreen(xs[i][0], xs[i][1], W, H, margin, xmin, xmax, ymin, ymax);
+      cctx.beginPath();
+      cctx.arc(p[0], p[1], 2.5, 0, 2*Math.PI);
+      cctx.fill();
+    }
+
+    // Current point.
+    const cur = xs[xs.length - 1];
+    let p = worldToScreen(cur[0], cur[1], W, H, margin, xmin, xmax, ymin, ymax);
+    cctx.fillStyle = "#111";
+    cctx.beginPath();
+    cctx.arc(p[0], p[1], 6, 0, 2*Math.PI);
+    cctx.fill();
+    cctx.strokeStyle = "#fff";
+    cctx.lineWidth = 1;
+    cctx.stroke();
+
+    // Optimum.
+    p = worldToScreen(0, 0, W, H, margin, xmin, xmax, ymin, ymax);
+    cctx.fillStyle = "#16a34a";
+    cctx.beginPath();
+    cctx.arc(p[0], p[1], 5, 0, 2*Math.PI);
+    cctx.fill();
+
+    // Loss plot.
+    const lm = { l: 58, r: 20, t: 24, b: 34 };
+    let fmin = 0;
+    let fmax = Math.max(1e-6, ...fs);
+    if (fmax === fmin) fmax = fmin + 1;
+    drawAxes(lctx, LW, LH, lm, 0, Math.max(1, fs.length - 1), fmin, fmax * 1.05, "iteration", "f(x_t)");
+    lctx.fillStyle = "#111";
+    lctx.font = "14px system-ui, sans-serif";
+    lctx.fillText("Objective value vs iteration", lm.l, 18);
+
+    lctx.strokeStyle = "#2563eb";
+    lctx.lineWidth = 2.5;
+    lctx.beginPath();
+    for (let i = 0; i < fs.length; i++) {
+      const q = worldToScreen(i, fs[i], LW, LH, lm, 0, Math.max(1, fs.length - 1), fmin, fmax * 1.05);
+      if (i === 0) lctx.moveTo(q[0], q[1]);
+      else lctx.lineTo(q[0], q[1]);
+    }
+    lctx.stroke();
+
+    // Summary.
+    const alg = algEl.value;
+    let text = "<b>Behavior</b><br/>";
+    if (alg === "gd") text += "Deterministic descent using the full gradient.";
+    if (alg === "mom") text += "Velocity smooths oscillations and can move faster along the shallow direction.";
+    if (alg === "nag") text += "Nesterov uses a look-ahead gradient, often slightly more anticipatory than heavy-ball.";
+    if (alg === "newton") text += "For a quadratic, exact Newton jumps to the minimizer in one step.";
+    if (alg === "sgd") text += "SGD adds standard normal noise to the gradient each step, causing visible jitter while still drifting inward on average.";
+    text += "<br/><br/>Final point ≈ <b>(" + cur[0].toFixed(3) + ", " + cur[1].toFixed(3) + ")</b>";
+    text += "<br/>Final objective ≈ <b>" + fs[fs.length - 1].toExponential(3) + "</b>";
+    if (diverged) text += "<br/><span style='color:#b91c1c'>Trajectory diverged for these settings.</span>";
+    summary.innerHTML = text;
+  }
+
+  contourCanvas.addEventListener("click", (ev) => {
+    const rect = contourCanvas.getBoundingClientRect();
+    const scaleX = contourCanvas.width / rect.width;
+    const scaleY = contourCanvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * scaleX;
+    const py = (ev.clientY - rect.top) * scaleY;
+    const margin = { l: 58, r: 20, t: 26, b: 42 };
+    const w = screenToWorld(px, py, contourCanvas.width, contourCanvas.height, margin, -3.6, 3.6, -3.6, 3.6);
+    start = [Math.max(-3.6, Math.min(3.6, w[0])), Math.max(-3.6, Math.min(3.6, w[1]))];
+    run();
+  });
+
+  runBtn.addEventListener("click", run);
+  resetBtn.addEventListener("click", () => {
+    start = [3.0, 2.0];
+    run();
+  });
+
+  [algEl, etaEl, gamEl, sigEl, kappaEl, rotEl, TEl].forEach(el => {
+    el.addEventListener("input", () => {
+      updateLabels();
+      run();
+    });
+  });
+
+  updateLabels();
+  run();
+})();
 </script>
 </body>
 </html>
