@@ -1,0 +1,404 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>1D Optimization Demo: f(x)=x^2</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 8px 0; }
+    .small { color: #444; font-size: 13px; line-height: 1.35; }
+    .wrap { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .left { flex: 1 1 760px; min-width: 320px; }
+    .right { width: min(360px, 100%); }
+    canvas { width: 100%; display: block; border: 1px solid #d8d8d8; border-radius: 8px; background: #fff; }
+    #funcCanvas { height: 420px; }
+    #timeCanvas { height: 240px; margin-top: 12px; }
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    input[type=range], select { width: 100%; }
+    button { width: 100%; padding: 10px; margin-top: 10px; font-size: 14px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .legend { margin-top: 10px; font-size: 14px; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 6px; }
+    .box { background: #f7f7f7; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; line-height: 1.35; }
+    code { background: #f3f3f3; padding: 1px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>1D demo: optimizing f(x)=x² from x₀=1</h2>
+  <div class="small">
+    This is the 1D analogue of the earlier quadratic demo. It compares GD, momentum, Nesterov, and Newton on the parabola
+    f(x)=x². Since f'(x)=2x, plain GD follows x_{t+1}=(1-2η)x_t.
+  </div>
+
+  <div class="wrap">
+    <div class="left">
+      <canvas id="funcCanvas" width="900" height="420"></canvas>
+      <canvas id="timeCanvas" width="900" height="240"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>trajectory
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>current iterate
+      </div>
+    </div>
+
+    <div class="right">
+      <label>Algorithm</label>
+      <select id="alg">
+        <option value="gd">Gradient Descent</option>
+        <option value="mom">Momentum (Heavy-ball)</option>
+        <option value="nag">Nesterov</option>
+        <option value="newton">Newton</option>
+      </select>
+
+      <label>Initial point</label>
+      <div class="box"><b>x₀ = 1</b> (fixed)</div>
+
+      <label>Step size η: <span id="etaVal"></span></label>
+      <input id="eta" type="range" min="0.01" max="1.20" step="0.01" value="0.20"/>
+
+      <label>Momentum γ: <span id="gamVal"></span></label>
+      <input id="gam" type="range" min="0.00" max="0.99" step="0.01" value="0.80"/>
+
+      <label>Total steps T: <span id="TVal"></span></label>
+      <input id="T" type="range" min="5" max="120" step="1" value="30"/>
+
+      <label>Animation speed: <span id="spdVal"></span></label>
+      <input id="spd" type="range" min="1" max="8" step="1" value="4"/>
+
+      <div class="row2">
+        <button id="playBtn">Play</button>
+        <button id="stepBtn">Step</button>
+      </div>
+      <div class="row2">
+        <button id="resetBtn">Reset</button>
+        <button id="stableBtn">Stable defaults</button>
+      </div>
+
+      <div class="box" id="summary"></div>
+
+      <div class="box">
+        <b>What to notice</b><br/>
+        For GD on x², stability requires roughly <code>0 &lt; η &lt; 1</code>.
+        If <code>η &lt; 0.5</code>, the iterates move monotonically toward 0.
+        If <code>0.5 &lt; η &lt; 1</code>, they alternate signs while shrinking.
+        At <code>η = 1</code>, they oscillate with constant magnitude, and for <code>η &gt; 1</code> they diverge.
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const funcCanvas = document.getElementById("funcCanvas");
+  const timeCanvas = document.getElementById("timeCanvas");
+  const fctx = funcCanvas.getContext("2d");
+  const tctx = timeCanvas.getContext("2d");
+
+  const algEl = document.getElementById("alg");
+  const etaEl = document.getElementById("eta");
+  const gamEl = document.getElementById("gam");
+  const TEl = document.getElementById("T");
+  const spdEl = document.getElementById("spd");
+
+  const etaVal = document.getElementById("etaVal");
+  const gamVal = document.getElementById("gamVal");
+  const TVal = document.getElementById("TVal");
+  const spdVal = document.getElementById("spdVal");
+
+  const playBtn = document.getElementById("playBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const stableBtn = document.getElementById("stableBtn");
+  const summary = document.getElementById("summary");
+
+  const x0 = 1.0;
+  const f = x => x*x;
+  const g = x => 2*x;
+
+  let sim = null;
+  let frame = 0;
+  let playing = false;
+  let raf = null;
+  let tickCounter = 0;
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function updateLabels() {
+    etaVal.textContent = Number(etaEl.value).toFixed(2);
+    gamVal.textContent = Number(gamEl.value).toFixed(2);
+    TVal.textContent = String(TEl.value);
+    spdVal.textContent = String(spdEl.value);
+  }
+
+  function recompute() {
+    const eta = Number(etaEl.value);
+    const gamma = Number(gamEl.value);
+    const T = Number(TEl.value);
+    const alg = algEl.value;
+
+    let x = x0;
+    let v = 0;
+    const xs = [x];
+    let diverged = false;
+
+    for (let t = 0; t < T; t++) {
+      if (alg === "gd") {
+        x = x - eta * g(x);
+      } else if (alg === "mom") {
+        v = gamma * v - eta * g(x);
+        x = x + v;
+      } else if (alg === "nag") {
+        const y = x + gamma * v;
+        v = gamma * v - eta * g(y);
+        x = x + v;
+      } else if (alg === "newton") {
+        x = 0;
+      }
+
+      if (!isFinite(x) || Math.abs(x) > 1e6) {
+        diverged = true;
+        xs.push(xs[xs.length - 1]);
+        break;
+      } else {
+        xs.push(x);
+      }
+
+      if (alg === "newton") {
+        while (xs.length < T + 1) xs.push(0);
+        break;
+      }
+    }
+
+    while (xs.length < T + 1) xs.push(xs[xs.length - 1]);
+
+    sim = { xs, diverged };
+    frame = clamp(frame, 0, xs.length - 1);
+    draw();
+  }
+
+  function drawAxes(ctx, W, H, margin, xmin, xmax, ymin, ymax, xlabel, ylabel) {
+    function sx(x) { return margin.l + (x - xmin) / (xmax - xmin) * (W - margin.l - margin.r); }
+    function sy(y) { return H - margin.b - (y - ymin) / (ymax - ymin) * (H - margin.t - margin.b); }
+
+    ctx.strokeStyle = "#d0d0d0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    if (xmin <= 0 && 0 <= xmax) {
+      const X0 = sx(0);
+      ctx.moveTo(X0, margin.t);
+      ctx.lineTo(X0, H - margin.b);
+    }
+    if (ymin <= 0 && 0 <= ymax) {
+      const Y0 = sy(0);
+      ctx.moveTo(margin.l, Y0);
+      ctx.lineTo(W - margin.r, Y0);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#666";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(xlabel, W - margin.r - 10, H - 8);
+    ctx.save();
+    ctx.translate(12, margin.t + 10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(ylabel, 0, 0);
+    ctx.restore();
+
+    return { sx, sy };
+  }
+
+  function draw() {
+    if (!sim) return;
+    const { xs, diverged } = sim;
+    const k = clamp(frame, 0, xs.length - 1);
+
+    const W = funcCanvas.width, H = funcCanvas.height;
+    const TW = timeCanvas.width, TH = timeCanvas.height;
+    fctx.clearRect(0, 0, W, H);
+    tctx.clearRect(0, 0, TW, TH);
+
+    const maxAbsX = Math.max(1.25, ...xs.map(v => Math.abs(v)));
+    const xmin = -1.15 * maxAbsX;
+    const xmax =  1.15 * maxAbsX;
+    const ymax = (1.15 * maxAbsX) * (1.15 * maxAbsX) * 1.05;
+
+    const fm = { l: 58, r: 20, t: 24, b: 40 };
+    const ft = drawAxes(fctx, W, H, fm, xmin, xmax, 0, ymax, "x", "f(x)");
+    fctx.fillStyle = "#111";
+    fctx.font = "14px system-ui, sans-serif";
+    fctx.fillText("Objective and iterates on f(x)=x²", fm.l, 18);
+
+    fctx.strokeStyle = "#222";
+    fctx.lineWidth = 2;
+    fctx.beginPath();
+    const n = 800;
+    for (let i = 0; i < n; i++) {
+      const x = xmin + (xmax - xmin) * i / (n - 1);
+      const y = f(x);
+      const X = ft.sx(x), Y = ft.sy(y);
+      if (i === 0) fctx.moveTo(X, Y);
+      else fctx.lineTo(X, Y);
+    }
+    fctx.stroke();
+
+    fctx.strokeStyle = "#2563eb";
+    fctx.lineWidth = 2.5;
+    fctx.beginPath();
+    for (let i = 0; i <= k; i++) {
+      const X = ft.sx(xs[i]), Y = ft.sy(f(xs[i]));
+      if (i === 0) fctx.moveTo(X, Y);
+      else fctx.lineTo(X, Y);
+    }
+    fctx.stroke();
+
+    fctx.globalAlpha = 0.15;
+    const y0 = ft.sy(0);
+    for (let i = 0; i <= k; i++) {
+      const X = ft.sx(xs[i]);
+      fctx.beginPath();
+      fctx.moveTo(X, y0 - 6);
+      fctx.lineTo(X, y0 + 6);
+      fctx.stroke();
+    }
+    fctx.globalAlpha = 1.0;
+
+    fctx.fillStyle = "#2563eb";
+    fctx.beginPath();
+    fctx.arc(ft.sx(xs[k]), ft.sy(f(xs[k])), 6, 0, 2*Math.PI);
+    fctx.fill();
+    fctx.strokeStyle = "#111";
+    fctx.lineWidth = 1;
+    fctx.stroke();
+
+    const tm = { l: 58, r: 20, t: 24, b: 36 };
+    const yMin = -1.15 * maxAbsX;
+    const yMax =  1.15 * maxAbsX;
+    const tt = drawAxes(tctx, TW, TH, tm, 0, xs.length - 1, yMin, yMax, "iteration", "x_t");
+    tctx.fillStyle = "#111";
+    tctx.font = "14px system-ui, sans-serif";
+    tctx.fillText("Position vs iteration", tm.l, 18);
+
+    tctx.strokeStyle = "#2563eb";
+    tctx.lineWidth = 2.5;
+    tctx.beginPath();
+    for (let i = 0; i <= k; i++) {
+      const X = tt.sx(i), Y = tt.sy(xs[i]);
+      if (i === 0) tctx.moveTo(X, Y);
+      else tctx.lineTo(X, Y);
+    }
+    tctx.stroke();
+
+    tctx.fillStyle = "#2563eb";
+    tctx.beginPath();
+    tctx.arc(tt.sx(k), tt.sy(xs[k]), 5, 0, 2*Math.PI);
+    tctx.fill();
+
+    const eta = Number(etaEl.value);
+    const gamma = Number(gamEl.value);
+    const alg = algEl.value;
+    let text = "<b>Behavior</b><br/>";
+    if (alg === "gd") {
+      if (eta < 0.5) {
+        text += "Monotone decay toward 0.";
+      } else if (eta < 1.0) {
+        text += "Alternating signs, but shrinking toward 0.";
+      } else if (Math.abs(eta - 1.0) < 1e-9) {
+        text += "Borderline: oscillates between +1 and -1.";
+      } else {
+        text += "Unstable: diverges because |1-2η| > 1.";
+      }
+      text += "<br/>Closed form: <code>x_t = (1-2η)^t</code>.";
+    } else if (alg === "newton") {
+      text += "Newton reaches the minimizer in one step because f''(x)=2 is constant.";
+    } else {
+      text += "Momentum can accelerate convergence, but large η or γ may cause oscillations or divergence.";
+      if (gamma > 0) text += "<br/>Try increasing η and γ to see underdamped oscillations.";
+    }
+    text += "<br/><br/>Current x ≈ <b>" + xs[k].toFixed(4) + "</b>";
+    if (diverged) text += "<br/><span style='color:#b91c1c'>Trajectory diverged for these settings.</span>";
+    summary.innerHTML = text;
+  }
+
+  function stopAnim() {
+    playing = false;
+    playBtn.textContent = "Play";
+    if (raf) cancelAnimationFrame(raf);
+    raf = null;
+  }
+
+  function animate() {
+    if (!playing || !sim) return;
+    tickCounter++;
+    const speed = Number(spdEl.value);
+    const threshold = Math.max(1, 10 - speed);
+    if (tickCounter % threshold === 0) {
+      frame++;
+      if (frame >= sim.xs.length) {
+        frame = sim.xs.length - 1;
+        draw();
+        stopAnim();
+        return;
+      }
+      draw();
+    }
+    raf = requestAnimationFrame(animate);
+  }
+
+  function playPause() {
+    if (!sim) recompute();
+    if (!playing) {
+      playing = true;
+      playBtn.textContent = "Pause";
+      tickCounter = 0;
+      raf = requestAnimationFrame(animate);
+    } else {
+      stopAnim();
+    }
+  }
+
+  function stepOnce() {
+    stopAnim();
+    if (!sim) recompute();
+    frame = clamp(frame + 1, 0, sim.xs.length - 1);
+    draw();
+  }
+
+  function resetFrame() {
+    stopAnim();
+    frame = 0;
+    draw();
+  }
+
+  function stableDefaults() {
+    etaEl.value = "0.20";
+    gamEl.value = "0.80";
+    TEl.value = "30";
+    algEl.value = "gd";
+    updateLabels();
+    recompute();
+    frame = 0;
+    draw();
+  }
+
+  [algEl, etaEl, gamEl, TEl, spdEl].forEach(el => {
+    el.addEventListener("input", () => {
+      updateLabels();
+      recompute();
+      frame = 0;
+      draw();
+    });
+  });
+
+  playBtn.addEventListener("click", playPause);
+  stepBtn.addEventListener("click", stepOnce);
+  resetBtn.addEventListener("click", resetFrame);
+  stableBtn.addEventListener("click", stableDefaults);
+
+  updateLabels();
+  recompute();
+  draw();
+})();
+</script>
+</body>
+</html>
