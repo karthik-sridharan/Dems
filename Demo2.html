@@ -1,0 +1,408 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>1D GD vs Momentum: x^4 - 0.5 x^2 + 0.1 x</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 8px 0; }
+    .small { color: #444; font-size: 13px; line-height: 1.35; }
+    .wrap { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .left { flex: 1 1 760px; min-width: 320px; }
+    .right { width: min(360px, 100%); }
+    canvas { width: 100%; display: block; border: 1px solid #d8d8d8; border-radius: 8px; background: #fff; }
+    #funcCanvas { height: 420px; }
+    #timeCanvas { height: 250px; margin-top: 12px; }
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    input[type=range] { width: 100%; }
+    button { width: 100%; padding: 10px; margin-top: 10px; font-size: 14px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .legend { margin-top: 10px; font-size: 14px; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 6px; }
+    .box { background: #f7f7f7; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; line-height: 1.35; }
+    code { background: #f3f3f3; padding: 1px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>1D demo: GD vs momentum on f(x)=x⁴ - 0.5x² + 0.1x</h2>
+  <div class="small">
+    This compares plain gradient descent and heavy-ball momentum on the tilted double-well
+    function <code>f(x)=x⁴-0.5x²+0.1x</code>, starting from <code>x₀=1</code>.
+    The derivative is <code>f'(x)=4x³-x+0.1</code>. For small step sizes, GD typically settles in the
+    shallow right local minimum, while momentum can overshoot the barrier and reach the deeper left minimum.
+  </div>
+
+  <div class="wrap">
+    <div class="left">
+      <canvas id="funcCanvas" width="900" height="420"></canvas>
+      <canvas id="timeCanvas" width="900" height="250"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>GD
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#dc2626;"></span>Momentum
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>current iterate
+      </div>
+    </div>
+
+    <div class="right">
+      <label>Initial point</label>
+      <div class="box"><b>x₀ = 1</b> (fixed)</div>
+
+      <label>Step size η: <span id="etaVal"></span></label>
+      <input id="eta" type="range" min="0.001" max="0.080" step="0.001" value="0.020"/>
+
+      <label>Momentum γ: <span id="gamVal"></span></label>
+      <input id="gam" type="range" min="0.00" max="0.99" step="0.01" value="0.95"/>
+
+      <label>Total steps T: <span id="TVal"></span></label>
+      <input id="T" type="range" min="5" max="180" step="1" value="70"/>
+
+      <label>Animation speed: <span id="spdVal"></span></label>
+      <input id="spd" type="range" min="1" max="8" step="1" value="4"/>
+
+      <div class="row2">
+        <button id="playBtn">Play</button>
+        <button id="stepBtn">Step</button>
+      </div>
+      <div class="row2">
+        <button id="resetBtn">Reset</button>
+        <button id="suggestBtn">Suggested defaults</button>
+      </div>
+
+      <div class="box" id="summary"></div>
+
+      <div class="box">
+        <b>What to try</b><br/>
+        Start with <code>η≈0.02</code> and <code>γ≈0.95</code>. You should often see GD settle into the right local minimum
+        near <code>x≈0.44</code>, while momentum crosses the barrier near <code>x≈0.10</code> and reaches the deeper left minimum
+        near <code>x≈-0.54</code>.<br/><br/>
+        Lower <code>γ</code> to make momentum behave more like GD. Increase <code>η</code> too much and both methods can oscillate or diverge.
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const funcCanvas = document.getElementById("funcCanvas");
+  const timeCanvas = document.getElementById("timeCanvas");
+  const fctx = funcCanvas.getContext("2d");
+  const tctx = timeCanvas.getContext("2d");
+
+  const etaEl = document.getElementById("eta");
+  const gamEl = document.getElementById("gam");
+  const TEl = document.getElementById("T");
+  const spdEl = document.getElementById("spd");
+
+  const etaVal = document.getElementById("etaVal");
+  const gamVal = document.getElementById("gamVal");
+  const TVal = document.getElementById("TVal");
+  const spdVal = document.getElementById("spdVal");
+
+  const playBtn = document.getElementById("playBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const suggestBtn = document.getElementById("suggestBtn");
+  const summary = document.getElementById("summary");
+
+  const x0 = 1.0;
+  const f = x => x*x*x*x - 0.5*x*x + 0.1*x;
+  const g = x => 4*x*x*x - x + 0.1;
+
+  let sim = null;
+  let frame = 0;
+  let playing = false;
+  let raf = null;
+  let tickCounter = 0;
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function updateLabels() {
+    etaVal.textContent = Number(etaEl.value).toFixed(3);
+    gamVal.textContent = Number(gamEl.value).toFixed(2);
+    TVal.textContent = String(TEl.value);
+    spdVal.textContent = String(spdEl.value);
+  }
+
+  function recompute() {
+    const eta = Number(etaEl.value);
+    const gamma = Number(gamEl.value);
+    const T = Number(TEl.value);
+
+    let xGD = x0;
+    let xM = x0;
+    let v = 0.0;
+
+    const gd = [xGD];
+    const mom = [xM];
+    let divergedGD = false;
+    let divergedM = false;
+
+    for (let t = 0; t < T; t++) {
+      if (!divergedGD) {
+        const nxt = xGD - eta * g(xGD);
+        if (!isFinite(nxt) || Math.abs(nxt) > 1e6) divergedGD = true;
+        else xGD = nxt;
+      }
+      gd.push(xGD);
+
+      if (!divergedM) {
+        let vv = gamma * v - eta * g(xM);
+        let nxt = xM + vv;
+        if (!isFinite(nxt) || Math.abs(nxt) > 1e6) {
+          divergedM = true;
+          vv = 0;
+        } else {
+          v = vv;
+          xM = nxt;
+        }
+      }
+      mom.push(xM);
+    }
+
+    sim = { gd, mom, divergedGD, divergedM };
+    frame = clamp(frame, 0, gd.length - 1);
+    draw();
+  }
+
+  function drawAxes(ctx, W, H, margin, xmin, xmax, ymin, ymax, xlabel, ylabel) {
+    function sx(x) { return margin.l + (x - xmin) / (xmax - xmin) * (W - margin.l - margin.r); }
+    function sy(y) { return H - margin.b - (y - ymin) / (ymax - ymin) * (H - margin.t - margin.b); }
+
+    ctx.strokeStyle = "#d0d0d0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    if (xmin <= 0 && 0 <= xmax) {
+      const X0 = sx(0);
+      ctx.moveTo(X0, margin.t);
+      ctx.lineTo(X0, H - margin.b);
+    }
+    if (ymin <= 0 && 0 <= ymax) {
+      const Y0 = sy(0);
+      ctx.moveTo(margin.l, Y0);
+      ctx.lineTo(W - margin.r, Y0);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#666";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(xlabel, W - margin.r - 10, H - 8);
+    ctx.save();
+    ctx.translate(12, margin.t + 10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(ylabel, 0, 0);
+    ctx.restore();
+
+    return { sx, sy };
+  }
+
+  function niceBounds() {
+    const xmin = -1.2, xmax = 1.2;
+    let ymin = Infinity, ymax = -Infinity;
+    const n = 600;
+    for (let i = 0; i < n; i++) {
+      const x = xmin + (xmax - xmin) * i / (n - 1);
+      const y = f(x);
+      ymin = Math.min(ymin, y);
+      ymax = Math.max(ymax, y);
+    }
+    const pad = 0.12 * Math.max(1e-6, ymax - ymin);
+    return { xmin, xmax, ymin: ymin - pad, ymax: ymax + pad };
+  }
+
+  function draw() {
+    if (!sim) return;
+    const { gd, mom, divergedGD, divergedM } = sim;
+    const k = clamp(frame, 0, gd.length - 1);
+
+    const W = funcCanvas.width, H = funcCanvas.height;
+    const TW = timeCanvas.width, TH = timeCanvas.height;
+    fctx.clearRect(0, 0, W, H);
+    tctx.clearRect(0, 0, TW, TH);
+
+    const b = niceBounds();
+    const fm = { l: 58, r: 20, t: 24, b: 40 };
+    const ft = drawAxes(fctx, W, H, fm, b.xmin, b.xmax, b.ymin, b.ymax, "x", "f(x)");
+
+    fctx.fillStyle = "#111";
+    fctx.font = "14px system-ui, sans-serif";
+    fctx.fillText("Objective and current iterates", fm.l, 18);
+
+    // function curve
+    fctx.strokeStyle = "#222";
+    fctx.lineWidth = 2;
+    fctx.beginPath();
+    const n = 800;
+    for (let i = 0; i < n; i++) {
+      const x = b.xmin + (b.xmax - b.xmin) * i / (n - 1);
+      const y = f(x);
+      const X = ft.sx(x), Y = ft.sy(y);
+      if (i === 0) fctx.moveTo(X, Y);
+      else fctx.lineTo(X, Y);
+    }
+    fctx.stroke();
+
+    function drawPath(xs, color) {
+      fctx.strokeStyle = color;
+      fctx.lineWidth = 2.5;
+      fctx.beginPath();
+      for (let i = 0; i <= k; i++) {
+        const X = ft.sx(xs[i]), Y = ft.sy(f(xs[i]));
+        if (i === 0) fctx.moveTo(X, Y);
+        else fctx.lineTo(X, Y);
+      }
+      fctx.stroke();
+
+      fctx.globalAlpha = 0.15;
+      const y0 = (b.ymin <= 0 && 0 <= b.ymax) ? ft.sy(0) : H - fm.b;
+      for (let i = 0; i <= k; i++) {
+        const X = ft.sx(xs[i]);
+        fctx.beginPath();
+        fctx.moveTo(X, y0 - 5);
+        fctx.lineTo(X, y0 + 5);
+        fctx.strokeStyle = color;
+        fctx.stroke();
+      }
+      fctx.globalAlpha = 1.0;
+
+      const xcur = xs[k], ycur = f(xcur);
+      fctx.fillStyle = color;
+      fctx.beginPath();
+      fctx.arc(ft.sx(xcur), ft.sy(ycur), 5.5, 0, 2*Math.PI);
+      fctx.fill();
+      fctx.strokeStyle = "#111";
+      fctx.lineWidth = 1;
+      fctx.stroke();
+    }
+
+    drawPath(gd, "#2563eb");
+    drawPath(mom, "#dc2626");
+
+    // Bottom plot: x_t vs iteration
+    let yMin = Math.min(...gd, ...mom);
+    let yMax = Math.max(...gd, ...mom);
+    const pad = 0.12 * Math.max(1e-6, yMax - yMin);
+    yMin -= pad;
+    yMax += pad;
+
+    const tm = { l: 58, r: 20, t: 24, b: 36 };
+    const tt = drawAxes(tctx, TW, TH, tm, 0, gd.length - 1, yMin, yMax, "iteration", "x_t");
+    tctx.fillStyle = "#111";
+    tctx.font = "14px system-ui, sans-serif";
+    tctx.fillText("Position vs iteration", tm.l, 18);
+
+    function drawTime(arr, color) {
+      tctx.strokeStyle = color;
+      tctx.lineWidth = 2.5;
+      tctx.beginPath();
+      for (let i = 0; i <= k; i++) {
+        const X = tt.sx(i), Y = tt.sy(arr[i]);
+        if (i === 0) tctx.moveTo(X, Y);
+        else tctx.lineTo(X, Y);
+      }
+      tctx.stroke();
+
+      tctx.fillStyle = color;
+      tctx.beginPath();
+      tctx.arc(tt.sx(k), tt.sy(arr[k]), 4.5, 0, 2*Math.PI);
+      tctx.fill();
+    }
+
+    drawTime(gd, "#2563eb");
+    drawTime(mom, "#dc2626");
+
+    // summary
+    const gdCur = gd[k], momCur = mom[k];
+    let text = "<b>Behavior</b><br/>";
+    text += "GD follows the local slope only, so it usually falls into the nearby right well. ";
+    text += "Momentum keeps a velocity term, so it may overshoot the shallow right minimum and cross into the deeper left well.";
+    text += "<br/><br/>Current GD x ≈ <b>" + gdCur.toFixed(4) + "</b>";
+    text += "<br/>Current momentum x ≈ <b>" + momCur.toFixed(4) + "</b>";
+    if (divergedGD) text += "<br/><span style='color:#b91c1c'>GD diverged for these settings.</span>";
+    if (divergedM) text += "<br/><span style='color:#b91c1c'>Momentum diverged for these settings.</span>";
+    summary.innerHTML = text;
+  }
+
+  function stopAnim() {
+    playing = false;
+    playBtn.textContent = "Play";
+    if (raf) cancelAnimationFrame(raf);
+    raf = null;
+  }
+
+  function animate() {
+    if (!playing || !sim) return;
+    tickCounter++;
+    const speed = Number(spdEl.value);
+    const threshold = Math.max(1, 10 - speed);
+    if (tickCounter % threshold === 0) {
+      frame++;
+      if (frame >= sim.gd.length) {
+        frame = sim.gd.length - 1;
+        draw();
+        stopAnim();
+        return;
+      }
+      draw();
+    }
+    raf = requestAnimationFrame(animate);
+  }
+
+  function playPause() {
+    if (!sim) recompute();
+    if (!playing) {
+      playing = true;
+      playBtn.textContent = "Pause";
+      tickCounter = 0;
+      raf = requestAnimationFrame(animate);
+    } else {
+      stopAnim();
+    }
+  }
+
+  function stepOnce() {
+    stopAnim();
+    if (!sim) recompute();
+    frame = clamp(frame + 1, 0, sim.gd.length - 1);
+    draw();
+  }
+
+  function resetFrame() {
+    stopAnim();
+    frame = 0;
+    draw();
+  }
+
+  function suggestedDefaults() {
+    etaEl.value = "0.020";
+    gamEl.value = "0.95";
+    TEl.value = "70";
+    updateLabels();
+    recompute();
+    frame = 0;
+    draw();
+  }
+
+  [etaEl, gamEl, TEl, spdEl].forEach(el => {
+    el.addEventListener("input", () => {
+      updateLabels();
+      recompute();
+      frame = 0;
+      draw();
+    });
+  });
+
+  playBtn.addEventListener("click", playPause);
+  stepBtn.addEventListener("click", stepOnce);
+  resetBtn.addEventListener("click", resetFrame);
+  suggestBtn.addEventListener("click", suggestedDefaults);
+
+  updateLabels();
+  recompute();
+  draw();
+})();
+</script>
+</body>
+</html>
