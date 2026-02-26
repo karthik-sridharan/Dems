@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>SGD Noise Demo (1D)</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:16px; }
+    #plot { width: 900px; height: 520px; }
+    .panel { width: 900px; max-width: 900px; }
+    label { display:block; margin-top:10px; }
+    input[type=range] { width: 100%; }
+    button { margin-top: 10px; padding: 10px 14px; }
+  </style>
+</head>
+<body>
+<h2>SGD in 1D: noise + minibatching</h2>
+<div id="plot"></div>
+<div class="panel">
+  <label>Learning rate η: <span id="etaVal"></span></label>
+  <input id="eta" type="range" min="0.001" max="0.2" step="0.001" value="0.05"/>
+
+  <label>Minibatch size b: <span id="bVal"></span> (noise std ∝ 1/√b)</label>
+  <input id="b" type="range" min="1" max="128" step="1" value="1"/>
+
+  <label>Steps T: <span id="TVal"></span></label>
+  <input id="T" type="range" min="20" max="500" step="10" value="200"/>
+
+  <button id="run">Run</button>
+</div>
+
+<script>
+  // Objective: f(w) = 0.5*(w-2)^2  (min at w*=2)
+  function f(w){ return 0.5*(w-2)*(w-2); }
+  function grad(w){ return (w-2); }
+
+  // Stochastic gradient: grad(w) + noise, noise ~ N(0, sigma^2/b)
+  function randn(){
+    // Box-Muller
+    let u=0, v=0;
+    while(u===0) u=Math.random();
+    while(v===0) v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  function runSGD(eta, b, T){
+    let w = -3.0;
+    const sigma = 2.0;               // base noise level
+    const ws=[w], fs=[f(w)];
+    for(let t=0;t<T;t++){
+      const noise = (sigma/Math.sqrt(b))*randn();
+      const g = grad(w) + noise;
+      w = w - eta*g;
+      ws.push(w); fs.push(f(w));
+    }
+    return {ws, fs};
+  }
+
+  const eta = document.getElementById("eta");
+  const b = document.getElementById("b");
+  const T = document.getElementById("T");
+  const etaVal = document.getElementById("etaVal");
+  const bVal = document.getElementById("bVal");
+  const TVal = document.getElementById("TVal");
+
+  function updateLabels(){
+    etaVal.textContent = (+eta.value).toFixed(3);
+    bVal.textContent = (+b.value).toFixed(0);
+    TVal.textContent = (+T.value).toFixed(0);
+  }
+
+  function render(){
+    updateLabels();
+    const out = runSGD(+eta.value, +b.value, +T.value);
+
+    const t = Array.from({length: out.ws.length}, (_,i)=>i);
+    const traceW = {type:"scatter", mode:"lines", x:t, y:out.ws, name:"w_t"};
+    const traceF = {type:"scatter", mode:"lines", x:t, y:out.fs, name:"f(w_t)", yaxis:"y2"};
+
+    Plotly.newPlot("plot", [traceW, traceF], {
+      margin:{l:50,r:50,b:40,t:40},
+      title:"Parameter path (left axis) and objective value (right axis)",
+      xaxis:{title:"iteration"},
+      yaxis:{title:"w_t"},
+      yaxis2:{title:"f(w_t)", overlaying:"y", side:"right"},
+      showlegend:true
+    }, {displayModeBar:false});
+  }
+
+  document.getElementById("run").onclick = render;
+  [eta,b,T].forEach(el => el.oninput = render);
+  render();
+</script>
+</body>
+</html>

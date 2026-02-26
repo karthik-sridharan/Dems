@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Optimization Demo: GD vs Momentum vs Newton (Quadratic)</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
+    .row { display:flex; gap:16px; align-items:flex-start; }
+    #plot { width: 900px; height: 620px; }
+    .panel { width: 320px; }
+    label { display:block; margin-top:10px; }
+    input[type=range] { width: 100%; }
+    button { margin-top: 12px; width: 100%; padding: 10px; }
+    select { width:100%; padding:8px; }
+    .small { color:#555; font-size: 13px; line-height:1.35; }
+  </style>
+</head>
+<body>
+<h2>GD vs Momentum vs Nesterov vs Newton on a Rotated Quadratic</h2>
+<div class="row">
+  <div id="plot"></div>
+  <div class="panel">
+    <label>Algorithm</label>
+    <select id="alg">
+      <option value="gd">Gradient Descent</option>
+      <option value="mom">Momentum (Heavy-ball)</option>
+      <option value="nag">Nesterov</option>
+      <option value="newton">Newton (exact for quadratic)</option>
+    </select>
+
+    <label>Step size η: <span id="etaVal"></span></label>
+    <input id="eta" type="range" min="0.001" max="0.2" step="0.001" value="0.03"/>
+
+    <label>Momentum γ: <span id="gamVal"></span></label>
+    <input id="gam" type="range" min="0.0" max="0.99" step="0.01" value="0.9"/>
+
+    <label>Condition number κ: <span id="kappaVal"></span></label>
+    <input id="kappa" type="range" min="1" max="200" step="1" value="80"/>
+
+    <label>Rotation (deg): <span id="rotVal"></span></label>
+    <input id="rot" type="range" min="0" max="80" step="1" value="35"/>
+
+    <label>Iterations T: <span id="TVal"></span></label>
+    <input id="T" type="range" min="5" max="120" step="1" value="45"/>
+
+    <button id="run">Run</button>
+    <button id="reset">Reset start point</button>
+
+    <p class="small">
+      Click on the plot to set the start point. Newton solves a quadratic in one step (in exact arithmetic),
+      while GD oscillates in ravines; momentum smooths the oscillation.
+    </p>
+  </div>
+</div>
+
+<script>
+  // --- Linear algebra helpers (2D) ---
+  function rotM(theta){
+    const c=Math.cos(theta), s=Math.sin(theta);
+    return [[c,-s],[s,c]];
+  }
+  function matMul(A,B){
+    return [
+      [A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
+      [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]
+    ];
+  }
+  function matTVec(A,x){
+    return [A[0][0]*x[0]+A[0][1]*x[1], A[1][0]*x[0]+A[1][1]*x[1]];
+  }
+  function dot(a,b){ return a[0]*b[0]+a[1]*b[1]; }
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1]]; }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
+  function scale(c,a){ return [c*a[0], c*a[1]]; }
+
+  function inv2(A){
+    const det = A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    return [[ A[1][1]/det, -A[0][1]/det],[-A[1][0]/det, A[0][0]/det]];
+  }
+
+  // --- Quadratic f(x)=0.5 x^T Q x, grad=Qx ---
+  function makeQ(kappa, deg){
+    const theta = deg*Math.PI/180;
+    const R = rotM(theta);
+    const RT = [[R[0][0],R[1][0]],[R[0][1],R[1][1]]];
+    const D = [[1,0],[0,kappa]];
+    return matMul(matMul(RT,D),R);
+  }
+  function f(Q,x){ return 0.5*dot(x, matTVec(Q,x)); }
+  function g(Q,x){ return matTVec(Q,x); }
+
+  // --- Run algorithms ---
+  function runAlg(Q, x0, alg, eta, gamma, T){
+    let x = x0.slice();
+    let v = [0,0];
+    const xs = [x.slice()];
+    const Qinv = inv2(Q);
+    for(let t=0;t<T;t++){
+      if(alg==="gd"){
+        x = sub(x, scale(eta, g(Q,x)));
+      } else if(alg==="mom"){
+        v = sub(scale(gamma, v), scale(eta, g(Q,x)));
+        x = add(x, v);
+      } else if(alg==="nag"){
+        const y = add(x, scale(gamma, v));
+        v = sub(scale(gamma, v), scale(eta, g(Q,y)));
+        x = add(x, v);
+      } else if(alg==="newton"){
+        // x <- x - Q^{-1} Q x = 0 (one step)
+        const step = matTVec(Qinv, g(Q,x));
+        x = sub(x, step);
+      }
+      xs.push(x.slice());
+    }
+    return xs;
+  }
+
+  // --- Plot grid ---
+  let start = [3.0, 2.0];
+
+  function gridData(Q){
+    const xs = [];
+    const ys = [];
+    const z = [];
+    const n=120;
+    const lo=-3.5, hi=3.5;
+    for(let i=0;i<n;i++){
+      xs.push(lo + (hi-lo)*i/(n-1));
+      ys.push(lo + (hi-lo)*i/(n-1));
+    }
+    for(let j=0;j<n;j++){
+      const row=[];
+      for(let i=0;i<n;i++){
+        row.push(f(Q, [xs[i], ys[j]]));
+      }
+      z.push(row);
+    }
+    return {xs, ys, z};
+  }
+
+  function updateLabels(){
+    etaVal.textContent = (+eta.value).toFixed(3);
+    gamVal.textContent = (+gam.value).toFixed(2);
+    kappaVal.textContent = (+kappa.value).toFixed(0);
+    rotVal.textContent = (+rot.value).toFixed(0);
+    TVal.textContent = (+T.value).toFixed(0);
+  }
+
+  const eta = document.getElementById("eta");
+  const gam = document.getElementById("gam");
+  const kappa = document.getElementById("kappa");
+  const rot = document.getElementById("rot");
+  const T = document.getElementById("T");
+  const alg = document.getElementById("alg");
+  const etaVal = document.getElementById("etaVal");
+  const gamVal = document.getElementById("gamVal");
+  const kappaVal = document.getElementById("kappaVal");
+  const rotVal = document.getElementById("rotVal");
+  const TVal = document.getElementById("TVal");
+
+  function render(){
+    updateLabels();
+    const Q = makeQ(+kappa.value, +rot.value);
+    const gd = gridData(Q);
+    const xs = runAlg(Q, start, alg.value, +eta.value, +gam.value, +T.value);
+    const xtrace = xs.map(p=>p[0]);
+    const ytrace = xs.map(p=>p[1]);
+
+    const contour = {
+      type: "contour",
+      x: gd.xs,
+      y: gd.ys,
+      z: gd.z,
+      contours: { coloring: "lines" },
+      line: { width: 1 },
+      showscale: false
+    };
+    const path = {
+      type:"scatter",
+      mode:"lines+markers",
+      x: xtrace,
+      y: ytrace,
+      marker: { size: 6 },
+      line: { width: 3 },
+      name: "trajectory"
+    };
+    const opt = {
+      type:"scatter",
+      mode:"markers",
+      x:[0], y:[0],
+      marker:{ size: 12, symbol:"star" },
+      name:"optimum"
+    };
+    Plotly.newPlot("plot", [contour, path, opt], {
+      margin:{l:40,r:10,b:40,t:40},
+      title: "Click to set start point",
+      xaxis:{title:"x1", range:[-3.6,3.6]},
+      yaxis:{title:"x2", range:[-3.6,3.6], scaleanchor:"x"},
+      showlegend:false
+    }, {displayModeBar:false});
+
+    const plotDiv = document.getElementById("plot");
+    plotDiv.on('plotly_click', (data) => {
+      const p = data.points[0];
+      start = [p.x, p.y];
+      render();
+    });
+  }
+
+  document.getElementById("run").onclick = render;
+  document.getElementById("reset").onclick = () => { start = [3.0,2.0]; render(); };
+  [eta,gam,kappa,rot,T,alg].forEach(el => el.oninput = render);
+
+  render();
+</script>
+</body>
+</html>
