@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Midterm Jeopardy</title>
+  <style>
+    :root {
+      --bg: #07142e;
+      --panel: #0b2d85;
+      --panel-dark: #08215f;
+      --gold: #ffcf4d;
+      --text: #f7f8fb;
+      --muted: #c7d4ff;
+      --used: #33405f;
+      --accent: #7ec8ff;
+      --danger: #b64040;
+      --success: #28844f;
+      --shadow: 0 10px 28px rgba(0,0,0,0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, #123a92 0%, var(--bg) 45%, #040c1d 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      padding: 18px;
+    }
+
+    .wrap {
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .titlebox {
+      flex: 1 1 420px;
+      min-width: 280px;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #d9e7ff;
+      color: #132c66;
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: #392400;
+    }
+
+    .btn-danger {
+      background: #ffcdc7;
+      color: #6d100a;
+    }
+
+    .btn-success {
+      background: #d4ffe0;
+      color: #085c28;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .team {
+      background: rgba(6, 20, 50, 0.75);
+      border: 2px solid rgba(126, 200, 255, 0.35);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .team input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .score {
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      font-weight: 900;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .team-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .team-controls button {
+      flex: 1 1 100px;
+      min-width: 0;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      box-shadow: none;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      background: rgba(0,0,0,0.18);
+      padding: 8px;
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .cat, .tile {
+      min-height: 100px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .cat {
+      background: linear-gradient(180deg, #1746b8 0%, #0a2570 100%);
+      font-size: clamp(1rem, 1.6vw, 1.35rem);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      min-height: 120px;
+    }
+
+    .tile {
+      background: linear-gradient(180deg, #1144c7 0%, #09276f 100%);
+      color: var(--gold);
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 900;
+      border: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .tile.used {
+      background: linear-gradient(180deg, #48536f 0%, #323b4f 100%);
+      color: #95a5d0;
+      cursor: default;
+      opacity: 0.82;
+    }
+
+    .tile:focus-visible {
+      outline: 4px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(1, 7, 22, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      z-index: 20;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(1200px, 100%);
+      min-height: min(78vh, 760px);
+      background: linear-gradient(180deg, #103684 0%, #0a1d4e 100%);
+      border: 3px solid rgba(255, 207, 77, 0.55);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+
+    .question-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .question-meta {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .question-category {
+      font-size: clamp(1rem, 2vw, 1.35rem);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .question-points {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .question-box {
+      flex: 1;
+      background: rgba(4, 14, 38, 0.34);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: clamp(20px, 4vw, 44px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: auto;
+    }
+
+    .question-text {
+      font-size: clamp(1.6rem, 2.8vw, 2.55rem);
+      line-height: 1.35;
+      font-weight: 700;
+      max-width: 1000px;
+    }
+
+    .question-text ol,
+    .question-text ul {
+      text-align: left;
+      display: inline-block;
+      margin: 18px auto 0 auto;
+    }
+
+    .question-bottom {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .current-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .award-panel {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .award-btn {
+      background: rgba(255,255,255,0.12);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: none;
+    }
+
+    .award-btn.plus {
+      background: rgba(54, 184, 104, 0.2);
+      border-color: rgba(96, 255, 157, 0.24);
+    }
+
+    .award-btn.minus {
+      background: rgba(214, 76, 76, 0.18);
+      border-color: rgba(255, 146, 146, 0.24);
+    }
+
+    .tiny {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1050px) {
+      .board {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .scoreboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .cat {
+        min-height: 90px;
+      }
+      .tile {
+        min-height: 84px;
+      }
+      .modal {
+        padding: 16px;
+      }
+      .question-bottom {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="titlebox">
+        <h1>Midterm Jeopardy</h1>
+        <p class="subtitle">Offline classroom version. Click a clue to display the question. Solutions are intentionally omitted.</p>
+      </div>
+      <div class="controls">
+        <button class="btn-secondary" id="fullscreenBtn">Fullscreen</button>
+        <button class="btn-secondary" id="resetScoresBtn">Reset Scores</button>
+        <button class="btn-danger" id="resetBoardBtn">Reset Board</button>
+      </div>
+    </div>
+
+    <div class="scoreboard" id="scoreboard"></div>
+
+    <div class="board" id="board"></div>
+
+    <div class="footer-note">
+      Click a clue to open it. Scores and used clues are saved in this browser. Keyboard: <strong>Esc</strong> closes a clue, <strong>F</strong> toggles fullscreen, <strong>R</strong> resets the board.
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="questionCategory">
+      <div class="question-top">
+        <div class="question-meta">
+          <div class="question-category" id="questionCategory"></div>
+          <div class="question-points" id="questionPoints"></div>
+        </div>
+        <div class="tiny">No solution is stored in this file.</div>
+      </div>
+
+      <div class="question-box">
+        <div class="question-text" id="questionText"></div>
+      </div>
+
+      <div class="question-bottom">
+        <div class="current-actions">
+          <button class="btn-secondary" id="closeBtn">Return Without Marking</button>
+          <button class="btn-primary" id="markUsedBtn">Mark Used &amp; Return</button>
+        </div>
+        <div class="award-panel" id="awardPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const categories = [
+  {
+    "title": "Naïve Bayes",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "Why is Naïve Bayes called <em>generative</em>, and what is its discriminative counterpart in certain settings?"
+      },
+      {
+        "points": 20,
+        "question_html": "[T/F] Naïve Bayes assumes that the features are independent."
+      },
+      {
+        "points": 30,
+        "question_html": "[T/F] If the training dataset is linearly separable, Naïve Bayes will obtain zero training error."
+      },
+      {
+        "points": 40,
+        "question_html": "Give two possible ways to estimate parameters in the models for <code>p(x<sub>α</sub> | y)</code> in Naïve Bayes. How do they differ?"
+      },
+      {
+        "points": 50,
+        "question_html": "Are Naïve Bayes decision boundaries always linear in the Gaussian case? If not, is there a simple condition that makes them linear?"
+      }
+    ]
+  },
+  {
+    "title": "k-NN",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "[T/F] k-NN is a generative classifier."
+      },
+      {
+        "points": 20,
+        "question_html": "What is the main assumption behind nearest-neighbor classification?"
+      },
+      {
+        "points": 30,
+        "question_html": "Name one advantage of k-NN over logistic regression, and one advantage of logistic regression over k-NN."
+      },
+      {
+        "points": 40,
+        "question_html": "Why can k-NN still perform well on high-dimensional faces and handwritten-digits data?"
+      },
+      {
+        "points": 50,
+        "question_html": "Assume you have points in 2D within the unit circle and a hyperplane that dissects the circle. As you add dimensions with random feature values, how are the pairwise point distances affected? How are the distances to the hyperplane affected?"
+      }
+    ]
+  },
+  {
+    "title": "Regression",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "[T/F] Linear regression can be interpreted as a generative model."
+      },
+      {
+        "points": 20,
+        "question_html": "For each of the following, say whether the MLE solution can be written in closed form:<ol><li>Logistic regression</li><li>Least-squares regression</li></ol>"
+      },
+      {
+        "points": 30,
+        "question_html": "In regression, give one reason to prefer the squared loss over the absolute loss, and one reason to prefer the absolute loss over the squared loss."
+      },
+      {
+        "points": 40,
+        "question_html": "Newton's method can be used to solve which of the following regression problems in a constant number of iterations?<ol><li>Linear regression</li><li>Logistic regression</li><li>MAP / Ridge regression</li></ol>"
+      },
+      {
+        "points": 50,
+        "question_html": "When would you prefer each of the following methods for solving linear regression?<ol><li>Newton's method</li><li>Closed-form solution</li><li>Stochastic gradient descent</li><li>Gradient descent</li></ol>"
+      }
+    ]
+  },
+  {
+    "title": "Optimization",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "[T/F] Newton's method always converges, but sometimes it is slower than gradient descent."
+      },
+      {
+        "points": 20,
+        "question_html": "Name two reasons one might prefer stochastic gradient descent to gradient descent or Newton's method."
+      },
+      {
+        "points": 30,
+        "question_html": "[T/F] Adagrad always converges faster than gradient descent."
+      },
+      {
+        "points": 40,
+        "question_html": "Name two distinct reasons why you might not be able to use Newton's method on a particular data set, independent of convergence."
+      },
+      {
+        "points": 50,
+        "question_html": "For each method below, mention one scenario where it will work well:<ol><li>Gradient descent</li><li>Newton's method</li><li>Gradient descent with momentum</li><li>Stochastic gradient descent</li><li>Adagrad</li></ol>"
+      }
+    ]
+  },
+  {
+    "title": "General",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "Why is your test error typically higher than your validation error?"
+      },
+      {
+        "points": 20,
+        "question_html": "Classify each of the following as <em>discriminative</em> or <em>generative</em>:<ul><li>k-NN</li><li>Linear regression</li><li>Logistic regression</li><li>Perceptron</li><li>Naïve Bayes</li></ul>"
+      },
+      {
+        "points": 30,
+        "question_html": "What is the Perceptron update after a positive input point <code>x</code> is misclassified?"
+      },
+      {
+        "points": 40,
+        "question_html": "Which algorithm would you expect to result in lower test-time classification error, k-NN or logistic regression, for each task?<ol><li>Text documents classified by topic</li><li>Given patients' vital signs (15 measurements), predict disease</li><li>Handwritten digits classified as 3 vs. 8</li></ol>"
+      },
+      {
+        "points": 50,
+        "question_html": "For each algorithm, name one assumption it makes on the data:<ul><li>k-NN</li><li>Naïve Bayes</li><li>Logistic regression</li><li>Linear regression</li><li>Perceptron</li></ul>"
+      }
+    ]
+  },
+  {
+    "title": "K-means / PCA",
+    "questions": [
+      {
+        "points": 10,
+        "question_html": "[T/F] K-means and PCA require labeled data."
+      },
+      {
+        "points": 20,
+        "question_html": "Give an example of how to choose <code>k</code>, the number of clusters, when using k-means."
+      },
+      {
+        "points": 30,
+        "question_html": "Why do we subtract the mean from the data before computing principal components, i.e. before equating them to eigenvectors?"
+      },
+      {
+        "points": 40,
+        "question_html": "[T/F] Lloyd's algorithm always yields the optimal clustering for a given <code>k</code>. If not, why not?"
+      },
+      {
+        "points": 50,
+        "question_html": "Describe one advantage and one disadvantage of each of the following clustering algorithms:<ul><li>K-means</li><li>Gaussian Mixture Models</li></ul>"
+      }
+    ]
+  }
+];
+
+    const STORAGE_KEY = "midterm_jeopardy_sp25_v1";
+    const TEAM_COUNT = 3;
+
+    const defaultState = () => {
+      const used = {};
+      categories.forEach((cat, ci) => {
+        cat.questions.forEach((_, qi) => {
+          used[`${ci}-${qi}`] = false;
+        });
+      });
+      return {
+        used,
+        scores: Array.from({ length: TEAM_COUNT }, () => 0),
+        names: Array.from({ length: TEAM_COUNT }, (_, i) => `Team ${i + 1}`)
+      };
+    };
+
+    let state = loadState();
+    let currentClue = null;
+
+    const boardEl = document.getElementById("board");
+    const scoreboardEl = document.getElementById("scoreboard");
+    const overlayEl = document.getElementById("overlay");
+    const questionCategoryEl = document.getElementById("questionCategory");
+    const questionPointsEl = document.getElementById("questionPoints");
+    const questionTextEl = document.getElementById("questionText");
+    const awardPanelEl = document.getElementById("awardPanel");
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        const fresh = defaultState();
+        return {
+          used: { ...fresh.used, ...(parsed.used || {}) },
+          scores: Array.isArray(parsed.scores) ? parsed.scores.slice(0, TEAM_COUNT).concat(Array(Math.max(0, TEAM_COUNT - parsed.scores.length)).fill(0)).slice(0, TEAM_COUNT) : fresh.scores,
+          names: Array.isArray(parsed.names) ? parsed.names.slice(0, TEAM_COUNT).concat(Array.from({length: Math.max(0, TEAM_COUNT - parsed.names.length)}, (_, i) => `Team ${parsed.names.length + i + 1}`)).slice(0, TEAM_COUNT) : fresh.names
+        };
+      } catch (err) {
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function renderScoreboard() {
+      scoreboardEl.innerHTML = "";
+      state.scores.forEach((score, index) => {
+        const card = document.createElement("div");
+        card.className = "team";
+        card.innerHTML = `
+          <input type="text" value="${escapeHtml(state.names[index])}" aria-label="Team name ${index + 1}" />
+          <div class="score">${formatScore(score)}</div>
+          <div class="team-controls">
+            <button class="btn-success">+10</button>
+            <button class="btn-danger">-10</button>
+          </div>
+        `;
+
+        const input = card.querySelector("input");
+        input.addEventListener("input", (e) => {
+          state.names[index] = e.target.value || `Team ${index + 1}`;
+          saveState();
+          if (currentClue) renderAwardPanel();
+        });
+
+        const [plusBtn, minusBtn] = card.querySelectorAll(".team-controls button");
+        plusBtn.addEventListener("click", () => updateScore(index, 10));
+        minusBtn.addEventListener("click", () => updateScore(index, -10));
+
+        scoreboardEl.appendChild(card);
+      });
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      categories.forEach((category, ci) => {
+        const catEl = document.createElement("div");
+        catEl.className = "cat";
+        catEl.textContent = category.title;
+        boardEl.appendChild(catEl);
+      });
+
+      const maxRows = Math.max(...categories.map(c => c.questions.length));
+      for (let qi = 0; qi < maxRows; qi++) {
+        categories.forEach((category, ci) => {
+          const clue = category.questions[qi];
+          const key = `${ci}-${qi}`;
+
+          if (!clue) {
+            const spacer = document.createElement("div");
+            spacer.className = "cat";
+            spacer.style.visibility = "hidden";
+            boardEl.appendChild(spacer);
+            return;
+          }
+
+          const tile = document.createElement("button");
+          tile.className = "tile" + (state.used[key] ? " used" : "");
+          tile.textContent = clue.points;
+          tile.disabled = state.used[key];
+          tile.setAttribute("aria-label", `${category.title} for ${clue.points}`);
+          tile.addEventListener("click", () => openClue(ci, qi));
+          boardEl.appendChild(tile);
+        });
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function formatScore(n) {
+      return n > 0 ? `+${n}` : `${n}`;
+    }
+
+    function updateScore(teamIndex, delta) {
+      state.scores[teamIndex] += delta;
+      saveState();
+      renderScoreboard();
+      if (currentClue) renderAwardPanel();
+    }
+
+    function renderAwardPanel() {
+      awardPanelEl.innerHTML = "";
+      if (!currentClue) return;
+      const value = categories[currentClue.ci].questions[currentClue.qi].points;
+
+      state.names.forEach((name, index) => {
+        const plus = document.createElement("button");
+        plus.className = "award-btn plus";
+        plus.textContent = `${name || `Team ${index + 1}`} +${value}`;
+        plus.addEventListener("click", () => updateScore(index, value));
+
+        const minus = document.createElement("button");
+        minus.className = "award-btn minus";
+        minus.textContent = `${name || `Team ${index + 1}`} -${value}`;
+        minus.addEventListener("click", () => updateScore(index, -value));
+
+        awardPanelEl.appendChild(plus);
+        awardPanelEl.appendChild(minus);
+      });
+    }
+
+    function openClue(ci, qi) {
+      currentClue = { ci, qi };
+      const category = categories[ci];
+      const clue = category.questions[qi];
+      questionCategoryEl.textContent = category.title;
+      questionPointsEl.textContent = `${clue.points} points`;
+      questionTextEl.innerHTML = clue.question_html;
+      renderAwardPanel();
+      overlayEl.classList.add("open");
+      overlayEl.setAttribute("aria-hidden", "false");
+    }
+
+    function closeOverlay(markUsed = false) {
+      if (markUsed && currentClue) {
+        const key = `${currentClue.ci}-${currentClue.qi}`;
+        state.used[key] = true;
+        saveState();
+        renderBoard();
+      }
+      overlayEl.classList.remove("open");
+      overlayEl.setAttribute("aria-hidden", "true");
+      currentClue = null;
+    }
+
+    function resetBoard() {
+      if (!confirm("Reset all clues to unused?")) return;
+      state.used = defaultState().used;
+      saveState();
+      renderBoard();
+    }
+
+    function resetScores() {
+      if (!confirm("Reset all team names and scores?")) return;
+      const fresh = defaultState();
+      state.scores = fresh.scores;
+      state.names = fresh.names;
+      saveState();
+      renderScoreboard();
+      if (currentClue) renderAwardPanel();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    }
+
+    document.getElementById("closeBtn").addEventListener("click", () => closeOverlay(false));
+    document.getElementById("markUsedBtn").addEventListener("click", () => closeOverlay(true));
+    document.getElementById("resetBoardBtn").addEventListener("click", resetBoard);
+    document.getElementById("resetScoresBtn").addEventListener("click", resetScores);
+    document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
+
+    overlayEl.addEventListener("click", (e) => {
+      if (e.target === overlayEl) closeOverlay(false);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlayEl.classList.contains("open")) {
+        closeOverlay(false);
+      } else if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if ((e.key === "r" || e.key === "R") && !overlayEl.classList.contains("open") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        resetBoard();
+      }
+    });
+
+    renderScoreboard();
+    renderBoard();
+  </script>
+</body>
+</html>
