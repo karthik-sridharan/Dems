@@ -1,0 +1,684 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Feature-Lift Classification Demo: 2D → 3D</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 6px 0; }
+    .small { color:#444; font-size:13px; line-height:1.35; }
+    .wrap { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+    .col { flex:1 1 520px; min-width:320px; }
+    canvas { width:100%; display:block; border:1px solid #d8d8d8; border-radius:10px; background:#fff; }
+    #xyCanvas { height:520px; }
+    #featCanvas { height:520px; }
+    label { display:block; margin-top:10px; font-size:14px; }
+    input[type=text], select { width:100%; padding:8px; font-size:14px; box-sizing:border-box; }
+    input[type=range] { width:100%; }
+    button { width:100%; padding:10px; margin-top:10px; font-size:14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .box { background:#f7f7f7; padding:10px; border-radius:10px; margin-top:10px; font-size:13px; line-height:1.35; }
+    .legend { margin-top:8px; font-size:14px; }
+    .sw { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+    code { background:#f3f3f3; padding:1px 4px; border-radius:4px; }
+    .err { color:#b91c1c; font-weight:600; }
+  </style>
+</head>
+<body>
+  <h2>Classification via explicit feature lift: 2D points → (φ₁(x), φ₂(x), φ₃(x)) in 3D</h2>
+  <div class="small">
+    Left: click to add labeled 2D points (x₁,x₂). Right: see their lifted coordinates in 3D feature space
+    (φ₁(x₁,x₂), φ₂(x₁,x₂), φ₃(x₁,x₂)). Click “Fit linear classifier” to fit a halfspace in feature space via
+    logistic regression (gradient descent). The induced decision boundary is drawn on the left, and the corresponding
+    separating plane is drawn on the right.
+  </div>
+
+  <div class="wrap">
+    <div class="col">
+      <canvas id="xyCanvas" width="900" height="520"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>class +1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#dc2626;"></span>class −1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>boundary
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Label to add</label>
+          <select id="labelSel">
+            <option value="1">+1</option>
+            <option value="-1">-1</option>
+          </select>
+        </div>
+        <div>
+          <label>Domain</label>
+          <select id="rangeSel">
+            <option value="-2,2">[-2, 2] × [-2, 2]</option>
+            <option value="-3,3">[-3, 3] × [-3, 3]</option>
+            <option value="-1.5,1.5">[-1.5, 1.5] × [-1.5, 1.5]</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <button id="clearBtn">Clear points</button>
+        <button id="exampleBtn">Load XOR-style example</button>
+      </div>
+
+      <div class="box">
+        <b>Tip:</b> The XOR example is not linearly separable in (x₁,x₂). Try a lift like
+        <code>φ₁=x₁</code>, <code>φ₂=x₂</code>, <code>φ₃=x₁*x₂</code> (or <code>x₁²+x₂²</code>) to help.
+      </div>
+    </div>
+
+    <div class="col">
+      <canvas id="featCanvas" width="900" height="520"></canvas>
+
+      <label>φ₁(x₁,x₂) (X-axis in 3D)</label>
+      <input id="phi1" type="text" value="x1" spellcheck="false"/>
+
+      <label>φ₂(x₁,x₂) (Y-axis in 3D)</label>
+      <input id="phi2" type="text" value="x2" spellcheck="false"/>
+
+      <label>φ₃(x₁,x₂) (Z-axis in 3D)</label>
+      <input id="phi3" type="text" value="x1*x2" spellcheck="false"/>
+
+      <div class="row2">
+        <button id="presetLinear">Preset: (x₁, x₂, 0)</button>
+        <button id="presetQuad">Preset: (x₁, x₂, x₁x₂)</button>
+      </div>
+
+      <label>Learning rate η: <span id="lrVal"></span></label>
+      <input id="lr" type="range" min="0.001" max="1.0" step="0.001" value="0.10"/>
+
+      <label>Steps: <span id="stepsVal"></span></label>
+      <input id="steps" type="range" min="50" max="4000" step="50" value="800"/>
+
+      <label>Weight decay λ: <span id="lamVal"></span></label>
+      <input id="lam" type="range" min="0.0" max="2.0" step="0.001" value="0.01"/>
+
+      <div class="row2">
+        <button id="fitBtn">Fit linear classifier</button>
+        <button id="resetViewBtn">Reset 3D view</button>
+      </div>
+
+      <label>3D zoom: <span id="zoomVal"></span></label>
+      <input id="zoom" type="range" min="140" max="520" step="1" value="320"/>
+
+      <div class="box" id="statusBox"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------------- Data ----------------
+  let pts = []; // {x1,x2,y} y in {-1,+1}
+  let domMin=-2, domMax=2;
+
+  // Feature functions
+  let phi1Expr="x1", phi2Expr="x2", phi3Expr="x1*x2";
+  let phi1Fn=null, phi2Fn=null, phi3Fn=null;
+
+  // Classifier in feature space: score = w·phi + b
+  let clf = null; // {w:[3], b, loss, acc}
+
+  // 3D view
+  let yaw = 0.6, pitch = -0.45;
+  let zoom = 320;
+
+  // ---------------- DOM ----------------
+  const xyCanvas = document.getElementById("xyCanvas");
+  const featCanvas = document.getElementById("featCanvas");
+  const xyctx = xyCanvas.getContext("2d");
+  const fctx = featCanvas.getContext("2d");
+
+  const labelSel = document.getElementById("labelSel");
+  const rangeSel = document.getElementById("rangeSel");
+  const clearBtn = document.getElementById("clearBtn");
+  const exampleBtn = document.getElementById("exampleBtn");
+
+  const phi1Input = document.getElementById("phi1");
+  const phi2Input = document.getElementById("phi2");
+  const phi3Input = document.getElementById("phi3");
+  const presetLinear = document.getElementById("presetLinear");
+  const presetQuad = document.getElementById("presetQuad");
+
+  const lrEl = document.getElementById("lr");
+  const stepsEl = document.getElementById("steps");
+  const lamEl = document.getElementById("lam");
+  const lrVal = document.getElementById("lrVal");
+  const stepsVal = document.getElementById("stepsVal");
+  const lamVal = document.getElementById("lamVal");
+
+  const fitBtn = document.getElementById("fitBtn");
+  const resetViewBtn = document.getElementById("resetViewBtn");
+  const zoomSlider = document.getElementById("zoom");
+  const zoomVal = document.getElementById("zoomVal");
+  const statusBox = document.getElementById("statusBox");
+
+  function updateLabels(){
+    lrVal.textContent = Number(lrEl.value).toFixed(3);
+    stepsVal.textContent = String(stepsEl.value);
+    lamVal.textContent = Number(lamEl.value).toFixed(3);
+    zoom = Number(zoomSlider.value);
+    zoomVal.textContent = String(zoom);
+  }
+
+  // ---------------- Helpers ----------------
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  function escapeHtml(s){ return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+  function dot(a,b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function scale(c,a){ return [c*a[0], c*a[1], c*a[2]]; }
+  function norm(a){ return Math.sqrt(dot(a,a)); }
+  function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+  // ------------- Compile φ -------------
+  function compilePhi(expr){
+    // expose Math funcs; variables x1, x2
+    return new Function("x1","x2","with (Math) { return (" + expr + "); }");
+  }
+
+  function refreshPhi(){
+    phi1Expr = phi1Input.value.trim();
+    phi2Expr = phi2Input.value.trim();
+    phi3Expr = phi3Input.value.trim();
+    try{
+      phi1Fn = compilePhi(phi1Expr);
+      phi2Fn = compilePhi(phi2Expr);
+      phi3Fn = compilePhi(phi3Expr);
+      // test
+      phi1Fn(0.1,0.2); phi2Fn(0.1,0.2); phi3Fn(0.1,0.2);
+      statusBox.innerHTML = "<b>Status</b><br/>φ(x₁,x₂)=(" +
+        "<code>" + escapeHtml(phi1Expr) + "</code>, <code>" + escapeHtml(phi2Expr) + "</code>, <code>" + escapeHtml(phi3Expr) + "</code>).";
+      return true;
+    }catch(e){
+      phi1Fn=phi2Fn=phi3Fn=null;
+      statusBox.innerHTML = "<span class='err'>Error parsing φ:</span> " + escapeHtml(String(e));
+      return false;
+    }
+  }
+
+  function phi(p){
+    const a1 = phi1Fn(p.x1,p.x2);
+    const a2 = phi2Fn(p.x1,p.x2);
+    const a3 = phi3Fn(p.x1,p.x2);
+    return [a1,a2,a3];
+  }
+
+  // ---------------- Fit logistic reg in feature space ----------------
+  function fitClassifier(){
+    clf = null;
+    if(!phi1Fn || !phi2Fn || !phi3Fn){ drawAll(); return; }
+    if(pts.length < 2){
+      statusBox.innerHTML = "<span class='err'>Add at least 2 labeled points.</span>";
+      drawAll(); return;
+    }
+
+    // Build feature matrix
+    const U = [];
+    for(const p of pts){
+      const u = phi(p);
+      if(u.some(v=>!isFinite(v))){
+        statusBox.innerHTML = "<span class='err'>φ produced non-finite values.</span>";
+        drawAll(); return;
+      }
+      U.push({u, y:p.y});
+    }
+
+    let w = [0,0,0], b = 0;
+    const lr = Number(lrEl.value);
+    const steps = Number(stepsEl.value);
+    const lam = Number(lamEl.value);
+
+    for(let t=0;t<steps;t++){
+      let gw=[0,0,0], gb=0, loss=0;
+      for(const item of U){
+        const s = dot(w,item.u) + b;
+        // logistic loss: log(1+exp(-y s))
+        const z = -item.y * s;
+        // stable softplus
+        const sp = z > 40 ? z : Math.log(1 + Math.exp(z));
+        loss += sp;
+        // gradient: -(y u) * sigmoid(-y s)
+        const coeff = -item.y * (1/(1+Math.exp(-z))); // sigmoid(z)=sigmoid(-y s)
+        gw[0] += coeff * item.u[0];
+        gw[1] += coeff * item.u[1];
+        gw[2] += coeff * item.u[2];
+        gb += coeff;
+      }
+      const n = U.length;
+      gw = [gw[0]/n + lam*w[0], gw[1]/n + lam*w[1], gw[2]/n + lam*w[2]];
+      gb = gb/n; // don't regularize bias
+      // update
+      w = [w[0]-lr*gw[0], w[1]-lr*gw[1], w[2]-lr*gw[2]];
+      b = b - lr*gb;
+
+      // occasional early stop if gradient tiny
+      if(t % 200 === 0 && norm(gw) < 1e-6) break;
+    }
+
+    // compute metrics
+    let loss=0, correct=0;
+    for(const item of U){
+      const s = dot(w,item.u) + b;
+      const z = -item.y*s;
+      loss += (z > 40 ? z : Math.log(1+Math.exp(z)));
+      if(item.y*s > 0) correct++;
+    }
+    loss /= U.length;
+    const acc = correct / U.length;
+
+    clf = {w, b, loss, acc};
+    statusBox.innerHTML = "<b>Status</b><br/>Fit done (logistic). " +
+      "Train acc: <b>" + (100*acc).toFixed(1) + "%</b>, loss: <b>" + loss.toFixed(3) + "</b>.<br/>" +
+      "Halfspace in feature space: sign(w·φ(x)+b).";
+    drawAll();
+  }
+
+  // ---------------- 2D plot transforms ----------------
+  function sx(x, W, m){ return m.l + (x - domMin)/(domMax-domMin) * (W-m.l-m.r); }
+  function sy(y, H, m){ return H - m.b - (y - domMin)/(domMax-domMin) * (H-m.t-m.b); }
+  function inv(px, py, W, H, m){
+    const x = domMin + (px - m.l)/(W-m.l-m.r) * (domMax-domMin);
+    const y = domMin + (H - m.b - py)/(H-m.t-m.b) * (domMax-domMin);
+    return [x,y];
+  }
+
+  // ---------------- 3D view ----------------
+  function rotate(p){
+    const x=p[0], y=p[1], z=p[2];
+    const cy=Math.cos(yaw), sy=Math.sin(yaw);
+    const cx=Math.cos(pitch), sx=Math.sin(pitch);
+    const x1 = cy*x + sy*z;
+    const z1 = -sy*x + cy*z;
+    const y2 = cx*y - sx*z1;
+    const z2 = sx*y + cx*z1;
+    return [x1, y2, z2];
+  }
+  function project(p, W, H){
+    const pr = rotate(p);
+    const zc = 5.5;
+    const denom = (zc - pr[2]);
+    const s = zoom / denom;
+    const cx = W*0.52, cy = H*0.52;
+    return { x: cx + s*pr[0], y: cy - s*pr[1], z: pr[2] };
+  }
+
+  // ---------------- Drawing: left (input space) ----------------
+  function drawLeft(){
+    const W=xyCanvas.width, H=xyCanvas.height;
+    xyctx.clearRect(0,0,W,H);
+    const m = {l:58,r:20,t:26,b:40};
+
+    // Title
+    xyctx.fillStyle="#111"; xyctx.font="14px system-ui, sans-serif";
+    xyctx.fillText("Input space (x₁,x₂): click to add points — boundary is induced by feature-space halfspace", m.l, 18);
+
+    // Background shading from classifier
+    if(clf && phi1Fn && phi2Fn && phi3Fn){
+      const N = 140;
+      for(let i=0;i<N;i++){
+        for(let j=0;j<N;j++){
+          const x1 = domMin + (domMax-domMin)*(i+0.5)/N;
+          const x2 = domMin + (domMax-domMin)*(j+0.5)/N;
+          const u = [phi1Fn(x1,x2), phi2Fn(x1,x2), phi3Fn(x1,x2)];
+          if(u.some(v=>!isFinite(v))) continue;
+          const s = dot(clf.w,u) + clf.b;
+          xyctx.fillStyle = (s>=0) ? "rgba(37,99,235,0.06)" : "rgba(220,38,38,0.06)";
+          const px1 = sx(x1, W, m), py1 = sy(x2, H, m);
+          const px2 = sx(x1 + (domMax-domMin)/N, W, m);
+          const py2 = sy(x2 + (domMax-domMin)/N, H, m);
+          xyctx.fillRect(px1, py2, px2-px1+1, py1-py2+1);
+        }
+      }
+    }
+
+    // Axes
+    xyctx.strokeStyle="#d0d0d0"; xyctx.lineWidth=1;
+    if(domMin<=0 && 0<=domMax){
+      const X0 = sx(0, W, m);
+      xyctx.beginPath(); xyctx.moveTo(X0,m.t); xyctx.lineTo(X0,H-m.b); xyctx.stroke();
+      const Y0 = sy(0, H, m);
+      xyctx.beginPath(); xyctx.moveTo(m.l,Y0); xyctx.lineTo(W-m.r,Y0); xyctx.stroke();
+    }
+    // grid
+    xyctx.strokeStyle="#eee"; xyctx.lineWidth=1;
+    for(let k=0;k<=4;k++){
+      const xv = domMin + (domMax-domMin)*k/4;
+      const px = sx(xv, W, m);
+      xyctx.beginPath(); xyctx.moveTo(px,m.t); xyctx.lineTo(px,H-m.b); xyctx.stroke();
+      const py = sy(xv, H, m);
+      xyctx.beginPath(); xyctx.moveTo(m.l,py); xyctx.lineTo(W-m.r,py); xyctx.stroke();
+    }
+
+    xyctx.fillStyle="#666"; xyctx.font="12px system-ui, sans-serif";
+    xyctx.fillText("x₁", W-m.r-10, H-8);
+    xyctx.save();
+    xyctx.translate(12, m.t+10);
+    xyctx.rotate(-Math.PI/2);
+    xyctx.fillText("x₂", 0, 0);
+    xyctx.restore();
+
+    // Decision boundary contour (approx) by marching squares-ish: draw segments where sign changes on grid
+    if(clf && phi1Fn && phi2Fn && phi3Fn){
+      const G = 90;
+      const val = (x1,x2) => {
+        const u = [phi1Fn(x1,x2), phi2Fn(x1,x2), phi3Fn(x1,x2)];
+        if(u.some(v=>!isFinite(v))) return NaN;
+        return dot(clf.w,u) + clf.b;
+      };
+      xyctx.strokeStyle="#111"; xyctx.lineWidth=2;
+      xyctx.beginPath();
+      for(let i=0;i<G;i++){
+        for(let j=0;j<G;j++){
+          const x1 = domMin + (domMax-domMin)*i/G;
+          const x2 = domMin + (domMax-domMin)*j/G;
+          const x1b = domMin + (domMax-domMin)*(i+1)/G;
+          const x2b = domMin + (domMax-domMin)*(j+1)/G;
+
+          const f00 = val(x1,x2);
+          const f10 = val(x1b,x2);
+          const f01 = val(x1,x2b);
+          const f11 = val(x1b,x2b);
+          if([f00,f10,f01,f11].some(v=>!isFinite(v))) continue;
+
+          // If signs differ, draw simple segments along edges (quick approximation)
+          const s00 = f00>=0, s10=f10>=0, s01=f01>=0, s11=f11>=0;
+          const cnt = (s00?1:0)+(s10?1:0)+(s01?1:0)+(s11?1:0);
+          if(cnt===0 || cnt===4) continue;
+
+          // interpolate crossing on each edge
+          function interp(a,b,va,vb){
+            const t = va/(va-vb); // where va + t(vb-va)=0
+            return a + t*(b-a);
+          }
+
+          const ptsSeg = [];
+          // bottom edge (x2 constant)
+          if(s00 !== s10){
+            const xx = interp(x1,x1b,f00,f10);
+            ptsSeg.push([xx, x2]);
+          }
+          // top edge
+          if(s01 !== s11){
+            const xx = interp(x1,x1b,f01,f11);
+            ptsSeg.push([xx, x2b]);
+          }
+          // left edge
+          if(s00 !== s01){
+            const yy = interp(x2,x2b,f00,f01);
+            ptsSeg.push([x1, yy]);
+          }
+          // right edge
+          if(s10 !== s11){
+            const yy = interp(x2,x2b,f10,f11);
+            ptsSeg.push([x1b, yy]);
+          }
+
+          if(ptsSeg.length >= 2){
+            const pA = ptsSeg[0], pB = ptsSeg[1];
+            const A = [sx(pA[0],W,m), sy(pA[1],H,m)];
+            const B = [sx(pB[0],W,m), sy(pB[1],H,m)];
+            xyctx.moveTo(A[0],A[1]);
+            xyctx.lineTo(B[0],B[1]);
+          }
+        }
+      }
+      xyctx.stroke();
+    }
+
+    // Points
+    for(const p of pts){
+      const px = sx(p.x1,W,m), py = sy(p.x2,H,m);
+      xyctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
+      xyctx.beginPath(); xyctx.arc(px,py,6.5,0,2*Math.PI); xyctx.fill();
+      xyctx.strokeStyle="#111"; xyctx.lineWidth=1; xyctx.stroke();
+    }
+  }
+
+  // ---------------- Drawing: right (feature space) ----------------
+  function drawRight(){
+    const W=featCanvas.width, H=featCanvas.height;
+    fctx.clearRect(0,0,W,H);
+
+    fctx.fillStyle="#111"; fctx.font="14px system-ui, sans-serif";
+    fctx.fillText("Feature space (φ₁,φ₂,φ₃): drag to rotate — plane is fitted halfspace", 18, 18);
+    fctx.strokeStyle="#eee"; fctx.lineWidth=1;
+    fctx.strokeRect(16,16,W-32,H-32);
+
+    if(!phi1Fn || !phi2Fn || !phi3Fn){
+      fctx.fillStyle="#b91c1c"; fctx.font="13px system-ui, sans-serif";
+      fctx.fillText("Fix φ inputs (parse error) to see feature space.", 18, 42);
+      return;
+    }
+    if(pts.length===0){
+      fctx.fillStyle="#666"; fctx.font="13px system-ui, sans-serif";
+      fctx.fillText("Add points to see lifted points.", 18, 42);
+      return;
+    }
+
+    // Lift points
+    const P=[];
+    for(const p of pts){
+      const u = phi(p);
+      if(u.some(v=>!isFinite(v))) continue;
+      P.push({u, y:p.y});
+    }
+    if(P.length===0){
+      fctx.fillStyle="#b91c1c"; fctx.font="13px system-ui, sans-serif";
+      fctx.fillText("φ produced non-finite values for points.", 18, 42);
+      return;
+    }
+
+    // Normalize to fit
+    let mins=[Infinity,Infinity,Infinity], maxs=[-Infinity,-Infinity,-Infinity];
+    for(const q of P){
+      for(let i=0;i<3;i++){ mins[i]=Math.min(mins[i], q.u[i]); maxs[i]=Math.max(maxs[i], q.u[i]); }
+    }
+    const center=[(mins[0]+maxs[0])/2,(mins[1]+maxs[1])/2,(mins[2]+maxs[2])/2];
+    const span = Math.max(1e-6, maxs[0]-mins[0], maxs[1]-mins[1], maxs[2]-mins[2]);
+    const scl = 2.2/span;
+    function normed(u){ return [(u[0]-center[0])*scl, (u[1]-center[1])*scl, (u[2]-center[2])*scl]; }
+
+    // Draw separating plane from clf if exists
+    if(clf){
+      // Plane in u coords: w·u + b = 0
+      // Convert to normalized p: u = center + p/scl
+      // => w·(center + p/scl) + b = 0 => (w/scl)·p + (w·center + b)=0
+      const w = clf.w;
+      const ws = [w[0]/scl, w[1]/scl, w[2]/scl];
+      const bs = dot(w, center) + clf.b;
+
+      const n2 = dot(ws, ws);
+      if(n2 > 1e-10){
+        const p0 = scale(-bs/n2, ws);
+
+        // basis on plane
+        let a = Math.abs(ws[0]) < 0.9 ? [1,0,0] : [0,1,0];
+        const proj = scale(dot(a,ws)/n2, ws);
+        let u = sub(a,proj);
+        u = scale(1/norm(u), u);
+        let v = [
+          ws[1]*u[2] - ws[2]*u[1],
+          ws[2]*u[0] - ws[0]*u[2],
+          ws[0]*u[1] - ws[1]*u[0]
+        ];
+        v = scale(1/norm(v), v);
+
+        const S = 1.85;
+        const corners = [
+          add(add(p0, scale(S,u)), scale(S,v)),
+          add(sub(p0, scale(S,u)), scale(S,v)),
+          sub(sub(p0, scale(S,u)), scale(S,v)),
+          sub(add(p0, scale(S,u)), scale(S,v)),
+        ];
+        const pc = corners.map(c => project(c,W,H));
+        fctx.fillStyle="rgba(16,185,129,0.10)";
+        fctx.strokeStyle="rgba(16,185,129,0.55)";
+        fctx.lineWidth=2;
+        fctx.beginPath();
+        fctx.moveTo(pc[0].x, pc[0].y);
+        for(let i=1;i<pc.length;i++) fctx.lineTo(pc[i].x, pc[i].y);
+        fctx.closePath();
+        fctx.fill(); fctx.stroke();
+      }
+    }
+
+    // axes
+    const axes = [
+      {a:[-1.2,0,0], b:[1.2,0,0], name:"φ₁"},
+      {a:[0,-1.2,0], b:[0,1.2,0], name:"φ₂"},
+      {a:[0,0,-1.2], b:[0,0,1.2], name:"φ₃"},
+    ];
+    for(const ax of axes){
+      const A=project(ax.a,W,H), B=project(ax.b,W,H);
+      fctx.strokeStyle="#999"; fctx.lineWidth=2;
+      fctx.beginPath(); fctx.moveTo(A.x,A.y); fctx.lineTo(B.x,B.y); fctx.stroke();
+      fctx.fillStyle="#666"; fctx.font="12px system-ui, sans-serif";
+      fctx.fillText(ax.name, B.x+4, B.y+4);
+    }
+
+    // depth-sort points
+    const dots = P.map(q => {
+      const p = normed(q.u);
+      const pr = project(p,W,H);
+      return {pr, y:q.y};
+    }).sort((a,b)=>a.pr.z - b.pr.z);
+
+    for(const d of dots){
+      fctx.fillStyle = (d.y>0) ? "#2563eb" : "#dc2626";
+      fctx.beginPath(); fctx.arc(d.pr.x,d.pr.y,5.8,0,2*Math.PI); fctx.fill();
+      fctx.strokeStyle="#111"; fctx.lineWidth=1; fctx.stroke();
+    }
+
+    if(clf){
+      fctx.fillStyle="#666"; fctx.font="12px system-ui, sans-serif";
+      fctx.fillText("train acc=" + (100*clf.acc).toFixed(1) + "%, loss=" + clf.loss.toFixed(3), 18, 42);
+    }
+  }
+
+  function drawAll(){ drawLeft(); drawRight(); }
+
+  // ---------------- Interaction ----------------
+  // Add point on left
+  xyCanvas.addEventListener("click", (ev) => {
+    const rect = xyCanvas.getBoundingClientRect();
+    const scaleX = xyCanvas.width / rect.width;
+    const scaleY = xyCanvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * scaleX;
+    const py = (ev.clientY - rect.top) * scaleY;
+    const m = {l:58,r:20,t:26,b:40};
+    const [x1,x2] = inv(px, py, xyCanvas.width, xyCanvas.height, m);
+    if(!isFinite(x1) || !isFinite(x2)) return;
+    pts.push({x1: clamp(x1,domMin,domMax), x2: clamp(x2,domMin,domMax), y: Number(labelSel.value)});
+    clf = null;
+    drawAll();
+  });
+
+  // Drag rotate right plot
+  let dragging=false, lastX=0, lastY=0;
+  featCanvas.addEventListener("mousedown",(ev)=>{ dragging=true; lastX=ev.clientX; lastY=ev.clientY; });
+  window.addEventListener("mouseup",()=>{ dragging=false; });
+  window.addEventListener("mousemove",(ev)=>{
+    if(!dragging) return;
+    const dx=ev.clientX-lastX, dy=ev.clientY-lastY;
+    lastX=ev.clientX; lastY=ev.clientY;
+    yaw += dx*0.006;
+    pitch += dy*0.006;
+    pitch = clamp(pitch, -1.25, 1.25);
+    drawAll();
+  });
+  featCanvas.addEventListener("touchstart",(ev)=>{
+    if(ev.touches.length!==1) return;
+    dragging=true; lastX=ev.touches[0].clientX; lastY=ev.touches[0].clientY;
+  }, {passive:true});
+  featCanvas.addEventListener("touchend",()=>{ dragging=false; }, {passive:true});
+  featCanvas.addEventListener("touchmove",(ev)=>{
+    if(!dragging || ev.touches.length!==1) return;
+    const dx=ev.touches[0].clientX-lastX, dy=ev.touches[0].clientY-lastY;
+    lastX=ev.touches[0].clientX; lastY=ev.touches[0].clientY;
+    yaw += dx*0.006;
+    pitch += dy*0.006;
+    pitch = clamp(pitch, -1.25, 1.25);
+    drawAll();
+  }, {passive:true});
+
+  // Controls
+  rangeSel.addEventListener("change", ()=>{
+    const a = rangeSel.value.split(",").map(Number);
+    domMin = a[0]; domMax = a[1];
+    // clamp points
+    pts = pts.map(p => ({x1: clamp(p.x1,domMin,domMax), x2: clamp(p.x2,domMin,domMax), y:p.y}));
+    clf = null;
+    drawAll();
+  });
+
+  clearBtn.addEventListener("click", ()=>{
+    pts=[]; clf=null;
+    drawAll();
+    statusBox.innerHTML = "<b>Status</b><br/>Cleared points.";
+  });
+
+  exampleBtn.addEventListener("click", ()=>{
+    // XOR-style: (+1) on (1,1) and (-1,-1); (-1) on (1,-1) and (-1,1)
+    pts = [
+      {x1:-1.0, x2:-1.0, y: 1},
+      {x1: 1.0, x2: 1.0, y: 1},
+      {x1:-1.0, x2: 1.0, y:-1},
+      {x1: 1.0, x2:-1.0, y:-1},
+      {x1:-0.7, x2:-0.9, y: 1},
+      {x1: 0.9, x2: 0.7, y: 1},
+      {x1:-0.9, x2: 0.8, y:-1},
+      {x1: 0.8, x2:-0.8, y:-1},
+    ];
+    clf = null;
+    drawAll();
+    statusBox.innerHTML = "<b>Status</b><br/>Loaded XOR-style example. Try φ₃=x₁*x₂ then fit.";
+  });
+
+  function onPhiChange(){
+    const ok = refreshPhi();
+    clf = null;
+    if(ok) drawAll();
+  }
+  phi1Input.addEventListener("input", onPhiChange);
+  phi2Input.addEventListener("input", onPhiChange);
+  phi3Input.addEventListener("input", onPhiChange);
+
+  presetLinear.addEventListener("click", ()=>{
+    phi1Input.value="x1";
+    phi2Input.value="x2";
+    phi3Input.value="0";
+    onPhiChange();
+  });
+  presetQuad.addEventListener("click", ()=>{
+    phi1Input.value="x1";
+    phi2Input.value="x2";
+    phi3Input.value="x1*x2";
+    onPhiChange();
+  });
+
+  [lrEl, stepsEl, lamEl, zoomSlider].forEach(el => el.addEventListener("input", ()=>{ updateLabels(); }));
+  fitBtn.addEventListener("click", ()=>{ try{ fitClassifier(); } catch(e){ statusBox.innerHTML="<span class='err'>Fit error:</span> "+escapeHtml(String(e)); clf=null; drawAll(); } });
+
+  resetViewBtn.addEventListener("click", ()=>{
+    yaw=0.6; pitch=-0.45;
+    zoomSlider.value="320";
+    updateLabels();
+    drawAll();
+  });
+
+  // init
+  updateLabels();
+  refreshPhi();
+  statusBox.innerHTML += "<br/>Add points then fit. Start with XOR example and φ₃=x₁*x₂.";
+  drawAll();
+})();
+</script>
+</body>
+</html>
