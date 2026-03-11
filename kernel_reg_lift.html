@@ -1,0 +1,617 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Feature-Lift Regression Demo: (φ1(x), φ2(x), y)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 6px 0; }
+    .small { color:#444; font-size:13px; line-height:1.35; }
+    .wrap { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+    .col { flex:1 1 520px; min-width:320px; }
+    canvas { width:100%; display:block; border:1px solid #d8d8d8; border-radius:10px; background:#fff; }
+    #xyCanvas { height:360px; }
+    #featCanvas { height:520px; margin-top:12px; }
+    label { display:block; margin-top:10px; font-size:14px; }
+    input[type=text], select { width:100%; padding:8px; font-size:14px; box-sizing:border-box; }
+    input[type=range] { width:100%; }
+    button { width:100%; padding:10px; margin-top:10px; font-size:14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .box { background:#f7f7f7; padding:10px; border-radius:10px; margin-top:10px; font-size:13px; line-height:1.35; }
+    .legend { margin-top:8px; font-size:14px; }
+    .sw { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+    code { background:#f3f3f3; padding:1px 4px; border-radius:4px; }
+    .err { color:#b91c1c; font-weight:600; }
+  </style>
+</head>
+<body>
+  <h2>Regression via explicit feature lift: points in (φ₁(x), φ₂(x), y)</h2>
+  <div class="small">
+    Left: click to add regression points (x, y). Right: the same points visualized in 3D as
+    (φ₁(x), φ₂(x), y). Choose φ₁ and φ₂ as expressions in <code>x</code>. Click “Fit plane” to solve
+    least-squares for <code>y ≈ w1·φ₁(x) + w2·φ₂(x) + b</code> and render the fitted plane in 3D (and the predicted curve on the left).
+  </div>
+
+  <div class="wrap">
+    <div class="col">
+      <canvas id="xyCanvas" width="900" height="360"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#111;"></span>data points
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#16a34a;"></span>fitted curve
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>x-range</label>
+          <select id="xRangeSel">
+            <option value="-2,2">[-2, 2]</option>
+            <option value="-3,3">[-3, 3]</option>
+            <option value="-1.5,1.5">[-1.5, 1.5]</option>
+          </select>
+        </div>
+        <div>
+          <label>y-range</label>
+          <select id="yRangeSel">
+            <option value="-2,2">[-2, 2]</option>
+            <option value="-3,3">[-3, 3]</option>
+            <option value="-1,1">[-1, 1]</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <button id="clearBtn">Clear points</button>
+        <button id="exampleBtn">Load nonlinear example</button>
+      </div>
+
+      <div class="box">
+        <b>Tip:</b> Try example data with φ₁(x)=x and φ₂(x)=x² to fit a parabola. Or try φ₁(x)=sin(3x), φ₂(x)=cos(3x)
+        for periodic data.
+      </div>
+    </div>
+
+    <div class="col">
+      <canvas id="featCanvas" width="900" height="520"></canvas>
+
+      <label>φ₁(x) (x-axis in 3D)</label>
+      <input id="phi1" type="text" value="x" spellcheck="false"/>
+
+      <label>φ₂(x) (y-axis in 3D)</label>
+      <input id="phi2" type="text" value="x*x" spellcheck="false"/>
+
+      <div class="row2">
+        <button id="presetPoly">Preset: (x, x²)</button>
+        <button id="presetTrig">Preset: (sin(3x), cos(3x))</button>
+      </div>
+
+      <label>Ridge λ: <span id="lamVal"></span></label>
+      <input id="lam" type="range" min="0" max="1.0" step="0.001" value="0.01"/>
+
+      <div class="row2">
+        <button id="fitBtn">Fit plane</button>
+        <button id="resetViewBtn">Reset 3D view</button>
+      </div>
+
+      <label>3D zoom: <span id="zoomVal"></span></label>
+      <input id="zoom" type="range" min="140" max="520" step="1" value="320"/>
+
+      <div class="box" id="statusBox"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Data points: (x,y)
+  let pts = []; // {x,y}
+  let xmin=-2, xmax=2, ymin=-2, ymax=2;
+
+  // Feature functions
+  let phi1Expr="x", phi2Expr="x*x";
+  let phi1Fn=null, phi2Fn=null;
+
+  // Fit: y ≈ w1*phi1 + w2*phi2 + b
+  let fit = null; // {w1,w2,b,mse,ok}
+
+  // 3D view state
+  let yaw = 0.6, pitch = -0.45;
+  let zoom = 320;
+
+  // DOM
+  const xyCanvas = document.getElementById("xyCanvas");
+  const featCanvas = document.getElementById("featCanvas");
+  const xyctx = xyCanvas.getContext("2d");
+  const fctx = featCanvas.getContext("2d");
+
+  const xRangeSel = document.getElementById("xRangeSel");
+  const yRangeSel = document.getElementById("yRangeSel");
+  const clearBtn = document.getElementById("clearBtn");
+  const exampleBtn = document.getElementById("exampleBtn");
+
+  const phi1Input = document.getElementById("phi1");
+  const phi2Input = document.getElementById("phi2");
+  const presetPoly = document.getElementById("presetPoly");
+  const presetTrig = document.getElementById("presetTrig");
+
+  const lamEl = document.getElementById("lam");
+  const lamVal = document.getElementById("lamVal");
+  const fitBtn = document.getElementById("fitBtn");
+  const resetViewBtn = document.getElementById("resetViewBtn");
+
+  const zoomSlider = document.getElementById("zoom");
+  const zoomVal = document.getElementById("zoomVal");
+  const statusBox = document.getElementById("statusBox");
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  function escapeHtml(s){ return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+  // ---------- Coordinate transforms for XY plot ----------
+  function xy_sx(x, W, m){ return m.l + (x - xmin)/(xmax-xmin) * (W-m.l-m.r); }
+  function xy_sy(y, H, m){ return H - m.b - (y - ymin)/(ymax-ymin) * (H-m.t-m.b); }
+  function xy_inv(px, py, W, H, m){
+    const x = xmin + (px - m.l) / (W-m.l-m.r) * (xmax-xmin);
+    const y = ymin + (H - m.b - py) / (H-m.t-m.b) * (ymax-ymin);
+    return [x,y];
+  }
+
+  // ---------- 3D math ----------
+  function dot(a,b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function scale(c,a){ return [c*a[0], c*a[1], c*a[2]]; }
+  function norm(a){ return Math.sqrt(dot(a,a)); }
+
+  function rotate(p){
+    const x=p[0], y=p[1], z=p[2];
+    const cy=Math.cos(yaw), sy=Math.sin(yaw);
+    const cx=Math.cos(pitch), sx=Math.sin(pitch);
+    const x1 = cy*x + sy*z;
+    const z1 = -sy*x + cy*z;
+    const y2 = cx*y - sx*z1;
+    const z2 = sx*y + cx*z1;
+    return [x1, y2, z2];
+  }
+
+  function project(p, W, H){
+    const pr = rotate(p);
+    const zc = 5.5;
+    const denom = (zc - pr[2]);
+    const s = zoom / denom;
+    const cx = W*0.52, cy = H*0.52;
+    return { x: cx + s*pr[0], y: cy - s*pr[1], z: pr[2] };
+  }
+
+  function compilePhi(expr){
+    return new Function("x", "with (Math) { return (" + expr + "); }");
+  }
+
+  function refreshPhi(){
+    phi1Expr = phi1Input.value.trim();
+    phi2Expr = phi2Input.value.trim();
+    try{
+      phi1Fn = compilePhi(phi1Expr);
+      phi2Fn = compilePhi(phi2Expr);
+      phi1Fn(0.1); phi2Fn(0.1);
+      statusBox.innerHTML = "<b>Status</b><br/>φ(x) = (" +
+        "<code>" + escapeHtml(phi1Expr) + "</code>, <code>" + escapeHtml(phi2Expr) + "</code>)";
+      return true;
+    }catch(e){
+      phi1Fn = null; phi2Fn = null;
+      statusBox.innerHTML = "<span class='err'>Error parsing φ:</span> " + escapeHtml(String(e));
+      return false;
+    }
+  }
+
+  // ---------- Ridge plane fit in 3D: y ~ w1*φ1 + w2*φ2 + b ----------
+  function fitPlane(){
+    fit = null;
+    if(!phi1Fn || !phi2Fn) { drawAll(); return; }
+    if(pts.length < 2){
+      statusBox.innerHTML = "<span class='err'>Add at least 2 points.</span>";
+      drawAll(); return;
+    }
+    const lam = Number(lamEl.value);
+    lamVal.textContent = lam.toFixed(3);
+
+    // Build normal equations for ridge regression with intercept
+    // Min ||A theta - y||^2 + lam ||theta||^2, where theta=[w1,w2,b]
+    // A_i = [phi1(xi), phi2(xi), 1]
+    let ATA = [[0,0,0],[0,0,0],[0,0,0]];
+    let ATy = [0,0,0];
+
+    const rows = [];
+    for(const p of pts){
+      const a1 = phi1Fn(p.x);
+      const a2 = phi2Fn(p.x);
+      if(!isFinite(a1) || !isFinite(a2) || !isFinite(p.y)) continue;
+      const a = [a1, a2, 1.0];
+      rows.push({a, y:p.y});
+      for(let i=0;i<3;i++){
+        ATy[i] += a[i]*p.y;
+        for(let j=0;j<3;j++){
+          ATA[i][j] += a[i]*a[j];
+        }
+      }
+    }
+    if(rows.length < 2){
+      statusBox.innerHTML = "<span class='err'>Need finite φ values for at least 2 points.</span>";
+      drawAll(); return;
+    }
+
+    // Ridge on w1,w2 (and optionally b); we'll ridge all three lightly for stability
+    for(let i=0;i<3;i++) ATA[i][i] += lam;
+
+    const theta = solve3x3(ATA, ATy);
+    if(!theta){
+      statusBox.innerHTML = "<span class='err'>Solver failed (try larger λ).</span>";
+      drawAll(); return;
+    }
+    const w1=theta[0], w2=theta[1], b=theta[2];
+
+    // MSE
+    let mse=0;
+    for(const r of rows){
+      const pred = w1*r.a[0] + w2*r.a[1] + b;
+      const e = pred - r.y;
+      mse += e*e;
+    }
+    mse /= rows.length;
+
+    fit = {w1,w2,b,mse,ok:true};
+    statusBox.innerHTML = "<b>Status</b><br/>Fit: y ≈ " +
+      "<code>" + w1.toFixed(3) + "·φ₁(x) + " + w2.toFixed(3) + "·φ₂(x) + " + b.toFixed(3) + "</code>" +
+      "<br/>MSE: <b>" + mse.toExponential(3) + "</b>";
+
+    drawAll();
+  }
+
+  function solve3x3(A,b){
+    // Gaussian elimination on 3x3
+    const M = [
+      [A[0][0],A[0][1],A[0][2],b[0]],
+      [A[1][0],A[1][1],A[1][2],b[1]],
+      [A[2][0],A[2][1],A[2][2],b[2]],
+    ];
+    for(let col=0; col<3; col++){
+      // pivot
+      let piv=col;
+      for(let r=col+1;r<3;r++){
+        if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv=r;
+      }
+      if(Math.abs(M[piv][col]) < 1e-12) return null;
+      const tmp = M[col]; M[col]=M[piv]; M[piv]=tmp;
+      const div = M[col][col];
+      for(let j=col;j<4;j++) M[col][j] /= div;
+      for(let r=0;r<3;r++){
+        if(r===col) continue;
+        const f = M[r][col];
+        for(let j=col;j<4;j++){
+          M[r][j] -= f*M[col][j];
+        }
+      }
+    }
+    return [M[0][3], M[1][3], M[2][3]];
+  }
+
+  // ---------- Drawing ----------
+  function drawAxes2D(ctx, W, H, m, xlabel, ylabel){
+    ctx.strokeStyle="#d0d0d0"; ctx.lineWidth=1;
+    // x-axis at y=0 if in range
+    if(ymin <= 0 && 0 <= ymax){
+      const y0 = xy_sy(0, H, m);
+      ctx.beginPath(); ctx.moveTo(m.l, y0); ctx.lineTo(W-m.r, y0); ctx.stroke();
+    }
+    // y-axis at x=0 if in range
+    if(xmin <= 0 && 0 <= xmax){
+      const x0 = xy_sx(0, W, m);
+      ctx.beginPath(); ctx.moveTo(x0, m.t); ctx.lineTo(x0, H-m.b); ctx.stroke();
+    }
+    ctx.fillStyle="#666"; ctx.font="12px system-ui, sans-serif";
+    ctx.fillText(xlabel, W-m.r-10, H-8);
+    ctx.save();
+    ctx.translate(12, m.t+10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(ylabel, 0, 0);
+    ctx.restore();
+  }
+
+  function drawXY(){
+    const W=xyCanvas.width, H=xyCanvas.height;
+    xyctx.clearRect(0,0,W,H);
+    const m = {l:58,r:20,t:26,b:40};
+
+    xyctx.fillStyle="#111"; xyctx.font="14px system-ui, sans-serif";
+    xyctx.fillText("Click to add regression points (x,y)", m.l, 18);
+
+    drawAxes2D(xyctx, W, H, m, "x", "y");
+
+    // ticks (x)
+    xyctx.fillStyle="#666"; xyctx.font="12px system-ui, sans-serif";
+    for(let k=0;k<=4;k++){
+      const xv = xmin + (xmax-xmin)*k/4;
+      const px = xy_sx(xv, W, m);
+      xyctx.strokeStyle="#eee"; xyctx.lineWidth=1;
+      xyctx.beginPath(); xyctx.moveTo(px, m.t); xyctx.lineTo(px, H-m.b); xyctx.stroke();
+      xyctx.fillText(xv.toFixed(1), px-10, H-m.b+18);
+    }
+    // ticks (y)
+    for(let k=0;k<=4;k++){
+      const yv = ymin + (ymax-ymin)*k/4;
+      const py = xy_sy(yv, H, m);
+      xyctx.strokeStyle="#eee"; xyctx.lineWidth=1;
+      xyctx.beginPath(); xyctx.moveTo(m.l, py); xyctx.lineTo(W-m.r, py); xyctx.stroke();
+      xyctx.fillText(yv.toFixed(1), 8, py+4);
+    }
+
+    // fitted curve if fit exists
+    if(fit && phi1Fn && phi2Fn){
+      xyctx.strokeStyle="#16a34a"; xyctx.lineWidth=2.5;
+      xyctx.beginPath();
+      const N=500;
+      for(let i=0;i<N;i++){
+        const x = xmin + (xmax-xmin)*i/(N-1);
+        const yhat = fit.w1*phi1Fn(x) + fit.w2*phi2Fn(x) + fit.b;
+        const px = xy_sx(x, W, m);
+        const py = xy_sy(yhat, H, m);
+        if(i===0) xyctx.moveTo(px,py);
+        else xyctx.lineTo(px,py);
+      }
+      xyctx.stroke();
+    }
+
+    // points
+    xyctx.fillStyle="#111";
+    for(const p of pts){
+      const px = xy_sx(p.x, W, m);
+      const py = xy_sy(p.y, H, m);
+      xyctx.beginPath(); xyctx.arc(px, py, 5.8, 0, 2*Math.PI); xyctx.fill();
+      xyctx.strokeStyle="#fff"; xyctx.lineWidth=1;
+      xyctx.stroke();
+    }
+  }
+
+  function draw3D(){
+    const W=featCanvas.width, H=featCanvas.height;
+    fctx.clearRect(0,0,W,H);
+
+    fctx.fillStyle="#111"; fctx.font="14px system-ui, sans-serif";
+    fctx.fillText("3D feature view: (φ₁(x), φ₂(x), y) — drag to rotate", 18, 18);
+    fctx.strokeStyle="#eee"; fctx.lineWidth=1;
+    fctx.strokeRect(16, 16, W-32, H-32);
+
+    if(!phi1Fn || !phi2Fn){
+      fctx.fillStyle="#b91c1c"; fctx.font="13px system-ui, sans-serif";
+      fctx.fillText("Fix φ inputs (parse error) to see 3D points.", 18, 42);
+      return;
+    }
+
+    // Build 3D points u=(phi1,phi2,y)
+    const P=[];
+    for(const p of pts){
+      const a1=phi1Fn(p.x), a2=phi2Fn(p.x);
+      if(!isFinite(a1) || !isFinite(a2) || !isFinite(p.y)) continue;
+      P.push({ u:[a1,a2,p.y] });
+    }
+    if(P.length===0){
+      fctx.fillStyle="#666"; fctx.font="13px system-ui, sans-serif";
+      fctx.fillText("Add points to see the lifted 3D cloud.", 18, 42);
+      return;
+    }
+
+    // Auto-scale normalize to [-1,1]^3
+    let mins=[Infinity,Infinity,Infinity], maxs=[-Infinity,-Infinity,-Infinity];
+    for(const q of P){
+      for(let i=0;i<3;i++){ mins[i]=Math.min(mins[i], q.u[i]); maxs[i]=Math.max(maxs[i], q.u[i]); }
+    }
+    const center=[(mins[0]+maxs[0])/2, (mins[1]+maxs[1])/2, (mins[2]+maxs[2])/2];
+    const span=Math.max(1e-6, maxs[0]-mins[0], maxs[1]-mins[1], maxs[2]-mins[2]);
+    const scl=2.2/span;
+    function normed(u){ return [(u[0]-center[0])*scl, (u[1]-center[1])*scl, (u[2]-center[2])*scl]; }
+
+    // Draw fitted plane (in normalized coordinates)
+    if(fit && fit.ok){
+      // In original coordinates: z = w1*x + w2*y + b where x=phi1, y=phi2, z=y_target
+      // In normalized p coords: u = center + p/scl. Want plane in p: (center_z + pz/scl) = w1(center_x+px/scl) + w2(center_y+py/scl) + b
+      // => pz - w1 px - w2 py = scl*(w1*center_x + w2*center_y + b - center_z)
+      const w1=fit.w1, w2=fit.w2, b0=fit.b;
+      const rhs = scl*(w1*center[0] + w2*center[1] + b0 - center[2]);
+      // plane in p: (-w1)px + (-w2)py + (1)pz - rhs = 0
+      const n = [-w1, -w2, 1.0];
+      const bs = -rhs;
+
+      const n2 = dot(n,n);
+      if(n2 > 1e-10){
+        const p0 = scale(-bs/n2, n); // point on plane
+
+        // basis vectors on plane
+        let a = Math.abs(n[0]) < 0.9 ? [1,0,0] : [0,1,0];
+        const proj = scale(dot(a,n)/n2, n);
+        let u = sub(a, proj); u = scale(1/norm(u), u);
+        let v = [
+          n[1]*u[2] - n[2]*u[1],
+          n[2]*u[0] - n[0]*u[2],
+          n[0]*u[1] - n[1]*u[0]
+        ];
+        v = scale(1/norm(v), v);
+
+        const S=1.9;
+        const corners=[
+          add(add(p0, scale(S,u)), scale(S,v)),
+          add(sub(p0, scale(S,u)), scale(S,v)),
+          sub(sub(p0, scale(S,u)), scale(S,v)),
+          sub(add(p0, scale(S,u)), scale(S,v)),
+        ];
+        const pc = corners.map(c => project(c, W, H));
+        fctx.fillStyle="rgba(22,163,74,0.10)";
+        fctx.strokeStyle="rgba(22,163,74,0.55)";
+        fctx.lineWidth=2;
+        fctx.beginPath();
+        fctx.moveTo(pc[0].x, pc[0].y);
+        for(let i=1;i<pc.length;i++) fctx.lineTo(pc[i].x, pc[i].y);
+        fctx.closePath();
+        fctx.fill(); fctx.stroke();
+      }
+    }
+
+    // Axes in normalized coords
+    const axes=[
+      {a:[-1.2,0,0], b:[1.2,0,0], name:"φ₁"},
+      {a:[0,-1.2,0], b:[0,1.2,0], name:"φ₂"},
+      {a:[0,0,-1.2], b:[0,0,1.2], name:"y"},
+    ];
+    for(const ax of axes){
+      const A=project(ax.a, W, H), B=project(ax.b, W, H);
+      fctx.strokeStyle="#999"; fctx.lineWidth=2;
+      fctx.beginPath(); fctx.moveTo(A.x,A.y); fctx.lineTo(B.x,B.y); fctx.stroke();
+      fctx.fillStyle="#666"; fctx.font="12px system-ui, sans-serif";
+      fctx.fillText(ax.name, B.x+4, B.y+4);
+    }
+
+    // Depth-sort points
+    const dots = P.map(q => {
+      const p = normed(q.u);
+      const pr = project(p, W, H);
+      return { pr, p };
+    }).sort((a,b)=>a.pr.z - b.pr.z);
+
+    for(const d of dots){
+      fctx.fillStyle="#111";
+      fctx.beginPath(); fctx.arc(d.pr.x, d.pr.y, 5.5, 0, 2*Math.PI); fctx.fill();
+      fctx.strokeStyle="#fff"; fctx.lineWidth=1; fctx.stroke();
+    }
+  }
+
+  function drawAll(){ drawXY(); draw3D(); }
+
+  // ---------- Interaction ----------
+  // Add point by clicking (x,y) on left canvas
+  xyCanvas.addEventListener("click", (ev) => {
+    const rect = xyCanvas.getBoundingClientRect();
+    const scaleX = xyCanvas.width / rect.width;
+    const scaleY = xyCanvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * scaleX;
+    const py = (ev.clientY - rect.top) * scaleY;
+    const m = {l:58,r:20,t:26,b:40};
+    const [x,y] = xy_inv(px, py, xyCanvas.width, xyCanvas.height, m);
+    if(!isFinite(x) || !isFinite(y)) return;
+    pts.push({x: clamp(x,xmin,xmax), y: clamp(y,ymin,ymax)});
+    fit = null;
+    drawAll();
+  });
+
+  // 3D drag rotate (mouse + touch)
+  let dragging=false, lastX=0, lastY=0;
+  featCanvas.addEventListener("mousedown",(ev)=>{ dragging=true; lastX=ev.clientX; lastY=ev.clientY; });
+  window.addEventListener("mouseup",()=>{ dragging=false; });
+  window.addEventListener("mousemove",(ev)=>{
+    if(!dragging) return;
+    const dx=ev.clientX-lastX, dy=ev.clientY-lastY;
+    lastX=ev.clientX; lastY=ev.clientY;
+    yaw += dx*0.006;
+    pitch += dy*0.006;
+    pitch = clamp(pitch, -1.25, 1.25);
+    drawAll();
+  });
+  featCanvas.addEventListener("touchstart",(ev)=>{
+    if(ev.touches.length!==1) return;
+    dragging=true; lastX=ev.touches[0].clientX; lastY=ev.touches[0].clientY;
+  }, {passive:true});
+  featCanvas.addEventListener("touchend",()=>{ dragging=false; }, {passive:true});
+  featCanvas.addEventListener("touchmove",(ev)=>{
+    if(!dragging || ev.touches.length!==1) return;
+    const dx=ev.touches[0].clientX-lastX, dy=ev.touches[0].clientY-lastY;
+    lastX=ev.touches[0].clientX; lastY=ev.touches[0].clientY;
+    yaw += dx*0.006;
+    pitch += dy*0.006;
+    pitch = clamp(pitch, -1.25, 1.25);
+    drawAll();
+  }, {passive:true});
+
+  // Controls
+  xRangeSel.addEventListener("change", ()=>{
+    const a = xRangeSel.value.split(",").map(Number);
+    xmin=a[0]; xmax=a[1];
+    pts = pts.map(p => ({x: clamp(p.x,xmin,xmax), y:p.y}));
+    fit=null; drawAll();
+  });
+  yRangeSel.addEventListener("change", ()=>{
+    const a = yRangeSel.value.split(",").map(Number);
+    ymin=a[0]; ymax=a[1];
+    pts = pts.map(p => ({x: p.x, y: clamp(p.y,ymin,ymax)}));
+    fit=null; drawAll();
+  });
+
+  clearBtn.addEventListener("click", ()=>{
+    pts=[]; fit=null; drawAll();
+    statusBox.innerHTML = "<b>Status</b><br/>Cleared points.";
+  });
+
+  exampleBtn.addEventListener("click", ()=>{
+    // Nonlinear regression example: y = 0.6 x^2 - 0.3 x + noise
+    pts=[];
+    const xs=[-1.6,-1.2,-0.8,-0.4,0,0.4,0.8,1.2,1.6];
+    for(const x of xs){
+      const noise = (Math.random()-0.5)*0.25;
+      const y = 0.6*x*x - 0.3*x + noise;
+      pts.push({x, y});
+    }
+    fit=null;
+    drawAll();
+    statusBox.innerHTML = "<b>Status</b><br/>Loaded nonlinear example. Try φ₁=x, φ₂=x*x, then Fit plane.";
+  });
+
+  function onPhiChange(){
+    const ok = refreshPhi();
+    fit=null;
+    if(ok) drawAll();
+  }
+  phi1Input.addEventListener("input", onPhiChange);
+  phi2Input.addEventListener("input", onPhiChange);
+
+  presetPoly.addEventListener("click", ()=>{
+    phi1Input.value="x";
+    phi2Input.value="x*x";
+    onPhiChange();
+  });
+  presetTrig.addEventListener("click", ()=>{
+    phi1Input.value="sin(3*x)";
+    phi2Input.value="cos(3*x)";
+    onPhiChange();
+  });
+
+  lamEl.addEventListener("input", ()=>{
+    lamVal.textContent = Number(lamEl.value).toFixed(3);
+  });
+
+  fitBtn.addEventListener("click", ()=>{
+    try{ fitPlane(); }
+    catch(e){
+      statusBox.innerHTML = "<span class='err'>Fit error:</span> " + escapeHtml(String(e));
+      fit=null; drawAll();
+    }
+  });
+
+  resetViewBtn.addEventListener("click", ()=>{
+    yaw=0.6; pitch=-0.45;
+    zoomSlider.value="320";
+    zoom=320;
+    zoomVal.textContent=String(zoom);
+    drawAll();
+  });
+
+  zoomSlider.addEventListener("input", ()=>{
+    zoom = Number(zoomSlider.value);
+    zoomVal.textContent = String(zoom);
+    drawAll();
+  });
+
+  // init
+  lamVal.textContent = Number(lamEl.value).toFixed(3);
+  zoomVal.textContent = String(zoom);
+  refreshPhi();
+  drawAll();
+})();
+</script>
+</body>
+</html>
