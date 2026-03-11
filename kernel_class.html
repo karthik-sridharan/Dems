@@ -1,0 +1,390 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kernel Intuition Demo 2: Kernel Classifier in 1D</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 6px 0; }
+    .small { color:#444; font-size:13px; line-height:1.35; }
+    .wrap { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+    .col { flex:1 1 520px; min-width:320px; }
+    canvas { width:100%; display:block; border:1px solid #d8d8d8; border-radius:10px; background:#fff; }
+    #xCanvas { height:170px; }
+    #scoreCanvas { height:520px; margin-top:12px; }
+    label { display:block; margin-top:10px; font-size:14px; }
+    input[type=range], select { width:100%; }
+    button { width:100%; padding:10px; margin-top:10px; font-size:14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .box { background:#f7f7f7; padding:10px; border-radius:10px; margin-top:10px; font-size:13px; line-height:1.35; }
+    .legend { margin-top:8px; font-size:14px; }
+    .sw { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+    code { background:#f3f3f3; padding:1px 4px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <h2>Demo 2: Kernel classifier in 1D (rich decision functions without explicit φ)</h2>
+  <div class="small">
+    Add labeled 1D points, then fit <b>kernel ridge classification</b>:
+    α=(K+λI)^{-1}y, f(x)=∑ᵢ αᵢ k(xᵢ,x). Increasing polynomial degree or using an RBF kernel yields richer f(x).
+  </div>
+
+  <div class="wrap">
+    <div class="col">
+      <canvas id="xCanvas" width="900" height="170"></canvas>
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>class +1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#dc2626;"></span>class −1
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Label to add</label>
+          <select id="labelSel">
+            <option value="1">+1</option>
+            <option value="-1">-1</option>
+          </select>
+        </div>
+        <div>
+          <label>x-range</label>
+          <select id="rangeSel">
+            <option value="-2,2">[-2, 2]</option>
+            <option value="-3,3">[-3, 3]</option>
+            <option value="-1.5,1.5">[-1.5, 1.5]</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <button id="clearBtn">Clear points</button>
+        <button id="exampleBtn">Load “outer + / inner −” example</button>
+      </div>
+
+      <label>Kernel</label>
+      <select id="kernelSel">
+        <option value="linear">Linear: k(x,z)=xz</option>
+        <option value="poly">Polynomial: k(x,z)=(1+xz)^d</option>
+        <option value="rbf">RBF: k(x,z)=exp(-γ (x-z)^2)</option>
+      </select>
+
+      <label>Polynomial degree d: <span id="degVal"></span></label>
+      <input id="deg" type="range" min="1" max="10" step="1" value="2"/>
+
+      <label>RBF gamma γ: <span id="gamVal"></span></label>
+      <input id="gamma" type="range" min="0.1" max="10.0" step="0.1" value="2.0"/>
+
+      <label>Ridge λ: <span id="lamVal"></span></label>
+      <input id="lam" type="range" min="0.0001" max="1.0" step="0.0001" value="0.01"/>
+
+      <button id="fitBtn">Fit kernel classifier</button>
+
+      <div class="box" id="statusBox"></div>
+      <div class="box">
+        <b>Teaching angle</b><br/>
+        Linear kernel can only yield a threshold classifier in 1D (one sign change).
+        Polynomial/RBF kernels can yield multiple sign changes → richer decision regions.
+      </div>
+    </div>
+
+    <div class="col">
+      <canvas id="scoreCanvas" width="900" height="520"></canvas>
+    </div>
+  </div>
+
+<script>
+(() => {
+  let pts = []; // {x, y}
+  let xmin=-2, xmax=2;
+
+  const xCanvas = document.getElementById("xCanvas");
+  const scoreCanvas = document.getElementById("scoreCanvas");
+  const xctx = xCanvas.getContext("2d");
+  const sctx = scoreCanvas.getContext("2d");
+
+  const labelSel = document.getElementById("labelSel");
+  const rangeSel = document.getElementById("rangeSel");
+  const clearBtn = document.getElementById("clearBtn");
+  const exampleBtn = document.getElementById("exampleBtn");
+  const kernelSel = document.getElementById("kernelSel");
+  const degEl = document.getElementById("deg");
+  const gammaEl = document.getElementById("gamma");
+  const lamEl = document.getElementById("lam");
+  const degVal = document.getElementById("degVal");
+  const gamVal = document.getElementById("gamVal");
+  const lamVal = document.getElementById("lamVal");
+  const fitBtn = document.getElementById("fitBtn");
+  const statusBox = document.getElementById("statusBox");
+
+  let alpha = null;
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function updateLabels(){
+    degVal.textContent = String(degEl.value);
+    gamVal.textContent = Number(gammaEl.value).toFixed(1);
+    lamVal.textContent = Number(lamEl.value).toFixed(4);
+  }
+
+  function kernel(x,z){
+    const k = kernelSel.value;
+    if(k === "linear"){
+      return x*z;
+    } else if(k === "poly"){
+      const d = Number(degEl.value);
+      return Math.pow(1 + x*z, d);
+    } else {
+      const g = Number(gammaEl.value);
+      const t = x-z;
+      return Math.exp(-g*t*t);
+    }
+  }
+
+  function solveLinearSystem(A, b){
+    const n = A.length;
+    const M = new Array(n);
+    for(let i=0;i<n;i++){
+      M[i] = A[i].slice();
+      M[i].push(b[i]);
+    }
+    for(let col=0; col<n; col++){
+      let pivot = col;
+      for(let r=col+1; r<n; r++){
+        if(Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
+      }
+      if(Math.abs(M[pivot][col]) < 1e-12) return null;
+      const tmp = M[col]; M[col]=M[pivot]; M[pivot]=tmp;
+      const div = M[col][col];
+      for(let j=col; j<=n; j++) M[col][j] /= div;
+      for(let r=0; r<n; r++){
+        if(r===col) continue;
+        const factor = M[r][col];
+        for(let j=col; j<=n; j++){
+          M[r][j] -= factor * M[col][j];
+        }
+      }
+    }
+    const x = new Array(n);
+    for(let i=0;i<n;i++) x[i] = M[i][n];
+    return x;
+  }
+
+  function scoreAt(x){
+    if(!alpha) return 0;
+    let s = 0;
+    for(let i=0;i<pts.length;i++){
+      s += alpha[i] * kernel(pts[i].x, x);
+    }
+    return s;
+  }
+
+  function fit(){
+    alpha = null;
+    const n = pts.length;
+    if(n === 0){
+      statusBox.innerHTML = "<b>Status</b><br/>Add some points first.";
+      drawAll(); return;
+    }
+    if(n > 80){
+      statusBox.innerHTML = "<b>Status</b><br/>Keep ≤ 80 points for this simple solver.";
+      drawAll(); return;
+    }
+
+    const lam = Number(lamEl.value);
+    const A = new Array(n);
+    const y = new Array(n);
+    for(let i=0;i<n;i++){
+      A[i] = new Array(n);
+      y[i] = pts[i].y;
+      for(let j=0;j<n;j++){
+        A[i][j] = kernel(pts[i].x, pts[j].x);
+      }
+      A[i][i] += lam;
+    }
+    const sol = solveLinearSystem(A, y);
+    if(!sol){
+      statusBox.innerHTML = "<b>Status</b><br/>Solver failed (near singular). Try larger λ.";
+      drawAll(); return;
+    }
+    alpha = sol;
+
+    let correct=0;
+    for(let i=0;i<n;i++){
+      const s = scoreAt(pts[i].x);
+      if(pts[i].y * s > 0) correct++;
+    }
+    statusBox.innerHTML = "<b>Status</b><br/>Fit done. Training accuracy: <b>" + correct + "/" + n + "</b>.";
+    drawAll();
+  }
+
+  function draw1D(){
+    const W=xCanvas.width, H=xCanvas.height;
+    xctx.clearRect(0,0,W,H);
+    const m = {l:40,r:20,t:20,b:36};
+    const y0 = H - m.b;
+
+    xctx.strokeStyle="#888"; xctx.lineWidth=2;
+    xctx.beginPath(); xctx.moveTo(m.l, y0); xctx.lineTo(W-m.r, y0); xctx.stroke();
+
+    xctx.fillStyle="#666"; xctx.font="12px system-ui, sans-serif";
+    for(let k=0;k<=4;k++){
+      const xv = xmin + (xmax-xmin)*k/4;
+      const px = m.l + (W-m.l-m.r)*k/4;
+      xctx.strokeStyle="#bbb"; xctx.lineWidth=1;
+      xctx.beginPath(); xctx.moveTo(px, y0-6); xctx.lineTo(px, y0+6); xctx.stroke();
+      xctx.fillText(xv.toFixed(1), px-10, y0+20);
+    }
+    xctx.fillText("x (click to add points)", m.l, 16);
+
+    function sx(x){ return m.l + (x - xmin)/(xmax-xmin) * (W-m.l-m.r); }
+
+    for(const p of pts){
+      const px = sx(p.x);
+      const py = y0 + (p.y>0 ? -30 : 30);
+      xctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
+      xctx.beginPath(); xctx.arc(px, py, 7, 0, 2*Math.PI); xctx.fill();
+      xctx.strokeStyle="#111"; xctx.lineWidth=1; xctx.stroke();
+    }
+  }
+
+  function drawAxes(ctx, W, H, margin, xminA, xmaxA, yminA, ymaxA, xlabel, ylabel) {
+    function sx(x) { return margin.l + (x - xminA) / (xmaxA - xminA) * (W - margin.l - margin.r); }
+    function sy(y) { return H - margin.b - (y - yminA) / (ymaxA - yminA) * (H - margin.t - margin.b); }
+
+    ctx.strokeStyle = "#d0d0d0"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (xminA <= 0 && 0 <= xmaxA) {
+      const X0 = sx(0);
+      ctx.moveTo(X0, margin.t); ctx.lineTo(X0, H - margin.b);
+    }
+    if (yminA <= 0 && 0 <= ymaxA) {
+      const Y0 = sy(0);
+      ctx.moveTo(margin.l, Y0); ctx.lineTo(W - margin.r, Y0);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#666"; ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(xlabel, W - margin.r - 10, H - 8);
+    ctx.save();
+    ctx.translate(12, margin.t + 10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(ylabel, 0, 0);
+    ctx.restore();
+
+    return { sx, sy };
+  }
+
+  function drawScore(){
+    const W=scoreCanvas.width, H=scoreCanvas.height;
+    sctx.clearRect(0,0,W,H);
+    const m = {l:58,r:20,t:26,b:40};
+
+    sctx.fillStyle="#111"; sctx.font="14px system-ui, sans-serif";
+    sctx.fillText("Score function f(x) and decision regions (sign)", m.l, 18);
+
+    const N = 600;
+    const xs = new Array(N);
+    const ys = new Array(N);
+    let yminA=Infinity, ymaxA=-Infinity;
+    for(let i=0;i<N;i++){
+      const x = xmin + (xmax-xmin)*i/(N-1);
+      const y = scoreAt(x);
+      xs[i]=x; ys[i]=y;
+      yminA=Math.min(yminA,y); ymaxA=Math.max(ymaxA,y);
+    }
+    if(!isFinite(yminA) || !isFinite(ymaxA)){ yminA=-1; ymaxA=1; }
+    const pad = 0.12*Math.max(1e-6, ymaxA-yminA);
+    yminA -= pad; ymaxA += pad;
+
+    const ax = drawAxes(sctx, W, H, m, xmin, xmax, yminA, ymaxA, "x", "score f(x)");
+
+    // background decision regions
+    for(let i=0;i<N-1;i++){
+      const y=ys[i];
+      sctx.fillStyle = (y>=0) ? "rgba(37,99,235,0.06)" : "rgba(220,38,38,0.06)";
+      const X1=ax.sx(xs[i]), X2=ax.sx(xs[i+1]);
+      sctx.fillRect(X1, m.t, X2-X1+1, H-m.t-m.b);
+    }
+
+    // curve
+    sctx.strokeStyle="#111"; sctx.lineWidth=2.2;
+    sctx.beginPath();
+    for(let i=0;i<N;i++){
+      const X=ax.sx(xs[i]), Y=ax.sy(ys[i]);
+      if(i===0) sctx.moveTo(X,Y);
+      else sctx.lineTo(X,Y);
+    }
+    sctx.stroke();
+
+    // points at y=0
+    for(const p of pts){
+      const X=ax.sx(p.x), Y=ax.sy(0);
+      sctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
+      sctx.beginPath(); sctx.arc(X, Y, 5.5, 0, 2*Math.PI); sctx.fill();
+      sctx.strokeStyle="#111"; sctx.lineWidth=1; sctx.stroke();
+    }
+
+    if(!alpha){
+      sctx.fillStyle="#666"; sctx.font="13px system-ui, sans-serif";
+      sctx.fillText("Click “Fit kernel classifier” to compute f(x).", m.l, 42);
+    } else {
+      const k = kernelSel.value;
+      let info = "kernel=" + k;
+      if(k==="poly") info += ", d=" + degEl.value;
+      if(k==="rbf") info += ", γ=" + Number(gammaEl.value).toFixed(1);
+      info += ", λ=" + Number(lamEl.value).toFixed(4);
+      sctx.fillStyle="#666"; sctx.font="12px system-ui, sans-serif";
+      sctx.fillText(info, m.l, 42);
+    }
+  }
+
+  function drawAll(){ draw1D(); drawScore(); }
+
+  xCanvas.addEventListener("click", (ev) => {
+    const rect = xCanvas.getBoundingClientRect();
+    const scaleX = xCanvas.width / rect.width;
+    const px = (ev.clientX - rect.left) * scaleX;
+    const m = {l:40,r:20};
+    const x = xmin + (px - m.l) / (xCanvas.width - m.l - m.r) * (xmax - xmin);
+    if(!isFinite(x)) return;
+    pts.push({x: clamp(x, xmin, xmax), y: Number(labelSel.value)});
+    alpha = null;
+    drawAll();
+  });
+
+  rangeSel.addEventListener("change", ()=>{
+    const parts = rangeSel.value.split(",").map(Number);
+    xmin = parts[0]; xmax = parts[1];
+    pts = pts.map(p => ({x: clamp(p.x, xmin, xmax), y:p.y}));
+    alpha = null;
+    drawAll();
+  });
+
+  clearBtn.addEventListener("click", ()=>{
+    pts = []; alpha = null;
+    statusBox.innerHTML = "<b>Status</b><br/>Cleared points.";
+    drawAll();
+  });
+
+  exampleBtn.addEventListener("click", ()=>{
+    pts = [
+      {x:-1.2, y: 1}, {x:-0.35, y:-1}, {x:0.35, y:-1}, {x:1.2, y: 1},
+      {x:-1.0, y: 1}, {x:-0.15, y:-1}, {x:0.15, y:-1}, {x:1.0, y: 1},
+    ];
+    alpha = null;
+    statusBox.innerHTML = "<b>Status</b><br/>Loaded example. Try linear kernel vs polynomial degree 2.";
+    drawAll();
+  });
+
+  kernelSel.addEventListener("change", ()=>{ alpha=null; drawAll(); });
+  [degEl, gammaEl, lamEl].forEach(el => el.addEventListener("input", ()=>{ updateLabels(); alpha=null; drawAll(); }));
+  fitBtn.addEventListener("click", fit);
+
+  updateLabels();
+  statusBox.innerHTML = "<b>Status</b><br/>Add points then fit. Suggestion: load example; try linear vs poly(d=2) vs RBF.";
+  drawAll();
+})();
+</script>
+</body>
+</html>
