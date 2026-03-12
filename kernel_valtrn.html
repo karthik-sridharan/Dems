@@ -1,0 +1,625 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>2D Kernel Classifier Demo — Train/Validation Split</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
+    h2 { margin: 0 0 6px 0; }
+    .small { color:#444; font-size:13px; line-height:1.35; }
+    .wrap { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+    .plots { flex:1 1 760px; min-width:320px; }
+    .ctrlcol { width:min(390px,100%); }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .panel { display:block; }
+    canvas { width:100%; display:block; border:1px solid #d8d8d8; border-radius:10px; background:#fff; }
+    #trainCanvas, #valCanvas { height:520px; }
+    label { display:block; margin-top:10px; font-size:14px; }
+    input[type=range], select { width:100%; }
+    button { width:100%; padding:10px; margin-top:10px; font-size:14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .box { background:#f7f7f7; padding:10px; border-radius:10px; margin-top:10px; font-size:13px; line-height:1.35; }
+    .legend { margin-top:8px; font-size:14px; }
+    .sw { display:inline-block; width:12px; height:12px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+    .metric { margin-top:8px; background:#fafafa; border:1px solid #e6e6e6; border-radius:8px; padding:8px 10px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h2>2D kernel classifier with random train/validation split</h2>
+  <div class="small">
+    First add labeled 2D points by clicking in the <b>left panel</b>. Then click <b>Random split</b> to send each point
+    to either the training panel (left) or the validation panel (right). The classifier is fit <b>only on the training set</b>,
+    but its decision regions and boundary are shown on <b>both</b> panels. Training and validation classification error
+    are displayed underneath.
+  </div>
+
+  <div class="wrap">
+    <div class="plots">
+      <div class="grid2">
+        <div class="panel">
+          <canvas id="trainCanvas" width="900" height="520"></canvas>
+          <div class="metric" id="trainMetric">Training error: N/A</div>
+        </div>
+        <div class="panel">
+          <canvas id="valCanvas" width="900" height="520"></canvas>
+          <div class="metric" id="valMetric">Validation error: N/A</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="sw" style="background:#2563eb;"></span>class +1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#dc2626;"></span>class −1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>decision boundary
+      </div>
+    </div>
+
+    <div class="ctrlcol">
+      <div class="row2">
+        <div>
+          <label>Label to add</label>
+          <select id="labelSel">
+            <option value="1">+1</option>
+            <option value="-1">-1</option>
+          </select>
+        </div>
+        <div>
+          <label>Domain</label>
+          <select id="rangeSel">
+            <option value="-2,2">[-2,2] × [-2,2]</option>
+            <option value="-3,3">[-3,3] × [-3,3]</option>
+            <option value="-1.5,1.5">[-1.5,1.5] × [-1.5,1.5]</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Training fraction: <span id="splitVal"></span></label>
+      <input id="splitFrac" type="range" min="0.10" max="0.90" step="0.05" value="0.70"/>
+
+      <div class="row2">
+        <button id="clearBtn">Clear points</button>
+        <button id="exampleBtn">Load concentric example</button>
+      </div>
+
+      <div class="row2">
+        <button id="splitBtn">Random split</button>
+        <button id="resplitBtn">Re-split</button>
+      </div>
+
+      <label>Kernel</label>
+      <select id="kernelSel">
+        <option value="linear">Linear: k(x,z)=x·z</option>
+        <option value="poly">Polynomial: k(x,z)=(1+x·z)^d</option>
+        <option value="rbf">RBF: k(x,z)=exp(-γ ||x-z||²)</option>
+      </select>
+
+      <label>Loss</label>
+      <select id="lossSel">
+        <option value="logistic">Logistic</option>
+        <option value="hinge">Hinge</option>
+        <option value="squared">Squared</option>
+        <option value="absolute">Absolute</option>
+      </select>
+
+      <label>Polynomial degree d: <span id="degVal"></span></label>
+      <input id="deg" type="range" min="1" max="8" step="1" value="2"/>
+
+      <label>RBF gamma γ: <span id="gamVal"></span></label>
+      <input id="gamma" type="range" min="0.05" max="50.0" step="0.05" value="2.0"/>
+
+      <label>Regularization λ: <span id="lamVal"></span></label>
+      <input id="lam" type="range" min="0.0001" max="20.0" step="0.0001" value="0.01"/>
+
+      <label>Learning rate η: <span id="lrVal"></span></label>
+      <input id="lr" type="range" min="0.001" max="1.0" step="0.001" value="0.10"/>
+
+      <label>Steps: <span id="stepsVal"></span></label>
+      <input id="steps" type="range" min="50" max="6000" step="50" value="1500"/>
+
+      <div class="row2">
+        <button id="fitBtn">Fit on training set</button>
+        <button id="redrawBtn">Redraw</button>
+      </div>
+
+      <div class="box" id="statusBox"></div>
+
+      <div class="box">
+        <b>How it works</b><br/>
+        Before splitting, all points live in the left panel and clicking there adds more points.
+        After splitting, the left panel shows only the training set and the right panel shows only the validation set.
+        Re-splitting keeps the same pooled points but changes which side they go to.<br/><br/>
+        Suggested demo: load the concentric example, split, fit <b>linear + logistic</b>, then compare with
+        <b>poly degree 2</b> or <b>RBF</b>.
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  let allPts = [];
+  let trainIdx = [];
+  let valIdx = [];
+  let isSplit = false;
+
+  let domMin = -2, domMax = 2;
+  let alpha = null;
+  let bias = 0;
+
+  const trainCanvas = document.getElementById("trainCanvas");
+  const valCanvas = document.getElementById("valCanvas");
+  const tctx = trainCanvas.getContext("2d");
+  const vctx = valCanvas.getContext("2d");
+
+  const trainMetric = document.getElementById("trainMetric");
+  const valMetric = document.getElementById("valMetric");
+
+  const labelSel = document.getElementById("labelSel");
+  const rangeSel = document.getElementById("rangeSel");
+  const splitFracEl = document.getElementById("splitFrac");
+  const splitVal = document.getElementById("splitVal");
+
+  const clearBtn = document.getElementById("clearBtn");
+  const exampleBtn = document.getElementById("exampleBtn");
+  const splitBtn = document.getElementById("splitBtn");
+  const resplitBtn = document.getElementById("resplitBtn");
+
+  const kernelSel = document.getElementById("kernelSel");
+  const lossSel = document.getElementById("lossSel");
+  const degEl = document.getElementById("deg");
+  const gammaEl = document.getElementById("gamma");
+  const lamEl = document.getElementById("lam");
+  const lrEl = document.getElementById("lr");
+  const stepsEl = document.getElementById("steps");
+
+  const degVal = document.getElementById("degVal");
+  const gamVal = document.getElementById("gamVal");
+  const lamVal = document.getElementById("lamVal");
+  const lrVal = document.getElementById("lrVal");
+  const stepsVal = document.getElementById("stepsVal");
+
+  const fitBtn = document.getElementById("fitBtn");
+  const redrawBtn = document.getElementById("redrawBtn");
+  const statusBox = document.getElementById("statusBox");
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  function updateLabels(){
+    splitVal.textContent = Number(splitFracEl.value).toFixed(2);
+    degVal.textContent = String(degEl.value);
+    gamVal.textContent = Number(gammaEl.value).toFixed(2);
+    lamVal.textContent = Number(lamEl.value).toFixed(4);
+    lrVal.textContent = Number(lrEl.value).toFixed(3);
+    stepsVal.textContent = String(stepsEl.value);
+  }
+
+  function sx(x, W, m){ return m.l + (x - domMin)/(domMax-domMin) * (W-m.l-m.r); }
+  function sy(y, H, m){ return H - m.b - (y - domMin)/(domMax-domMin) * (H-m.t-m.b); }
+  function inv(px, py, W, H, m){
+    const x = domMin + (px - m.l)/(W-m.l-m.r) * (domMax-domMin);
+    const y = domMin + (H - m.b - py)/(H-m.t-m.b) * (domMax-domMin);
+    return [x,y];
+  }
+
+  function drawAxes(ctx, W, H, m, title){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "#111";
+    ctx.font = "14px system-ui, sans-serif";
+    ctx.fillText(title, m.l, 18);
+
+    ctx.strokeStyle = "#eee";
+    ctx.lineWidth = 1;
+    for(let k=0;k<=4;k++){
+      const v = domMin + (domMax-domMin)*k/4;
+      const px = sx(v, W, m);
+      const py = sy(v, H, m);
+      ctx.beginPath(); ctx.moveTo(px, m.t); ctx.lineTo(px, H-m.b); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.l, py); ctx.lineTo(W-m.r, py); ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#d0d0d0";
+    ctx.lineWidth = 1.2;
+    if(domMin<=0 && 0<=domMax){
+      const X0 = sx(0, W, m), Y0 = sy(0, H, m);
+      ctx.beginPath(); ctx.moveTo(X0, m.t); ctx.lineTo(X0, H-m.b); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.l, Y0); ctx.lineTo(W-m.r, Y0); ctx.stroke();
+    }
+
+    ctx.fillStyle = "#666";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText("x₁", W-m.r-10, H-8);
+    ctx.save();
+    ctx.translate(12, m.t+10);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText("x₂", 0, 0);
+    ctx.restore();
+  }
+
+  function kernel(a,b){
+    const s = Math.max(1, Math.abs(domMax));
+    const ax = a[0]/s, ay = a[1]/s;
+    const bx = b[0]/s, by = b[1]/s;
+    const dotp = ax*bx + ay*by;
+
+    if(kernelSel.value === "linear"){
+      return dotp;
+    } else if(kernelSel.value === "poly"){
+      const d = Number(degEl.value);
+      return Math.pow(1 + dotp, d);
+    } else {
+      const g = Number(gammaEl.value);
+      const dx = ax-bx, dy = ay-by;
+      return Math.exp(-g*(dx*dx + dy*dy));
+    }
+  }
+
+  function matVec(M, v){
+    const out = new Array(M.length).fill(0);
+    for(let i=0;i<M.length;i++){
+      let s = 0;
+      for(let j=0;j<v.length;j++) s += M[i][j]*v[j];
+      out[i] = s;
+    }
+    return out;
+  }
+
+  function getTrainPts(){ return trainIdx.map(i => allPts[i]); }
+  function getValPts(){ return valIdx.map(i => allPts[i]); }
+
+  function scoreAt(x){
+    if(!alpha || !isSplit) return 0;
+    const tr = getTrainPts();
+    let s = bias;
+    for(let i=0;i<tr.length;i++){
+      s += alpha[i] * kernel([tr[i].x1, tr[i].x2], x);
+    }
+    return s;
+  }
+
+  function classifyPts(arr){
+    if(!alpha) return null;
+    let wrong = 0;
+    for(const p of arr){
+      const s = scoreAt([p.x1,p.x2]);
+      if(p.y * s <= 0) wrong++;
+    }
+    return { wrong, total: arr.length, err: arr.length ? wrong/arr.length : 0 };
+  }
+
+  function drawPoints(ctx, W, H, m, arr){
+    for(const p of arr){
+      const px = sx(p.x1, W, m), py = sy(p.x2, H, m);
+      ctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
+      ctx.beginPath(); ctx.arc(px, py, 6.5, 0, 2*Math.PI); ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  function drawBoundary(ctx, W, H, m){
+    if(!alpha || !isSplit) return;
+
+    const G = 120;
+    for(let i=0;i<G;i++){
+      for(let j=0;j<G;j++){
+        const x1 = domMin + (domMax-domMin)*(i+0.5)/G;
+        const x2 = domMin + (domMax-domMin)*(j+0.5)/G;
+        const s = scoreAt([x1,x2]);
+        ctx.fillStyle = (s>=0) ? "rgba(37,99,235,0.06)" : "rgba(220,38,38,0.06)";
+        const px1 = sx(x1, W, m), py1 = sy(x2, H, m);
+        const px2 = sx(x1 + (domMax-domMin)/G, W, m);
+        const py2 = sy(x2 + (domMax-domMin)/G, H, m);
+        ctx.fillRect(px1, py2, px2-px1+1, py1-py2+1);
+      }
+    }
+
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    function interp(a,b,va,vb){ return a + (va/(va-vb))*(b-a); }
+
+    for(let i=0;i<G;i++){
+      for(let j=0;j<G;j++){
+        const x1 = domMin + (domMax-domMin)*i/G;
+        const x2 = domMin + (domMax-domMin)*j/G;
+        const x1b = domMin + (domMax-domMin)*(i+1)/G;
+        const x2b = domMin + (domMax-domMin)*(j+1)/G;
+
+        const f00 = scoreAt([x1,x2]);
+        const f10 = scoreAt([x1b,x2]);
+        const f01 = scoreAt([x1,x2b]);
+        const f11 = scoreAt([x1b,x2b]);
+
+        const s00 = f00>=0, s10=f10>=0, s01=f01>=0, s11=f11>=0;
+        const cnt = (s00?1:0)+(s10?1:0)+(s01?1:0)+(s11?1:0);
+        if(cnt===0 || cnt===4) continue;
+
+        const hits = [];
+        if(s00 !== s10) hits.push([interp(x1,x1b,f00,f10), x2]);
+        if(s01 !== s11) hits.push([interp(x1,x1b,f01,f11), x2b]);
+        if(s00 !== s01) hits.push([x1, interp(x2,x2b,f00,f01)]);
+        if(s10 !== s11) hits.push([x1b, interp(x2,x2b,f10,f11)]);
+
+        if(hits.length >= 2){
+          const A = [sx(hits[0][0],W,m), sy(hits[0][1],H,m)];
+          const B = [sx(hits[1][0],W,m), sy(hits[1][1],H,m)];
+          ctx.moveTo(A[0],A[1]);
+          ctx.lineTo(B[0],B[1]);
+        }
+      }
+    }
+    ctx.stroke();
+  }
+
+  function updateMetrics(){
+    if(!isSplit || !alpha){
+      trainMetric.textContent = isSplit ? "Training error: N/A (fit classifier to compute)" : "Training error: N/A";
+      valMetric.textContent = isSplit ? "Validation error: N/A (fit classifier to compute)" : "Validation error: N/A";
+      return;
+    }
+    const tr = classifyPts(getTrainPts());
+    const va = classifyPts(getValPts());
+    trainMetric.textContent = "Training error: " + tr.wrong + "/" + tr.total + " = " + (100*tr.err).toFixed(1) + "%";
+    valMetric.textContent = "Validation error: " + va.wrong + "/" + va.total + " = " + (100*va.err).toFixed(1) + "%";
+  }
+
+  function drawAll(){
+    const m = {l:58,r:20,t:26,b:40};
+
+    drawAxes(tctx, trainCanvas.width, trainCanvas.height, m,
+      isSplit ? "Training set (fit uses only these points)" : "Add points here before splitting");
+    drawBoundary(tctx, trainCanvas.width, trainCanvas.height, m);
+    drawPoints(tctx, trainCanvas.width, trainCanvas.height, m, isSplit ? getTrainPts() : allPts);
+
+    drawAxes(vctx, valCanvas.width, valCanvas.height, m,
+      isSplit ? "Validation set (same fitted boundary shown here)" : "Validation set (empty until split)");
+    drawBoundary(vctx, valCanvas.width, valCanvas.height, m);
+    drawPoints(vctx, valCanvas.width, valCanvas.height, m, isSplit ? getValPts() : []);
+
+    if(!isSplit){
+      vctx.fillStyle = "#666";
+      vctx.font = "13px system-ui, sans-serif";
+      vctx.fillText("Click “Random split” after adding points.", m.l, 42);
+    } else if(!alpha){
+      tctx.fillStyle = "#666";
+      tctx.font = "13px system-ui, sans-serif";
+      tctx.fillText("Click “Fit on training set”.", m.l, 42);
+
+      vctx.fillStyle = "#666";
+      vctx.font = "13px system-ui, sans-serif";
+      vctx.fillText("Boundary will appear here too after fitting.", m.l, 42);
+    } else {
+      let info = "kernel=" + kernelSel.value + ", loss=" + lossSel.value;
+      if(kernelSel.value==="poly") info += ", d=" + degEl.value;
+      if(kernelSel.value==="rbf") info += ", γ=" + Number(gammaEl.value).toFixed(2);
+      info += ", λ=" + Number(lamEl.value).toFixed(4);
+
+      tctx.fillStyle = "#666";
+      tctx.font = "12px system-ui, sans-serif";
+      tctx.fillText(info, m.l, 42);
+
+      vctx.fillStyle = "#666";
+      vctx.font = "12px system-ui, sans-serif";
+      vctx.fillText(info, m.l, 42);
+    }
+
+    updateMetrics();
+  }
+
+  function clearFit(){
+    alpha = null;
+    bias = 0;
+  }
+
+  function randomSplit(){
+    clearFit();
+    trainIdx = [];
+    valIdx = [];
+    const pTrain = Number(splitFracEl.value);
+    const n = allPts.length;
+
+    if(n === 0){
+      statusBox.innerHTML = "<b>Status</b><br/>Add some points first.";
+      drawAll();
+      return;
+    }
+
+    for(let i=0;i<n;i++){
+      if(Math.random() < pTrain) trainIdx.push(i);
+      else valIdx.push(i);
+    }
+
+    if(n >= 2){
+      if(trainIdx.length === 0) trainIdx.push(valIdx.pop());
+      if(valIdx.length === 0) valIdx.push(trainIdx.pop());
+    } else {
+      trainIdx = [0];
+      valIdx = [];
+    }
+
+    isSplit = true;
+    statusBox.innerHTML = "<b>Status</b><br/>Random split done. Train size: <b>" + trainIdx.length +
+      "</b>, validation size: <b>" + valIdx.length + "</b>.";
+    drawAll();
+  }
+
+  function fitOnTraining(){
+    clearFit();
+    if(!isSplit){
+      statusBox.innerHTML = "<b>Status</b><br/>Split the data first.";
+      drawAll();
+      return;
+    }
+
+    const tr = getTrainPts();
+    const n = tr.length;
+    if(n === 0){
+      statusBox.innerHTML = "<b>Status</b><br/>Training set is empty.";
+      drawAll();
+      return;
+    }
+    if(n > 120){
+      statusBox.innerHTML = "<b>Status</b><br/>Keep training set ≤ 120 points for this in-browser optimizer.";
+      drawAll();
+      return;
+    }
+
+    const K = Array.from({length:n}, () => Array(n).fill(0));
+    const y = new Array(n);
+    for(let i=0;i<n;i++){
+      y[i] = tr[i].y;
+      for(let j=0;j<n;j++){
+        K[i][j] = kernel([tr[i].x1, tr[i].x2], [tr[j].x1, tr[j].x2]);
+      }
+    }
+
+    const loss = lossSel.value;
+    const lam = Number(lamEl.value);
+    const lr = Number(lrEl.value);
+    const steps = Number(stepsEl.value);
+
+    alpha = new Array(n).fill(0);
+    bias = 0;
+
+    for(let t=0;t<steps;t++){
+      const sVec = matVec(K, alpha).map(v => v + bias);
+      const gScore = new Array(n).fill(0);
+
+      for(let i=0;i<n;i++){
+        const yi = y[i];
+        const si = sVec[i];
+
+        if(loss === "logistic"){
+          gScore[i] = -yi / (1 + Math.exp(yi*si));
+        } else if(loss === "hinge"){
+          const m = 1 - yi*si;
+          gScore[i] = (m > 0) ? -yi : 0;
+        } else if(loss === "squared"){
+          gScore[i] = si - yi;
+        } else {
+          const r = si - yi;
+          gScore[i] = (r > 0) ? 1 : (r < 0 ? -1 : 0);
+        }
+      }
+
+      const Kg = matVec(K, gScore);
+      const gradA = new Array(n);
+      for(let i=0;i<n;i++) gradA[i] = Kg[i]/n + lam*alpha[i];
+      const gradB = gScore.reduce((a,b)=>a+b,0)/n;
+
+      for(let i=0;i<n;i++) alpha[i] -= lr*gradA[i];
+      bias -= lr*gradB;
+
+      if(t % 200 === 0){
+        let gn = gradB*gradB;
+        for(let i=0;i<n;i++) gn += gradA[i]*gradA[i];
+        if(Math.sqrt(gn) < 1e-6) break;
+      }
+    }
+
+    const trErr = classifyPts(tr);
+    const vaErr = classifyPts(getValPts());
+
+    statusBox.innerHTML = "<b>Status</b><br/>Fit done on training set. Train acc: <b>" +
+      (100*(1-trErr.err)).toFixed(1) + "%</b>, validation acc: <b>" +
+      (100*(1-vaErr.err)).toFixed(1) + "%</b>.";
+    drawAll();
+  }
+
+  trainCanvas.addEventListener("click", (ev) => {
+    const rect = trainCanvas.getBoundingClientRect();
+    const scaleX = trainCanvas.width / rect.width;
+    const scaleY = trainCanvas.height / rect.height;
+    const px = (ev.clientX - rect.left) * scaleX;
+    const py = (ev.clientY - rect.top) * scaleY;
+    const m = {l:58,r:20,t:26,b:40};
+    const xy = inv(px, py, trainCanvas.width, trainCanvas.height, m);
+    if(!isFinite(xy[0]) || !isFinite(xy[1])) return;
+
+    allPts.push({
+      x1: clamp(xy[0],domMin,domMax),
+      x2: clamp(xy[1],domMin,domMax),
+      y: Number(labelSel.value)
+    });
+    isSplit = false;
+    trainIdx = [];
+    valIdx = [];
+    clearFit();
+    statusBox.innerHTML = "<b>Status</b><br/>Added point. Split cleared; click Random split again.";
+    drawAll();
+  });
+
+  rangeSel.addEventListener("change", () => {
+    const a = rangeSel.value.split(",").map(Number);
+    domMin = a[0];
+    domMax = a[1];
+    allPts = allPts.map(p => ({
+      x1: clamp(p.x1, domMin, domMax),
+      x2: clamp(p.x2, domMin, domMax),
+      y: p.y
+    }));
+    clearFit();
+    drawAll();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    allPts = [];
+    trainIdx = [];
+    valIdx = [];
+    isSplit = false;
+    clearFit();
+    statusBox.innerHTML = "<b>Status</b><br/>Cleared all points.";
+    drawAll();
+  });
+
+  exampleBtn.addEventListener("click", () => {
+    allPts = [
+      {x1: 0.0, x2: 0.0, y: 1},
+      {x1: 0.5, x2: 0.2, y: 1},
+      {x1:-0.4, x2: 0.3, y: 1},
+      {x1: 0.2, x2:-0.5, y: 1},
+      {x1: 1.4, x2: 0.0, y:-1},
+      {x1:-1.3, x2: 0.2, y:-1},
+      {x1: 0.0, x2: 1.5, y:-1},
+      {x1: 0.1, x2:-1.4, y:-1},
+      {x1: 1.0, x2: 1.0, y:-1},
+      {x1:-1.0, x2:-1.0, y:-1}
+    ];
+    trainIdx = [];
+    valIdx = [];
+    isSplit = false;
+    clearFit();
+    statusBox.innerHTML = "<b>Status</b><br/>Loaded concentric example. Now click Random split.";
+    drawAll();
+  });
+
+  splitBtn.addEventListener("click", randomSplit);
+  resplitBtn.addEventListener("click", () => {
+    if(allPts.length === 0){
+      statusBox.innerHTML = "<b>Status</b><br/>No points to split.";
+      drawAll();
+      return;
+    }
+    randomSplit();
+  });
+
+  [splitFracEl, kernelSel, lossSel, degEl, gammaEl, lamEl, lrEl, stepsEl].forEach(el => {
+    el.addEventListener("input", () => {
+      updateLabels();
+      clearFit();
+      drawAll();
+    });
+  });
+
+  fitBtn.addEventListener("click", fitOnTraining);
+  redrawBtn.addEventListener("click", drawAll);
+
+  updateLabels();
+  statusBox.innerHTML = "<b>Status</b><br/>Add points in the left panel, then split, then fit on training only.";
+  drawAll();
+})();
+</script>
+</body>
+</html>
