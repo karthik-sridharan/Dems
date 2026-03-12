@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Kernel Method Demo 2D</title>
+  <title>2D Kernel Classifier Demo — Single Panel + Loss Choice</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 14px; color: #111; }
     h2 { margin: 0 0 6px 0; }
     .small { color:#444; font-size:13px; line-height:1.35; }
     .wrap { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
-    .col { flex:1 1 520px; min-width:320px; }
+    .plotcol { flex:1 1 720px; min-width:320px; }
+    .ctrlcol { width:min(390px,100%); }
     canvas { width:100%; display:block; border:1px solid #d8d8d8; border-radius:10px; background:#fff; }
-    #leftCanvas, #rightCanvas { height:520px; }
+    #canvas { height:640px; }
     label { display:block; margin-top:10px; font-size:14px; }
     input[type=range], select { width:100%; }
     button { width:100%; padding:10px; margin-top:10px; font-size:14px; }
@@ -23,22 +24,26 @@
   </style>
 </head>
 <body>
-  <h2>Kernel method demo in 2D: richer decision boundaries without explicit φ</h2>
+  <h2>2D kernel classifier: add points and show the boundary in the same panel</h2>
   <div class="small">
-    Left: click to add labeled 2D points. Right: after fitting, view the kernel classifier's score field
-    f(x)=∑ᵢ αᵢ k(xᵢ,x), its decision regions, and the zero-level decision boundary.
-    Compare linear, polynomial, and RBF kernels to see how richer kernels produce more expressive boundaries.
+    Click to add labeled 2D points. After fitting, the same panel shows decision regions and the decision boundary
+    for a kernel classifier of the form <code>f(x)=∑ᵢ αᵢ k(xᵢ,x)+b</code>. You can switch the kernel, the loss
+    (logistic / hinge / squared / absolute on ±1 targets), and the optimizer settings.
   </div>
 
   <div class="wrap">
-    <div class="col">
-      <canvas id="leftCanvas" width="900" height="520"></canvas>
+    <div class="plotcol">
+      <canvas id="canvas" width="1000" height="640"></canvas>
       <div class="legend">
         <span class="sw" style="background:#2563eb;"></span>class +1
         &nbsp;&nbsp;
         <span class="sw" style="background:#dc2626;"></span>class −1
+        &nbsp;&nbsp;
+        <span class="sw" style="background:#111;"></span>decision boundary
       </div>
+    </div>
 
+    <div class="ctrlcol">
       <div class="row2">
         <div>
           <label>Label to add</label>
@@ -62,23 +67,6 @@
         <button id="exampleBtn">Load concentric example</button>
       </div>
 
-      <div class="box">
-        <b>Teaching angle</b><br/>
-        A linear kernel yields a straight-line boundary in the original 2D space. Polynomial and RBF kernels can produce
-        curved or more localized boundaries, showing how richer kernels implicitly represent richer feature maps.
-      </div>
-    </div>
-
-    <div class="col">
-      <canvas id="rightCanvas" width="900" height="520"></canvas>
-      <div class="legend">
-        <span class="sw" style="background:#2563eb;"></span>positive region
-        &nbsp;&nbsp;
-        <span class="sw" style="background:#dc2626;"></span>negative region
-        &nbsp;&nbsp;
-        <span class="sw" style="background:#111;"></span>decision boundary
-      </div>
-
       <label>Kernel</label>
       <select id="kernelSel">
         <option value="linear">Linear: k(x,z)=x·z</option>
@@ -86,34 +74,57 @@
         <option value="rbf">RBF: k(x,z)=exp(-γ ||x-z||²)</option>
       </select>
 
+      <label>Loss</label>
+      <select id="lossSel">
+        <option value="logistic">Logistic</option>
+        <option value="hinge">Hinge</option>
+        <option value="squared">Squared</option>
+        <option value="absolute">Absolute</option>
+      </select>
+
       <label>Polynomial degree d: <span id="degVal"></span></label>
       <input id="deg" type="range" min="1" max="8" step="1" value="2"/>
 
       <label>RBF gamma γ: <span id="gamVal"></span></label>
-      <input id="gamma" type="range" min="0.1" max="10.0" step="0.1" value="2.0"/>
+      <input id="gamma" type="range" min="0.05" max="50.0" step="0.05" value="2.0"/>
 
-      <label>Ridge λ: <span id="lamVal"></span></label>
-      <input id="lam" type="range" min="0.0001" max="1.0" step="0.0001" value="0.01"/>
+      <label>Regularization λ: <span id="lamVal"></span></label>
+      <input id="lam" type="range" min="0.0001" max="20.0" step="0.0001" value="0.01"/>
+
+      <label>Learning rate η: <span id="lrVal"></span></label>
+      <input id="lr" type="range" min="0.001" max="1.0" step="0.001" value="0.10"/>
+
+      <label>Steps: <span id="stepsVal"></span></label>
+      <input id="steps" type="range" min="50" max="6000" step="50" value="1500"/>
 
       <div class="row2">
-        <button id="fitBtn">Fit kernel classifier</button>
+        <button id="fitBtn">Fit classifier</button>
         <button id="redrawBtn">Redraw</button>
       </div>
 
       <div class="box" id="statusBox"></div>
+
+      <div class="box">
+        <b>Suggested use</b><br/>
+        Load the concentric example and compare:
+        <br/>• <b>linear + logistic</b>
+        <br/>• <b>poly degree 2 + logistic</b>
+        <br/>• <b>RBF + logistic</b>
+        <br/><br/>Then change the loss to hinge / squared / absolute to show how the fitted boundary changes.
+        The γ and λ ranges are intentionally wide so you can show under/over-smoothing.
+      </div>
     </div>
   </div>
 
 <script>
 (() => {
-  let pts = []; // {x1,x2,y}
+  let pts = [];
   let domMin=-2, domMax=2;
   let alpha = null;
+  let bias = 0;
 
-  const leftCanvas = document.getElementById("leftCanvas");
-  const rightCanvas = document.getElementById("rightCanvas");
-  const lctx = leftCanvas.getContext("2d");
-  const rctx = rightCanvas.getContext("2d");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
   const labelSel = document.getElementById("labelSel");
   const rangeSel = document.getElementById("rangeSel");
@@ -121,22 +132,30 @@
   const exampleBtn = document.getElementById("exampleBtn");
 
   const kernelSel = document.getElementById("kernelSel");
+  const lossSel = document.getElementById("lossSel");
   const degEl = document.getElementById("deg");
   const gammaEl = document.getElementById("gamma");
   const lamEl = document.getElementById("lam");
+  const lrEl = document.getElementById("lr");
+  const stepsEl = document.getElementById("steps");
+
   const degVal = document.getElementById("degVal");
   const gamVal = document.getElementById("gamVal");
   const lamVal = document.getElementById("lamVal");
+  const lrVal = document.getElementById("lrVal");
+  const stepsVal = document.getElementById("stepsVal");
+
   const fitBtn = document.getElementById("fitBtn");
   const redrawBtn = document.getElementById("redrawBtn");
   const statusBox = document.getElementById("statusBox");
 
   function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-
   function updateLabels(){
     degVal.textContent = String(degEl.value);
-    gamVal.textContent = Number(gammaEl.value).toFixed(1);
+    gamVal.textContent = Number(gammaEl.value).toFixed(2);
     lamVal.textContent = Number(lamEl.value).toFixed(4);
+    lrVal.textContent = Number(lrEl.value).toFixed(3);
+    stepsVal.textContent = String(stepsEl.value);
   }
 
   function sx(x, W, m){ return m.l + (x - domMin)/(domMax-domMin) * (W-m.l-m.r); }
@@ -147,12 +166,14 @@
     return [x,y];
   }
 
-  function drawAxes(ctx, W, H, m, title){
+  function drawAxes(W, H, m, title){
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle="#111"; ctx.font="14px system-ui, sans-serif";
+    ctx.fillStyle="#111";
+    ctx.font="14px system-ui, sans-serif";
     ctx.fillText(title, m.l, 18);
 
-    ctx.strokeStyle="#eee"; ctx.lineWidth=1;
+    ctx.strokeStyle="#eee";
+    ctx.lineWidth=1;
     for(let k=0;k<=4;k++){
       const v = domMin + (domMax-domMin)*k/4;
       const px = sx(v, W, m);
@@ -161,14 +182,16 @@
       ctx.beginPath(); ctx.moveTo(m.l, py); ctx.lineTo(W-m.r, py); ctx.stroke();
     }
 
-    ctx.strokeStyle="#d0d0d0"; ctx.lineWidth=1.2;
+    ctx.strokeStyle="#d0d0d0";
+    ctx.lineWidth=1.2;
     if(domMin<=0 && 0<=domMax){
       const X0 = sx(0,W,m), Y0 = sy(0,H,m);
       ctx.beginPath(); ctx.moveTo(X0,m.t); ctx.lineTo(X0,H-m.b); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(m.l,Y0); ctx.lineTo(W-m.r,Y0); ctx.stroke();
     }
 
-    ctx.fillStyle="#666"; ctx.font="12px system-ui, sans-serif";
+    ctx.fillStyle="#666";
+    ctx.font="12px system-ui, sans-serif";
     ctx.fillText("x₁", W-m.r-10, H-8);
     ctx.save();
     ctx.translate(12, m.t+10);
@@ -177,119 +200,56 @@
     ctx.restore();
   }
 
-  function drawPoints(ctx, W, H, m){
-    for(const p of pts){
-      const px = sx(p.x1,W,m), py = sy(p.x2,H,m);
-      ctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
-      ctx.beginPath(); ctx.arc(px,py,6.5,0,2*Math.PI); ctx.fill();
-      ctx.strokeStyle="#111"; ctx.lineWidth=1; ctx.stroke();
-    }
-  }
-
   function kernel(a,b){
-    const k = kernelSel.value;
-    const dotp = a[0]*b[0] + a[1]*b[1];
-    if(k === "linear"){
+    const s = Math.max(1, Math.abs(domMax));
+    const ax = a[0]/s, ay = a[1]/s;
+    const bx = b[0]/s, by = b[1]/s;
+    const dotp = ax*bx + ay*by;
+    if(kernelSel.value === "linear"){
       return dotp;
-    } else if(k === "poly"){
+    } else if(kernelSel.value === "poly"){
       const d = Number(degEl.value);
       return Math.pow(1 + dotp, d);
     } else {
       const g = Number(gammaEl.value);
-      const dx = a[0]-b[0], dy=a[1]-b[1];
+      const dx = ax-bx, dy = ay-by;
       return Math.exp(-g*(dx*dx + dy*dy));
     }
   }
 
-  function solveLinearSystem(A, b){
-    const n = A.length;
-    const M = new Array(n);
-    for(let i=0;i<n;i++){
-      M[i] = A[i].slice();
-      M[i].push(b[i]);
+  function matVec(M, v){
+    const out = new Array(M.length).fill(0);
+    for(let i=0;i<M.length;i++){
+      let s=0;
+      for(let j=0;j<v.length;j++) s += M[i][j]*v[j];
+      out[i]=s;
     }
-    for(let col=0; col<n; col++){
-      let pivot = col;
-      for(let r=col+1; r<n; r++){
-        if(Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
-      }
-      if(Math.abs(M[pivot][col]) < 1e-12) return null;
-      const tmp = M[col]; M[col] = M[pivot]; M[pivot] = tmp;
-      const div = M[col][col];
-      for(let j=col; j<=n; j++) M[col][j] /= div;
-      for(let r=0; r<n; r++){
-        if(r===col) continue;
-        const f = M[r][col];
-        for(let j=col; j<=n; j++){
-          M[r][j] -= f * M[col][j];
-        }
-      }
-    }
-    const x = new Array(n);
-    for(let i=0;i<n;i++) x[i] = M[i][n];
-    return x;
-  }
-
-  function fit(){
-    alpha = null;
-    const n = pts.length;
-    if(n === 0){
-      statusBox.innerHTML = "<b>Status</b><br/>Add some points first.";
-      drawAll();
-      return;
-    }
-    if(n > 100){
-      statusBox.innerHTML = "<b>Status</b><br/>Keep ≤ 100 points for this simple in-browser solver.";
-      drawAll();
-      return;
-    }
-
-    const lam = Number(lamEl.value);
-    const A = new Array(n);
-    const y = new Array(n);
-    for(let i=0;i<n;i++){
-      A[i] = new Array(n);
-      y[i] = pts[i].y;
-      const xi = [pts[i].x1, pts[i].x2];
-      for(let j=0;j<n;j++){
-        const xj = [pts[j].x1, pts[j].x2];
-        A[i][j] = kernel(xi, xj);
-      }
-      A[i][i] += lam;
-    }
-
-    const sol = solveLinearSystem(A, y);
-    if(!sol){
-      statusBox.innerHTML = "<b>Status</b><br/>Solver failed (matrix near singular). Try larger λ.";
-      drawAll();
-      return;
-    }
-    alpha = sol;
-
-    let correct=0;
-    for(let i=0;i<n;i++){
-      const s = scoreAt([pts[i].x1, pts[i].x2]);
-      if(pts[i].y * s > 0) correct++;
-    }
-    const acc = correct / n;
-    statusBox.innerHTML = "<b>Status</b><br/>Fit done. Training accuracy: <b>" +
-      (100*acc).toFixed(1) + "%</b> (" + correct + "/" + n + ").";
-    drawAll();
+    return out;
   }
 
   function scoreAt(x){
     if(!alpha) return 0;
-    let s = 0;
+    let s = bias;
     for(let i=0;i<pts.length;i++){
       s += alpha[i] * kernel([pts[i].x1, pts[i].x2], x);
     }
     return s;
   }
 
-  function drawBoundary(ctx, W, H, m){
-    if(!alpha) return;
+  function drawPoints(W,H,m){
+    for(const p of pts){
+      const px = sx(p.x1,W,m), py = sy(p.x2,H,m);
+      ctx.fillStyle = (p.y>0) ? "#2563eb" : "#dc2626";
+      ctx.beginPath(); ctx.arc(px,py,6.5,0,2*Math.PI); ctx.fill();
+      ctx.strokeStyle="#111";
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
 
-    const G = 100;
+  function drawBoundary(W,H,m){
+    if(!alpha) return;
+    const G = 120;
     for(let i=0;i<G;i++){
       for(let j=0;j<G;j++){
         const x1 = domMin + (domMax-domMin)*(i+0.5)/G;
@@ -307,9 +267,7 @@
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    function interp(a,b,va,vb){
-      return a + (va/(va-vb))*(b-a);
-    }
+    function interp(a,b,va,vb){ return a + (va/(va-vb))*(b-a); }
 
     for(let i=0;i<G;i++){
       for(let j=0;j<G;j++){
@@ -344,53 +302,135 @@
     ctx.stroke();
   }
 
-  function drawLeft(){
-    const W=leftCanvas.width, H=leftCanvas.height;
+  function draw(){
+    const W=canvas.width, H=canvas.height;
     const m = {l:58,r:20,t:26,b:40};
-    drawAxes(lctx, W, H, m, "Input points (click to add)");
-    drawPoints(lctx, W, H, m);
-  }
-
-  function drawRight(){
-    const W=rightCanvas.width, H=rightCanvas.height;
-    const m = {l:58,r:20,t:26,b:40};
-    drawAxes(rctx, W, H, m, "Kernel classifier: score field and boundary");
-    drawBoundary(rctx, W, H, m);
-    drawPoints(rctx, W, H, m);
+    drawAxes(W,H,m,"Click to add 2D points — fitted boundary appears here");
+    drawBoundary(W,H,m);
+    drawPoints(W,H,m);
 
     if(!alpha){
-      rctx.fillStyle="#666";
-      rctx.font="13px system-ui, sans-serif";
-      rctx.fillText("Click “Fit kernel classifier” to compute the decision boundary.", m.l, 42);
+      ctx.fillStyle="#666";
+      ctx.font="13px system-ui, sans-serif";
+      ctx.fillText("Add points and click “Fit classifier” to compute the decision boundary.", m.l, 42);
     } else {
-      let info = "kernel=" + kernelSel.value;
+      let info = "kernel=" + kernelSel.value + ", loss=" + lossSel.value;
       if(kernelSel.value==="poly") info += ", d=" + degEl.value;
-      if(kernelSel.value==="rbf") info += ", γ=" + Number(gammaEl.value).toFixed(1);
+      if(kernelSel.value==="rbf") info += ", γ=" + Number(gammaEl.value).toFixed(2);
       info += ", λ=" + Number(lamEl.value).toFixed(4);
-      rctx.fillStyle="#666";
-      rctx.font="12px system-ui, sans-serif";
-      rctx.fillText(info, m.l, 42);
+      ctx.fillStyle="#666";
+      ctx.font="12px system-ui, sans-serif";
+      ctx.fillText(info, m.l, 42);
     }
   }
 
-  function drawAll(){
-    drawLeft();
-    drawRight();
+  function fit(){
+    alpha = null;
+    bias = 0;
+
+    const n = pts.length;
+    if(n === 0){
+      statusBox.innerHTML = "<b>Status</b><br/>Add some points first.";
+      draw();
+      return;
+    }
+    if(n > 120){
+      statusBox.innerHTML = "<b>Status</b><br/>Keep ≤ 120 points for this in-browser optimizer.";
+      draw();
+      return;
+    }
+
+    const K = Array.from({length:n}, () => Array(n).fill(0));
+    const y = new Array(n);
+    for(let i=0;i<n;i++){
+      y[i] = pts[i].y;
+      for(let j=0;j<n;j++){
+        K[i][j] = kernel([pts[i].x1, pts[i].x2], [pts[j].x1, pts[j].x2]);
+      }
+    }
+
+    const loss = lossSel.value;
+    const lam = Number(lamEl.value);
+    const lr = Number(lrEl.value);
+    const steps = Number(stepsEl.value);
+
+    alpha = new Array(n).fill(0);
+    bias = 0;
+
+    for(let t=0;t<steps;t++){
+      const sVec = matVec(K, alpha).map(v => v + bias);
+      const gScore = new Array(n).fill(0);
+
+      for(let i=0;i<n;i++){
+        const yi = y[i];
+        const si = sVec[i];
+
+        if(loss === "logistic"){
+          gScore[i] = -yi / (1 + Math.exp(yi*si));
+        } else if(loss === "hinge"){
+          const m = 1 - yi*si;
+          gScore[i] = (m > 0) ? -yi : 0;
+        } else if(loss === "squared"){
+          gScore[i] = si - yi;
+        } else {
+          const r = si - yi;
+          gScore[i] = (r > 0) ? 1 : (r < 0 ? -1 : 0);
+        }
+      }
+
+      const Kg = matVec(K, gScore);
+      const gradA = new Array(n);
+      for(let i=0;i<n;i++) gradA[i] = Kg[i]/n + lam*alpha[i];
+      const gradB = gScore.reduce((a,b)=>a+b,0)/n;
+
+      for(let i=0;i<n;i++) alpha[i] -= lr*gradA[i];
+      bias -= lr*gradB;
+
+      if(t % 200 === 0){
+        let gn = gradB*gradB;
+        for(let i=0;i<n;i++) gn += gradA[i]*gradA[i];
+        if(Math.sqrt(gn) < 1e-6) break;
+      }
+    }
+
+    const sFinal = matVec(K, alpha).map(v => v + bias);
+    let correct=0, objFinal=0;
+    for(let i=0;i<n;i++){
+      const yi = y[i], si = sFinal[i];
+      if(yi*si > 0) correct++;
+      if(loss === "logistic"){
+        const z = -yi*si;
+        objFinal += (z > 40 ? z : Math.log(1 + Math.exp(z)));
+      } else if(loss === "hinge"){
+        objFinal += Math.max(0, 1 - yi*si);
+      } else if(loss === "squared"){
+        const r = si - yi;
+        objFinal += 0.5*r*r;
+      } else {
+        objFinal += Math.abs(si - yi);
+      }
+    }
+    objFinal /= n;
+    const acc = correct / n;
+
+    statusBox.innerHTML = "<b>Status</b><br/>Fit done. Train acc: <b>" +
+      (100*acc).toFixed(1) + "%</b>, objective: <b>" + objFinal.toFixed(4) + "</b>.";
+    draw();
   }
 
-  leftCanvas.addEventListener("click", (ev) => {
-    const rect = leftCanvas.getBoundingClientRect();
-    const scaleX = leftCanvas.width / rect.width;
-    const scaleY = leftCanvas.height / rect.height;
+  canvas.addEventListener("click", (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     const px = (ev.clientX - rect.left) * scaleX;
     const py = (ev.clientY - rect.top) * scaleY;
     const m = {l:58,r:20,t:26,b:40};
-    const xy = inv(px, py, leftCanvas.width, leftCanvas.height, m);
-    const x1 = xy[0], x2 = xy[1];
-    if(!isFinite(x1) || !isFinite(x2)) return;
-    pts.push({x1: clamp(x1,domMin,domMax), x2: clamp(x2,domMin,domMax), y: Number(labelSel.value)});
+    const xy = inv(px, py, canvas.width, canvas.height, m);
+    if(!isFinite(xy[0]) || !isFinite(xy[1])) return;
+    pts.push({x1: clamp(xy[0],domMin,domMax), x2: clamp(xy[1],domMin,domMax), y: Number(labelSel.value)});
     alpha = null;
-    drawAll();
+    bias = 0;
+    draw();
   });
 
   rangeSel.addEventListener("change", () => {
@@ -402,14 +442,16 @@
       y: p.y
     }));
     alpha = null;
-    drawAll();
+    bias = 0;
+    draw();
   });
 
   clearBtn.addEventListener("click", () => {
     pts = [];
     alpha = null;
+    bias = 0;
     statusBox.innerHTML = "<b>Status</b><br/>Cleared points.";
-    drawAll();
+    draw();
   });
 
   exampleBtn.addEventListener("click", () => {
@@ -426,24 +468,26 @@
       {x1:-1.0, x2:-1.0, y:-1}
     ];
     alpha = null;
-    statusBox.innerHTML = "<b>Status</b><br/>Loaded center-vs-outer example. Try linear vs polynomial vs RBF.";
-    drawAll();
+    bias = 0;
+    statusBox.innerHTML = "<b>Status</b><br/>Loaded center-vs-outer example. Try linear vs polynomial vs RBF, and compare losses.";
+    draw();
   });
 
-  [kernelSel, degEl, gammaEl, lamEl].forEach(el => {
+  [kernelSel, lossSel, degEl, gammaEl, lamEl, lrEl, stepsEl].forEach(el => {
     el.addEventListener("input", () => {
       updateLabels();
       alpha = null;
-      drawAll();
+      bias = 0;
+      draw();
     });
   });
 
   fitBtn.addEventListener("click", fit);
-  redrawBtn.addEventListener("click", drawAll);
+  redrawBtn.addEventListener("click", draw);
 
   updateLabels();
-  statusBox.innerHTML = "<b>Status</b><br/>Add 2D points then fit. A good demo is the center-vs-outer example with linear vs RBF.";
-  drawAll();
+  statusBox.innerHTML = "<b>Status</b><br/>Add 2D points, choose kernel/loss, then fit. Same panel is used for adding points and showing the boundary.";
+  draw();
 })();
 </script>
 </body>
