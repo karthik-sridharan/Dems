@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Decision Tree Mini Demos</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.35; background:#fafafa; color:#222; }
+  h1, h2 { margin-bottom: 8px; }
+  .section { background:white; border:1px solid #ddd; border-radius:14px; padding:18px; margin:18px 0; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+  .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:10px 0 14px; }
+  canvas { border:1px solid #bbb; border-radius:8px; background:white; max-width:100%; }
+  button, select, input[type="range"] { font-size:14px; }
+  button { padding:8px 12px; border-radius:8px; border:1px solid #bbb; background:#f5f5f5; cursor:pointer; }
+  button:hover { background:#ececec; }
+  .pill { display:inline-block; padding:5px 10px; border-radius:999px; background:#f3f3f3; border:1px solid #ddd; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .row { display:flex; flex-wrap:wrap; gap:18px; }
+  .col { flex:1 1 360px; min-width:320px; }
+  .small { font-size: 13px; color:#444; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:10px; }
+  .card { border:1px solid #ddd; border-radius:10px; padding:10px; background:#fcfcfc; }
+  .rules { white-space:pre-wrap; background:#fbfbfb; border:1px solid #e4e4e4; border-radius:10px; padding:10px; min-height:90px; }
+  .legend span { margin-right:12px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<h1>Decision Tree HTML Mini Demos</h1>
+<p>One page, three quick demos for a lecture: <b>best split</b>, <b>fitting a 2D tree</b>, and <b>overfitting vs depth</b>.</p>
+
+<div class="section">
+  <h2>1) Best Split Explorer (1D)</h2>
+  <p class="small">Move the threshold and watch the weighted impurity change. This is good for explaining why the first split matters.</p>
+  <div class="controls">
+    <label>Criterion
+      <select id="splitCriterion">
+        <option value="gini">Gini</option>
+        <option value="entropy">Entropy</option>
+      </select>
+    </label>
+    <label>Threshold
+      <input type="range" id="thresholdSlider" min="0" max="1000" value="500" style="width:260px; vertical-align:middle;">
+    </label>
+    <span class="pill" id="thresholdValue"></span>
+    <button id="regen1D">Regenerate 1D data</button>
+  </div>
+  <canvas id="splitCanvas" width="920" height="220"></canvas>
+  <div class="stats">
+    <div class="card" id="leftInfo"></div>
+    <div class="card" id="rightInfo"></div>
+    <div class="card" id="overallInfo"></div>
+    <div class="card" id="bestInfo"></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>2) Click-to-Build a 2D Decision Tree</h2>
+  <p class="small">Click inside the square to add points. Train a tree of chosen depth and show the learned axis-aligned regions.</p>
+  <div class="controls">
+    <label>Add class
+      <select id="pointClass">
+        <option value="0">Blue</option>
+        <option value="1">Red</option>
+      </select>
+    </label>
+    <label>Depth
+      <input type="range" id="depth2d" min="1" max="6" value="2" style="width:180px; vertical-align:middle;">
+      <span class="pill" id="depth2dValue"></span>
+    </label>
+    <label>Criterion
+      <select id="criterion2d">
+        <option value="gini">Gini</option>
+        <option value="entropy">Entropy</option>
+      </select>
+    </label>
+    <button id="preset2d">Load preset data</button>
+    <button id="clear2d">Clear</button>
+  </div>
+  <div class="row">
+    <div class="col">
+      <canvas id="treeCanvas" width="520" height="520"></canvas>
+      <div class="legend small" style="margin-top:8px;">
+        <span><span class="dot" style="background:#2166d1"></span>Class 0</span>
+        <span><span class="dot" style="background:#d12d2d"></span>Class 1</span>
+      </div>
+    </div>
+    <div class="col">
+      <div class="stats">
+        <div class="card" id="dataStats2d"></div>
+        <div class="card" id="accStats2d"></div>
+      </div>
+      <h3 style="margin-top:14px;">Learned rules</h3>
+      <div id="rules2d" class="rules"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>3) Overfitting Demo: Depth vs Train/Test Accuracy</h2>
+  <p class="small">This dataset has some label noise. Shallow trees underfit; deep trees can overfit.</p>
+  <div class="controls">
+    <label>Noise
+      <input type="range" id="noiseSlider" min="0" max="30" value="10" style="width:180px; vertical-align:middle;">
+      <span class="pill" id="noiseValue"></span>
+    </label>
+    <label>Current depth
+      <input type="range" id="depthOverfit" min="1" max="8" value="3" style="width:180px; vertical-align:middle;">
+      <span class="pill" id="depthOverfitValue"></span>
+    </label>
+    <button id="regenOverfit">Regenerate dataset</button>
+  </div>
+  <div class="row">
+    <div class="col">
+      <canvas id="overfitCanvas" width="520" height="520"></canvas>
+    </div>
+    <div class="col">
+      <canvas id="curveCanvas" width="520" height="280"></canvas>
+      <div class="stats">
+        <div class="card" id="overfitNow"></div>
+        <div class="card" id="overfitBest"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function impurityFromCounts(n0, n1, criterion) {
+  const n = n0 + n1;
+  if (n === 0) return 0;
+  const p0 = n0 / n, p1 = n1 / n;
+  if (criterion === 'entropy') {
+    const h = (p) => p <= 0 ? 0 : -p * Math.log2(p);
+    return h(p0) + h(p1);
+  }
+  return 1 - p0 * p0 - p1 * p1;
+}
+
+function counts(data) {
+  let n0 = 0, n1 = 0;
+  data.forEach(d => d.y === 0 ? n0++ : n1++);
+  return { n0, n1, n: data.length };
+}
+
+function majorityLabel(data) {
+  const c = counts(data);
+  return c.n1 >= c.n0 ? 1 : 0;
+}
+
+function weightedImpurity(left, right, criterion) {
+  const cl = counts(left), cr = counts(right);
+  const n = left.length + right.length;
+  return (left.length / n) * impurityFromCounts(cl.n0, cl.n1, criterion)
+       + (right.length / n) * impurityFromCounts(cr.n0, cr.n1, criterion);
+}
+
+function candidateThresholds(values) {
+  const sorted = [...new Set(values.slice().sort((a,b) => a-b))];
+  const ths = [];
+  for (let i = 0; i < sorted.length - 1; i++) ths.push((sorted[i] + sorted[i+1]) / 2);
+  return ths;
+}
+
+function bestSplit(data, criterion) {
+  if (data.length <= 1) return null;
+  let best = null;
+  const parentCounts = counts(data);
+  const parentImp = impurityFromCounts(parentCounts.n0, parentCounts.n1, criterion);
+  ['x1', 'x2'].forEach(feature => {
+    const ths = candidateThresholds(data.map(d => d[feature]));
+    ths.forEach(th => {
+      const left = data.filter(d => d[feature] <= th);
+      const right = data.filter(d => d[feature] > th);
+      if (left.length === 0 || right.length === 0) return;
+      const imp = weightedImpurity(left, right, criterion);
+      const gain = parentImp - imp;
+      if (!best || gain > best.gain) best = { feature, threshold: th, gain, impurity: imp, left, right };
+    });
+  });
+  return best && best.gain > 1e-12 ? best : null;
+}
+
+function buildTree(data, criterion, maxDepth, depth = 0) {
+  const c = counts(data);
+  const pred = c.n1 >= c.n0 ? 1 : 0;
+  const node = { prediction: pred, depth, size: data.length, n0: c.n0, n1: c.n1 };
+  if (depth >= maxDepth || c.n0 === 0 || c.n1 === 0 || data.length <= 1) return node;
+  const split = bestSplit(data, criterion);
+  if (!split) return node;
+  node.feature = split.feature;
+  node.threshold = split.threshold;
+  node.left = buildTree(split.left, criterion, maxDepth, depth + 1);
+  node.right = buildTree(split.right, criterion, maxDepth, depth + 1);
+  return node;
+}
+
+function predict(tree, x1, x2) {
+  let node = tree;
+  while (node.left && node.right) {
+    const value = node.feature === 'x1' ? x1 : x2;
+    node = value <= node.threshold ? node.left : node.right;
+  }
+  return node.prediction;
+}
+
+function accuracy(tree, data) {
+  if (!tree || data.length === 0) return 0;
+  let correct = 0;
+  data.forEach(d => { if (predict(tree, d.x1, d.x2) === d.y) correct++; });
+  return correct / data.length;
+}
+
+function drawPoint(ctx, x, y, cls, r=6) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = cls === 0 ? '#2166d1' : '#d12d2d';
+  ctx.fill();
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function fillBackground2D(ctx, tree, w, h) {
+  const cell = 10;
+  for (let i = 0; i < w; i += cell) {
+    for (let j = 0; j < h; j += cell) {
+      const x1 = i / w;
+      const x2 = 1 - j / h;
+      const y = tree ? predict(tree, x1, x2) : 0;
+      ctx.fillStyle = y === 0 ? 'rgba(33,102,209,0.13)' : 'rgba(209,45,45,0.13)';
+      ctx.fillRect(i, j, cell, cell);
+    }
+  }
+}
+
+function drawRecursiveSplits(ctx, node, bounds, w, h) {
+  if (!node || !node.left || !node.right) return;
+  ctx.save();
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,5]);
+  if (node.feature === 'x1') {
+    const x = node.threshold * w;
+    ctx.beginPath();
+    ctx.moveTo(x, (1 - bounds.ymax) * h);
+    ctx.lineTo(x, (1 - bounds.ymin) * h);
+    ctx.stroke();
+    drawRecursiveSplits(ctx, node.left, { xmin: bounds.xmin, xmax: node.threshold, ymin: bounds.ymin, ymax: bounds.ymax }, w, h);
+    drawRecursiveSplits(ctx, node.right, { xmin: node.threshold, xmax: bounds.xmax, ymin: bounds.ymin, ymax: bounds.ymax }, w, h);
+  } else {
+    const y = (1 - node.threshold) * h;
+    ctx.beginPath();
+    ctx.moveTo(bounds.xmin * w, y);
+    ctx.lineTo(bounds.xmax * w, y);
+    ctx.stroke();
+    drawRecursiveSplits(ctx, node.left, { xmin: bounds.xmin, xmax: bounds.xmax, ymin: bounds.ymin, ymax: node.threshold }, w, h);
+    drawRecursiveSplits(ctx, node.right, { xmin: bounds.xmin, xmax: bounds.xmax, ymin: node.threshold, ymax: bounds.ymax }, w, h);
+  }
+  ctx.restore();
+}
+
+function rulesFromTree(node, indent='') {
+  if (!node.left || !node.right) {
+    return indent + `Predict class ${node.prediction}   [n=${node.size}, blue=${node.n0}, red=${node.n1}]`;
+  }
+  const featureName = node.feature === 'x1' ? 'x' : 'y';
+  return indent + `if ${featureName} <= ${node.threshold.toFixed(2)}\n`
+       + rulesFromTree(node.left, indent + '  ') + `\n`
+       + indent + `else\n`
+       + rulesFromTree(node.right, indent + '  ');
+}
+
+// Demo 1: Split explorer
+let data1D = [];
+function make1DData() {
+  data1D = [];
+  const xs = [0.07,0.12,0.18,0.24,0.33,0.39,0.48,0.55,0.67,0.76,0.87,0.93];
+  xs.forEach((x, i) => {
+    let y = x > 0.52 ? 1 : 0;
+    if (i === 4 || i === 8) y = 1 - y;
+    data1D.push({ x, y });
+  });
+}
+
+function best1DSplit(criterion) {
+  let best = null;
+  const ths = candidateThresholds(data1D.map(d => d.x));
+  const total = data1D.map(d => ({x1:d.x, x2:0, y:d.y}));
+  const parent = counts(total);
+  const parentImp = impurityFromCounts(parent.n0, parent.n1, criterion);
+  ths.forEach(th => {
+    const left = data1D.filter(d => d.x <= th).map(d => ({x1:d.x, x2:0, y:d.y}));
+    const right = data1D.filter(d => d.x > th).map(d => ({x1:d.x, x2:0, y:d.y}));
+    const imp = weightedImpurity(left, right, criterion);
+    const gain = parentImp - imp;
+    if (!best || gain > best.gain) best = { threshold: th, impurity: imp, gain, left, right };
+  });
+  return best;
+}
+
+function render1D() {
+  const canvas = document.getElementById('splitCanvas');
+  const ctx = canvas.getContext('2d');
+  const criterion = document.getElementById('splitCriterion').value;
+  const th = document.getElementById('thresholdSlider').value / 1000;
+  document.getElementById('thresholdValue').textContent = `t = ${th.toFixed(3)}`;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  const left = data1D.filter(d => d.x <= th).map(d => ({x1:d.x, x2:0, y:d.y}));
+  const right = data1D.filter(d => d.x > th).map(d => ({x1:d.x, x2:0, y:d.y}));
+  const imp = weightedImpurity(left, right, criterion);
+  const cl = counts(left), cr = counts(right);
+  const best = best1DSplit(criterion);
+
+  const margin = 40;
+  const axisY = 150;
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin, axisY);
+  ctx.lineTo(canvas.width - margin, axisY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#222';
+  ctx.font = '14px Arial';
+  ctx.fillText('x', canvas.width - 20, axisY + 20);
+
+  ctx.fillStyle = 'rgba(120,120,120,0.08)';
+  ctx.fillRect(margin, 20, (canvas.width - 2*margin) * th, 160);
+
+  const xpix = (x) => margin + x * (canvas.width - 2 * margin);
+
+  ctx.strokeStyle = '#000';
+  ctx.setLineDash([7,5]);
+  ctx.beginPath();
+  ctx.moveTo(xpix(th), 20);
+  ctx.lineTo(xpix(th), 180);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  data1D.forEach((d, i) => {
+    const y = d.y === 0 ? axisY - 38 : axisY - 88;
+    drawPoint(ctx, xpix(d.x), y, d.y, 7);
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.fillText(d.x.toFixed(2), xpix(d.x)-12, axisY + 18 + (i%2)*14);
+  });
+
+  document.getElementById('leftInfo').innerHTML = `<b>Left of threshold</b><br>blue=${cl.n0}, red=${cl.n1}<br>${criterion} = ${impurityFromCounts(cl.n0, cl.n1, criterion).toFixed(3)}`;
+  document.getElementById('rightInfo').innerHTML = `<b>Right of threshold</b><br>blue=${cr.n0}, red=${cr.n1}<br>${criterion} = ${impurityFromCounts(cr.n0, cr.n1, criterion).toFixed(3)}`;
+  document.getElementById('overallInfo').innerHTML = `<b>Weighted impurity</b><br>${criterion} = ${imp.toFixed(3)}`;
+  document.getElementById('bestInfo').innerHTML = `<b>Best split</b><br>t* = ${best.threshold.toFixed(3)}<br>weighted ${criterion} = ${best.impurity.toFixed(3)}`;
+}
+
+// Demo 2: interactive 2D tree
+let data2D = [];
+let tree2D = null;
+function render2D() {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const depth = +document.getElementById('depth2d').value;
+  const criterion = document.getElementById('criterion2d').value;
+  document.getElementById('depth2dValue').textContent = depth;
+
+  tree2D = data2D.length ? buildTree(data2D, criterion, depth) : null;
+  ctx.clearRect(0,0,w,h);
+  fillBackground2D(ctx, tree2D, w, h);
+
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(0,0,w,h);
+  ctx.beginPath();
+  ctx.moveTo(0,h-0.5); ctx.lineTo(w,h-0.5);
+  ctx.moveTo(0.5,0); ctx.lineTo(0.5,h);
+  ctx.stroke();
+
+  if (tree2D) drawRecursiveSplits(ctx, tree2D, {xmin:0, xmax:1, ymin:0, ymax:1}, w, h);
+
+  data2D.forEach(d => drawPoint(ctx, d.x1*w, (1-d.x2)*h, d.y, 6));
+
+  const c = counts(data2D);
+  const acc = tree2D ? accuracy(tree2D, data2D) : 0;
+  document.getElementById('dataStats2d').innerHTML = `<b>Dataset</b><br>n = ${data2D.length}<br>blue = ${c.n0}, red = ${c.n1}`;
+  document.getElementById('accStats2d').innerHTML = `<b>Training accuracy</b><br>${(100*acc).toFixed(1)}%`;
+  document.getElementById('rules2d').textContent = tree2D ? rulesFromTree(tree2D) : 'Add some points first.';
+}
+
+function addPreset2D() {
+  data2D = [];
+  const pts0 = [[0.12,0.82],[0.18,0.73],[0.22,0.67],[0.31,0.80],[0.36,0.68],[0.42,0.78],[0.28,0.58]];
+  const pts1 = [[0.63,0.24],[0.72,0.33],[0.82,0.20],[0.76,0.42],[0.88,0.36],[0.66,0.48],[0.57,0.35]];
+  pts0.forEach(p => data2D.push({x1:p[0], x2:p[1], y:0}));
+  pts1.forEach(p => data2D.push({x1:p[0], x2:p[1], y:1}));
+  data2D.push({x1:0.52, x2:0.70, y:1});
+  data2D.push({x1:0.52, x2:0.28, y:0});
+  render2D();
+}
+
+// Demo 3: overfitting
+let trainOver = [], testOver = [], curve = [];
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function generateOverfitData(noisePct) {
+  const all = [];
+  const n = 220;
+  for (let i = 0; i < n; i++) {
+    let x1 = Math.random();
+    let x2 = Math.random();
+    // stripe-like true boundary, good for trees
+    let y = ((x1 > 0.33 && x1 < 0.66) ^ (x2 > 0.33 && x2 < 0.66)) ? 1 : 0;
+    if (Math.random() < noisePct / 100) y = 1 - y;
+    all.push({x1, x2, y});
+  }
+  // shuffle
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  trainOver = all.slice(0, 150);
+  testOver = all.slice(150);
+}
+
+function computeCurve() {
+  const criterion = 'gini';
+  curve = [];
+  for (let depth = 1; depth <= 8; depth++) {
+    const tree = buildTree(trainOver, criterion, depth);
+    curve.push({
+      depth,
+      train: accuracy(tree, trainOver),
+      test: accuracy(tree, testOver),
+      tree
+    });
+  }
+}
+
+function drawCurve() {
+  const canvas = document.getElementById('curveCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,w,h);
+  const left = 50, right = 20, top = 20, bottom = 40;
+  const plotW = w - left - right, plotH = h - top - bottom;
+
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, h-bottom);
+  ctx.lineTo(w-right, h-bottom);
+  ctx.stroke();
+
+  for (let t = 0; t <= 1.0; t += 0.2) {
+    const y = top + (1 - t) * plotH;
+    ctx.strokeStyle = '#e6e6e6';
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(w-right, y); ctx.stroke();
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.fillText(t.toFixed(1), 15, y + 4);
+  }
+
+  const xpix = d => left + (d - 1) / 7 * plotW;
+  const ypix = a => top + (1 - a) * plotH;
+
+  function drawSeries(key, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    curve.forEach((p, i) => {
+      const x = xpix(p.depth), y = ypix(p[key]);
+      if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    curve.forEach(p => {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(xpix(p.depth), ypix(p[key]), 4, 0, 2*Math.PI); ctx.fill();
+    });
+  }
+  drawSeries('train', '#2166d1');
+  drawSeries('test', '#d12d2d');
+
+  ctx.fillStyle = '#222';
+  ctx.font = '12px Arial';
+  for (let d = 1; d <= 8; d++) ctx.fillText(String(d), xpix(d)-3, h - 16);
+  ctx.fillText('depth', w/2 - 18, h - 4);
+  ctx.save();
+  ctx.translate(14, h/2 + 20); ctx.rotate(-Math.PI/2); ctx.fillText('accuracy', 0, 0); ctx.restore();
+  ctx.fillStyle = '#2166d1'; ctx.fillText('train', w-90, 24);
+  ctx.fillStyle = '#d12d2d'; ctx.fillText('test', w-45, 24);
+}
+
+function renderOverfit() {
+  const depth = +document.getElementById('depthOverfit').value;
+  const noise = +document.getElementById('noiseSlider').value;
+  document.getElementById('depthOverfitValue').textContent = depth;
+  document.getElementById('noiseValue').textContent = `${noise}%`;
+
+  const entry = curve.find(p => p.depth === depth);
+  const tree = entry.tree;
+
+  const canvas = document.getElementById('overfitCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  fillBackground2D(ctx, tree, w, h);
+  drawRecursiveSplits(ctx, tree, {xmin:0, xmax:1, ymin:0, ymax:1}, w, h);
+  trainOver.forEach(d => drawPoint(ctx, d.x1*w, (1-d.x2)*h, d.y, 4.5));
+  ctx.strokeStyle = '#555';
+  ctx.strokeRect(0,0,w,h);
+
+  const bestTest = curve.reduce((a,b) => a.test >= b.test ? a : b);
+  document.getElementById('overfitNow').innerHTML = `<b>At depth ${depth}</b><br>train accuracy = ${(100*entry.train).toFixed(1)}%<br>test accuracy = ${(100*entry.test).toFixed(1)}%`;
+  document.getElementById('overfitBest').innerHTML = `<b>Best test depth in this run</b><br>depth = ${bestTest.depth}<br>test accuracy = ${(100*bestTest.test).toFixed(1)}%`;
+  drawCurve();
+}
+
+// Event wiring
+make1DData();
+render1D();
+
+document.getElementById('thresholdSlider').addEventListener('input', render1D);
+document.getElementById('splitCriterion').addEventListener('change', render1D);
+document.getElementById('regen1D').addEventListener('click', () => {
+  make1DData();
+  // slight randomization of labels/positions
+  data1D = data1D.map(d => ({ x: Math.min(0.97, Math.max(0.03, d.x + 0.03*(Math.random()-0.5))), y: (Math.random() < 0.08 ? 1-d.y : d.y) }));
+  data1D.sort((a,b) => a.x-b.x);
+  render1D();
+});
+
+document.getElementById('treeCanvas').addEventListener('click', (e) => {
+  const rect = e.target.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = 1 - (e.clientY - rect.top) / rect.height;
+  const cls = +document.getElementById('pointClass').value;
+  data2D.push({ x1: Math.max(0, Math.min(1, x)), x2: Math.max(0, Math.min(1, y)), y: cls });
+  render2D();
+});
+
+document.getElementById('depth2d').addEventListener('input', render2D);
+document.getElementById('criterion2d').addEventListener('change', render2D);
+document.getElementById('clear2d').addEventListener('click', () => { data2D = []; render2D(); });
+document.getElementById('preset2d').addEventListener('click', addPreset2D);
+addPreset2D();
+
+function refreshOverfitAll() {
+  const noise = +document.getElementById('noiseSlider').value;
+  generateOverfitData(noise);
+  computeCurve();
+  renderOverfit();
+}
+
+document.getElementById('regenOverfit').addEventListener('click', refreshOverfitAll);
+document.getElementById('noiseSlider').addEventListener('input', refreshOverfitAll);
+document.getElementById('depthOverfit').addEventListener('input', renderOverfit);
+refreshOverfitAll();
+</script>
+</body>
+</html>
