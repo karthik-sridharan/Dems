@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Multi-Head Attention Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; background:#f6f7fb; color:#202534; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 20px; }
+  .panel { background:white; border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); margin-bottom:18px; }
+  .heads { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+  .head { border:1px solid #eee; border-radius:12px; padding:12px; }
+  .token { display:inline-block; padding:7px 10px; margin:4px 6px 0 0; border-radius:999px; background:#edf3ff; cursor:pointer; }
+  .token.active { background:#1f6feb; color:white; }
+  input { width:100%; padding:9px 10px; border-radius:8px; border:1px solid #bbb; }
+  .heat { display:grid; gap:4px; margin-top:10px; }
+  .cell { padding:8px 6px; border-radius:8px; text-align:center; font-size:12px; border:1px solid rgba(0,0,0,0.05); }
+  table { width:100%; border-collapse: collapse; }
+  th, td { padding:8px 6px; border-bottom:1px solid #eee; text-align:left; }
+  .small { color:#666; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1 style="margin-top:0">Multi-Head Attention Demo</h1>
+    <label><b>Sentence</b></label>
+    <input id="sentenceInput" value="the smart student reads the long book carefully" />
+    <p class="small">Three toy heads are shown: one prefers nearby words, one prefers content words, and one prefers long-range matches. Click a token to inspect where each head attends.</p>
+    <div id="tokenBar"></div>
+  </div>
+
+  <div class="panel">
+    <div class="heads">
+      <div class="head">
+        <h2 style="margin-top:0">Head 1: local</h2>
+        <div id="head1" class="heat"></div>
+      </div>
+      <div class="head">
+        <h2 style="margin-top:0">Head 2: content focus</h2>
+        <div id="head2" class="heat"></div>
+      </div>
+      <div class="head">
+        <h2 style="margin-top:0">Head 3: long-range</h2>
+        <div id="head3" class="heat"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-top:0">Combined attention (average of heads)</h2>
+    <table>
+      <thead><tr><th>token</th><th>combined weight</th><th>interpretation</th></tr></thead>
+      <tbody id="combinedTable"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+let queryIndex = 2;
+function softmax(arr){ const m = Math.max(...arr); const ex = arr.map(x=>Math.exp(x-m)); const z = ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/z); }
+function isContent(tok){ return !['the','a','an','of','to','and','in'].includes(tok.toLowerCase()); }
+function render(){
+  const tokens = document.getElementById('sentenceInput').value.trim().split(/\s+/).filter(Boolean).slice(0,10);
+  queryIndex = Math.min(queryIndex, tokens.length-1);
+  document.getElementById('tokenBar').innerHTML = tokens.map((t,i)=>`<span class="token ${i===queryIndex?'active':''}" data-i="${i}">${t}</span>`).join('');
+  document.querySelectorAll('.token').forEach(el=>el.onclick=()=>{ queryIndex=+el.dataset.i; render(); });
+  const queryTok = tokens[queryIndex].toLowerCase();
+  const head1 = softmax(tokens.map((t,i)=> 2.4 - 0.9*Math.abs(i-queryIndex)));
+  const head2 = softmax(tokens.map((t,i)=> (isContent(t)?2.3:0.8) + (t.toLowerCase()===queryTok?0.6:0)));
+  const head3 = softmax(tokens.map((t,i)=> 0.8*Math.abs(i-queryIndex) + ((t.length%3)===(queryTok.length%3)?1.2:0) ));
+  const heads = [head1,head2,head3];
+  ['head1','head2','head3'].forEach((id,h)=>{
+    document.getElementById(id).style.gridTemplateColumns = `repeat(${tokens.length}, 1fr)`;
+    document.getElementById(id).innerHTML = tokens.map((t,i)=>{
+      const w = heads[h][i];
+      const shade = 255 - Math.round(170*w);
+      return `<div class="cell" style="background:rgb(${shade},${shade},255)"><b>${t}</b><br>${w.toFixed(3)}</div>`;
+    }).join('');
+  });
+  const combined = tokens.map((_,i)=>(head1[i]+head2[i]+head3[i])/3);
+  document.getElementById('combinedTable').innerHTML = tokens.map((t,i)=>{
+    const interp = i===queryIndex ? 'self' : (head1[i]>head2[i] && head1[i]>head3[i] ? 'nearby token' : (head2[i]>head3[i] ? 'content word' : 'long-range pattern'));
+    return `<tr><td>${t}</td><td>${combined[i].toFixed(3)}</td><td>${interp}</td></tr>`;
+  }).join('');
+}
+document.getElementById('sentenceInput').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

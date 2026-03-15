@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cross-Attention Translation Alignment Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; background:#f6f8fc; color:#202534; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding:20px; }
+  .panel { background:white; border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); margin-bottom:18px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  select, input { width:100%; padding:9px 10px; border-radius:8px; border:1px solid #bbb; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { border:1px solid #eee; padding:8px; text-align:center; font-size:13px; }
+  .small { color:#666; font-size:13px; }
+  .token { display:inline-block; padding:7px 10px; margin:4px 6px 0 0; border-radius:999px; background:#edf3ff; cursor:pointer; }
+  .token.active { background:#1f6feb; color:white; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1 style="margin-top:0">Cross-Attention / Translation Alignment Demo</h1>
+    <div class="grid">
+      <div>
+        <label><b>Preset</b></label>
+        <select id="preset"></select>
+      </div>
+      <div>
+        <label><b>Inspect target token</b></label>
+        <div id="targetBar"></div>
+      </div>
+    </div>
+    <p class="small">This demo mimics encoder-decoder cross-attention. Each target token places attention over source tokens. Stronger cells indicate stronger alignment.</p>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2 style="margin-top:0">Cross-attention matrix</h2>
+      <div id="matrix"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Interpretation</h2>
+      <div id="explain"></div>
+    </div>
+  </div>
+</div>
+<script>
+const presets = {
+  'English → French': {
+    src:['the','student','reads','the','book'],
+    tgt:['l','étudiant','lit','le','livre'],
+    lex:{'l':['the'],'étudiant':['student'],'lit':['reads'],'le':['the'],'livre':['book']}
+  },
+  'English → Spanish': {
+    src:['the','cat','chases','the','dog'],
+    tgt:['el','gato','persigue','al','perro'],
+    lex:{'el':['the'],'gato':['cat'],'persigue':['chases'],'al':['the','dog'],'perro':['dog']}
+  },
+  'English → German': {
+    src:['the','curious','student','reads'],
+    tgt:['der','neugierige','student','liest'],
+    lex:{'der':['the'],'neugierige':['curious'],'student':['student'],'liest':['reads']}
+  }
+};
+let targetIndex = 0;
+function softmax(arr){ const m = Math.max(...arr); const ex = arr.map(x=>Math.exp(x-m)); const z = ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/z); }
+function render(){
+  const p = presets[document.getElementById('preset').value];
+  targetIndex = Math.min(targetIndex, p.tgt.length-1);
+  document.getElementById('targetBar').innerHTML = p.tgt.map((t,i)=>`<span class="token ${i===targetIndex?'active':''}" data-i="${i}">${t}</span>`).join('');
+  document.querySelectorAll('.token').forEach(el=>el.onclick=()=>{ targetIndex=+el.dataset.i; render(); });
+  const matrix = p.tgt.map((t,i)=>{
+    const mapped = p.lex[t] || [];
+    const raw = p.src.map((s,j)=> (mapped.includes(s)?3.0:0.8) + (i===j?0.8:0) );
+    return softmax(raw);
+  });
+  let html = '<table><thead><tr><th>target \\ source</th>'+p.src.map(s=>`<th>${s}</th>`).join('')+'</tr></thead><tbody>';
+  p.tgt.forEach((t,i)=>{
+    html += `<tr><th>${t}</th>`;
+    p.src.forEach((s,j)=>{
+      const w = matrix[i][j];
+      const shade = 255 - Math.round(180*w);
+      html += `<td style="background:rgb(${shade},${shade},255)">${w.toFixed(2)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('matrix').innerHTML = html;
+  const row = matrix[targetIndex];
+  const ranked = p.src.map((s,j)=>({s,w:row[j]})).sort((a,b)=>b.w-a.w);
+  document.getElementById('explain').innerHTML = `
+    <p>Selected target token: <b>${p.tgt[targetIndex]}</b></p>
+    <p>Top attended source token: <b>${ranked[0].s}</b> (weight ${ranked[0].w.toFixed(3)})</p>
+    <p>Runner-up: <b>${ranked[1].s}</b> (weight ${ranked[1].w.toFixed(3)})</p>
+    <p class="small">In encoder-decoder transformers, this kind of pattern helps the decoder align generated tokens with relevant source tokens.</p>`;
+}
+const preset = document.getElementById('preset');
+preset.innerHTML = Object.keys(presets).map(k=>`<option value="${k}">${k}</option>`).join('');
+preset.addEventListener('change', render);
+render();
+</script>
+</body>
+</html>

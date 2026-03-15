@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Causal Mask Toggle Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; background:#f6f8fc; color:#1e2430; }
+  .wrap { max-width: 1300px; margin: 0 auto; padding: 20px; }
+  .panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom:18px; }
+  input, select { padding: 9px 10px; border-radius: 8px; border:1px solid #bbb; font-size:14px; }
+  .grid { display:grid; grid-template-columns: 1.2fr 0.8fr; gap:18px; }
+  .matrix { overflow:auto; }
+  table { border-collapse: collapse; width:100%; }
+  th, td { border:1px solid #eee; padding:8px; text-align:center; font-size:13px; }
+  .small { color:#666; font-size:13px; }
+  .pred { font-size: 18px; padding: 10px 12px; border-radius: 10px; background: #eef4ff; margin-top: 10px; }
+  .pill { display:inline-block; padding:6px 10px; border-radius:999px; background:#eef4ff; margin-right:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1 style="margin-top:0">Causal Mask Toggle</h1>
+    <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:12px; align-items:end;">
+      <div>
+        <label><b>Sequence</b></label><br>
+        <input id="sentenceInput" style="width:100%" value="the student reads the book [NEXT]" />
+      </div>
+      <div>
+        <label><b>Mask mode</b></label><br>
+        <select id="maskMode">
+          <option value="causal">causal mask on</option>
+          <option value="full">no mask</option>
+        </select>
+      </div>
+      <div class="pill">Last token predicts next word</div>
+    </div>
+    <p class="small">The special token <b>[NEXT]</b> is the position where we predict the next token. With a causal mask, each position can only attend to itself and earlier tokens.</p>
+  </div>
+
+  <div class="grid">
+    <div class="panel matrix">
+      <h2 style="margin-top:0">Attention matrix</h2>
+      <div id="matrixContainer"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Prediction at [NEXT]</h2>
+      <div id="explanation" class="small"></div>
+      <div id="prediction" class="pred"></div>
+      <h3>Top logits</h3>
+      <table>
+        <thead><tr><th>word</th><th>score</th></tr></thead>
+        <tbody id="logitTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const seed = {
+  the:[0.15,0.18,0.12], student:[0.72,0.42,0.36], reads:[0.58,0.26,0.86], book:[0.48,0.60,0.76], dog:[0.22,0.58,0.70], chases:[0.82,0.20,0.78], cat:[0.20,0.54,0.68], river:[0.14,0.38,0.92], bank:[0.56,0.56,0.50],
+  ["[next]"]:[0.45,0.45,0.45], food:[0.36,0.70,0.58]
+};
+const vocab = {
+  book:[0.45,0.60,0.82], cat:[0.22,0.56,0.70], bank:[0.56,0.54,0.48], river:[0.12,0.40,0.94], food:[0.34,0.72,0.54], story:[0.50,0.64,0.70], school:[0.78,0.45,0.22]
+};
+const Wq = [[1.1,0.1,0.1],[0.1,1.0,0.2],[0.1,0.2,1.1]];
+const Wk = [[1.0,0.0,0.3],[0.2,1.1,0.1],[0.0,0.1,1.0]];
+const Wv = [[0.9,0.2,0.0],[0.1,0.95,0.1],[0.2,0.1,1.0]];
+function embed(tok){
+  const key = tok.toLowerCase();
+  if(seed[key]) return seed[key];
+  const chars = [...key].map(c=>c.charCodeAt(0));
+  return [0.15+(chars.reduce((a,b)=>a+b,0)%75)/100, 0.12+(chars.reduce((a,b,i)=>a+b*(i+1),0)%70)/100, 0.10+(chars.reduce((a,b)=>a+(b%19),0)%80)/100];
+}
+function mv(M,v){ return M.map(r=>r.reduce((s,x,i)=>s+x*v[i],0)); }
+function dot(a,b){ return a.reduce((s,x,i)=>s+x*b[i],0); }
+function softmax(arr){ const m = Math.max(...arr); const ex = arr.map(x=>Math.exp(x-m)); const z = ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/z); }
+
+function render(){
+  const tokens = document.getElementById('sentenceInput').value.trim().split(/\s+/).filter(Boolean).slice(0,8);
+  const maskMode = document.getElementById('maskMode').value;
+  const rows = tokens.map((t,i)=>({token:t, i, x:embed(t), q:mv(Wq,embed(t)), k:mv(Wk,embed(t)), v:mv(Wv,embed(t))}));
+  const attn = rows.map((rq, i)=>{
+    const raw = rows.map((rk,j)=> {
+      const blocked = maskMode==='causal' && j>i;
+      return blocked ? -1e9 : dot(rq.q,rk.k)/Math.sqrt(3);
+    });
+    return softmax(raw);
+  });
+  let html = '<table><thead><tr><th>query \\ key</th>'+rows.map(r=>`<th>${r.token}<br><span style="font-weight:normal;color:#666">${r.i}</span></th>`).join('')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    html += `<tr><th>${r.token}<br><span style="font-weight:normal;color:#666">${i}</span></th>`;
+    rows.forEach((c,j)=>{
+      const w = attn[i][j];
+      const shade = 255 - Math.round(180*w);
+      const block = maskMode==='causal' && j>i;
+      html += `<td style="background:${block?'#f2f2f2':`rgb(${shade},${shade},255)`}">${block?'×':w.toFixed(2)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('matrixContainer').innerHTML = html;
+
+  const nextIndex = Math.max(0, tokens.findIndex(t => t.toLowerCase()==='[next]'));
+  const out = rows[0].v.map((_,d)=>rows.reduce((s,r,j)=>s+attn[nextIndex][j]*r.v[d],0));
+  const logits = Object.entries(vocab).map(([w,v])=>({w, score:dot(out,v)})).sort((a,b)=>b.score-a.score);
+  document.getElementById('prediction').innerHTML = `Predicted next word: <b>${logits[0].w}</b>`;
+  document.getElementById('explanation').innerHTML = `At position <b>[NEXT]</b>, the model attends using the final row of the matrix. Toggle the mask to see how future positions would become illegally visible.`;
+  document.getElementById('logitTable').innerHTML = logits.slice(0,5).map(x=>`<tr><td>${x.w}</td><td>${x.score.toFixed(3)}</td></tr>`).join('');
+}
+
+document.getElementById('maskMode').addEventListener('change', render);
+document.getElementById('sentenceInput').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

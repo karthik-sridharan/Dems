@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>One-Head Self-Attention Calculator</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f6fb; margin: 0; color: #1d2433; }
+  .wrap { max-width: 1300px; margin: 0 auto; padding: 20px; }
+  .top { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 18px; }
+  .row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  input, select, button { padding: 9px 10px; border-radius: 8px; border: 1px solid #bbb; font-size: 14px; }
+  button { background: #1f6feb; color: white; border: none; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+  .panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eee; padding: 6px 5px; text-align: left; vertical-align: top; }
+  .mono { font-family: Menlo, Consolas, monospace; }
+  .heatmap { display: grid; gap: 4px; }
+  .cell { color: #111; font-size: 12px; border-radius: 8px; padding: 8px 6px; text-align: center; border: 1px solid rgba(0,0,0,0.06); }
+  .tokens { margin: 8px 0 12px; }
+  .token { display: inline-block; padding: 8px 10px; margin: 4px 6px 0 0; border-radius: 999px; background: #edf3ff; cursor: pointer; }
+  .token.active { background: #1f6feb; color: white; }
+  .small { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 style="margin-top:0">One-Head Self-Attention Calculator</h1>
+    <div class="row">
+      <div>
+        <label><b>Sentence (space-separated tokens)</b></label>
+        <input id="sentenceInput" value="the curious student reads the book" />
+      </div>
+      <div>
+        <label><b>Query token</b></label>
+        <select id="querySelect"></select>
+      </div>
+      <div>
+        <label><b>Temperature</b></label>
+        <input id="temperature" type="range" min="0.4" max="2" step="0.05" value="1" />
+      </div>
+      <div><button id="recomputeBtn">Recompute</button></div>
+    </div>
+    <p class="small">Click any token chip to make it the query. Scores are computed as <span class="mono">QKᵀ / √d</span>, followed by a softmax.</p>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2 style="margin-top:0">Token vectors</h2>
+      <div id="tokenChips" class="tokens"></div>
+      <table>
+        <thead><tr><th>Token</th><th>Embedding x</th><th>Q</th><th>K</th><th>V</th></tr></thead>
+        <tbody id="tokenTable"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Attention for selected query</h2>
+      <div id="scoreFormula" class="small"></div>
+      <div id="heatmap" class="heatmap" style="margin:12px 0;"></div>
+      <h3>Weighted output</h3>
+      <div id="outputVec" class="mono"></div>
+    </div>
+  </div>
+</div>
+<script>
+const vocabSeeds = {
+  the:[0.15,0.18,0.12], a:[0.14,0.16,0.12], curious:[0.62,0.70,0.28], student:[0.70,0.44,0.35], reads:[0.58,0.26,0.82], book:[0.50,0.58,0.70],
+  dog:[0.24,0.58,0.66], chases:[0.76,0.20,0.78], cat:[0.22,0.56,0.68], river:[0.18,0.40,0.88], bank:[0.55,0.55,0.52], money:[0.70,0.80,0.20]
+};
+const Wq = [[1.2,0.2,0.1],[0.1,1.0,0.2],[0.0,0.2,1.1]];
+const Wk = [[1.0,0.0,0.3],[0.2,1.1,0.1],[0.1,0.1,1.0]];
+const Wv = [[0.9,0.2,0.0],[0.1,0.95,0.2],[0.15,0.1,1.05]];
+let tokens = [];
+function embed(tok){
+  if(vocabSeeds[tok]) return vocabSeeds[tok];
+  const chars = [...tok].map(c=>c.charCodeAt(0));
+  const s1 = chars.reduce((a,b)=>a+b,0), s2 = chars.reduce((a,b,i)=>a+b*(i+1),0), s3 = chars.reduce((a,b)=>a+(b%17),0);
+  return [0.12+(s1%70)/100, 0.10+(s2%65)/100, 0.12+(s3%75)/100];
+}
+function matVec(M,v){ return M.map(r=>r.reduce((s,x,i)=>s+x*v[i],0)); }
+function dot(a,b){ return a.reduce((s,x,i)=>s+x*b[i],0); }
+function softmax(arr){ const m = Math.max(...arr); const ex = arr.map(x=>Math.exp(x-m)); const z = ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/z); }
+function fmt(v){ return '['+v.map(x=>x.toFixed(2)).join(', ')+']'; }
+
+function build(){
+  tokens = document.getElementById('sentenceInput').value.trim().split(/\s+/).filter(Boolean).slice(0,8);
+  if(tokens.length===0) tokens=['the','student','reads'];
+  const querySelect = document.getElementById('querySelect');
+  querySelect.innerHTML = tokens.map((t,i)=>`<option value="${i}">${t} (index ${i})</option>`).join('');
+  if(querySelect.value==="") querySelect.value="0";
+  render();
+}
+function render(){
+  const qIndex = +document.getElementById('querySelect').value;
+  const temp = +document.getElementById('temperature').value;
+  const rows = tokens.map((t,i)=>{
+    const x = embed(t);
+    return {token:t, x, q:matVec(Wq,x), k:matVec(Wk,x), v:matVec(Wv,x), i};
+  });
+  document.getElementById('tokenChips').innerHTML = rows.map((r,i)=>`<span class="token ${i===qIndex?'active':''}" data-i="${i}">${r.token}</span>`).join('');
+  document.querySelectorAll('.token').forEach(el => el.onclick = () => { document.getElementById('querySelect').value = el.dataset.i; render(); });
+  document.getElementById('tokenTable').innerHTML = rows.map(r=>`<tr><td><b>${r.token}</b></td><td class="mono">${fmt(r.x)}</td><td class="mono">${fmt(r.q)}</td><td class="mono">${fmt(r.k)}</td><td class="mono">${fmt(r.v)}</td></tr>`).join('');
+  const q = rows[qIndex].q;
+  const rawScores = rows.map(r => dot(q, r.k) / Math.sqrt(q.length) / temp);
+  const weights = softmax(rawScores);
+  const out = rows[0].v.map((_,d)=>rows.reduce((s,r,i)=>s+weights[i]*r.v[d],0));
+  document.getElementById('scoreFormula').innerHTML = `Selected query: <b>${rows[qIndex].token}</b>. Raw scores = dot(Q<sub>${qIndex}</sub>, K<sub>j</sub>) / √3.`;
+  document.getElementById('heatmap').style.gridTemplateColumns = `repeat(${tokens.length}, 1fr)`;
+  document.getElementById('heatmap').innerHTML = rows.map((r,i)=>{
+    const w = weights[i];
+    const shade = 255 - Math.round(170*w);
+    return `<div class="cell" style="background: rgb(${shade}, ${shade}, 255);"><b>${r.token}</b><br>score ${rawScores[i].toFixed(2)}<br>weight ${w.toFixed(3)}</div>`;
+  }).join('');
+  document.getElementById('outputVec').textContent = fmt(out);
+}
+
+document.getElementById('recomputeBtn').addEventListener('click', build);
+document.getElementById('querySelect').addEventListener('change', render);
+document.getElementById('temperature').addEventListener('input', render);
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Embedding Neighborhood Explorer</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; background: #f7f7fb; color: #222; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1 { margin-bottom: 6px; }
+  .sub { color: #555; margin-bottom: 18px; }
+  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+  .panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  canvas { width: 100%; height: 620px; border-radius: 12px; border: 1px solid #ddd; background: linear-gradient(#fff, #fafafa); }
+  .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+  label { font-weight: bold; display: block; margin-bottom: 4px; }
+  select, button, input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #bbb; font-size: 14px; }
+  button { cursor: pointer; background: #1f6feb; color: white; border: none; }
+  button:hover { filter: brightness(0.95); }
+  .pill { display: inline-block; padding: 3px 8px; margin-right: 6px; margin-bottom: 6px; border-radius: 999px; background: #eef3ff; color: #224; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 6px 4px; border-bottom: 1px solid #eee; text-align: left; }
+  .vector { font-family: Menlo, Consolas, monospace; font-size: 13px; word-break: break-all; }
+  .small { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Embedding Neighborhood Explorer</h1>
+  <div class="sub">Click any word in the scatter plot to inspect neighbors and do simple vector arithmetic.</div>
+  <div class="grid">
+    <div class="panel">
+      <div class="controls">
+        <div>
+          <label>Highlight semantic group</label>
+          <select id="groupFilter"></select>
+        </div>
+        <div>
+          <label>Search word</label>
+          <input id="searchBox" placeholder="Type a word, e.g. king" />
+        </div>
+      </div>
+      <canvas id="plot" width="800" height="620"></canvas>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Selected word</h3>
+      <div id="selectedWord" style="font-size:24px; font-weight:bold; margin-bottom:8px;">king</div>
+      <div id="groupTags"></div>
+      <p class="small">Embedding vector</p>
+      <div id="vectorBox" class="vector"></div>
+
+      <h3>Nearest neighbors</h3>
+      <table>
+        <thead><tr><th>Word</th><th>Cosine similarity</th></tr></thead>
+        <tbody id="neighborTable"></tbody>
+      </table>
+
+      <h3>Vector arithmetic</h3>
+      <div class="controls" style="grid-template-columns: 1fr;">
+        <div>
+          <label>A</label>
+          <select id="aSelect"></select>
+        </div>
+        <div>
+          <label>B</label>
+          <select id="bSelect"></select>
+        </div>
+        <div>
+          <label>C</label>
+          <select id="cSelect"></select>
+        </div>
+        <div><button id="computeBtn">Compute A - B + C</button></div>
+      </div>
+      <div id="arithResult" class="small">Example: king - man + woman ≈ queen</div>
+    </div>
+  </div>
+</div>
+<script>
+const words = [
+  {w:'king', g:'royalty', v:[0.92,0.88,0.86,0.20], xy:[0.82,0.78]},
+  {w:'queen', g:'royalty', v:[0.90,0.86,0.83,0.79], xy:[0.86,0.72]},
+  {w:'prince', g:'royalty', v:[0.84,0.79,0.73,0.18], xy:[0.74,0.74]},
+  {w:'princess', g:'royalty', v:[0.82,0.77,0.69,0.72], xy:[0.77,0.67]},
+  {w:'man', g:'people', v:[0.72,0.61,0.64,0.12], xy:[0.60,0.66]},
+  {w:'woman', g:'people', v:[0.71,0.60,0.63,0.70], xy:[0.62,0.58]},
+  {w:'boy', g:'people', v:[0.64,0.54,0.58,0.14], xy:[0.50,0.60]},
+  {w:'girl', g:'people', v:[0.63,0.53,0.57,0.72], xy:[0.53,0.52]},
+  {w:'doctor', g:'professions', v:[0.53,0.84,0.44,0.48], xy:[0.38,0.82]},
+  {w:'nurse', g:'professions', v:[0.46,0.79,0.40,0.62], xy:[0.34,0.74]},
+  {w:'teacher', g:'professions', v:[0.50,0.77,0.50,0.48], xy:[0.42,0.70]},
+  {w:'professor', g:'professions', v:[0.57,0.89,0.54,0.44], xy:[0.45,0.89]},
+  {w:'dog', g:'animals', v:[0.25,0.42,0.92,0.31], xy:[0.18,0.34]},
+  {w:'cat', g:'animals', v:[0.23,0.40,0.89,0.35], xy:[0.15,0.28]},
+  {w:'wolf', g:'animals', v:[0.27,0.38,0.95,0.25], xy:[0.12,0.40]},
+  {w:'tiger', g:'animals', v:[0.30,0.36,0.91,0.22], xy:[0.20,0.44]},
+  {w:'apple', g:'food', v:[0.18,0.52,0.22,0.55], xy:[0.24,0.56]},
+  {w:'orange', g:'food', v:[0.20,0.49,0.21,0.52], xy:[0.20,0.50]},
+  {w:'banana', g:'food', v:[0.17,0.46,0.18,0.50], xy:[0.16,0.54]},
+  {w:'grape', g:'food', v:[0.21,0.51,0.19,0.57], xy:[0.27,0.49]},
+  {w:'car', g:'transport', v:[0.74,0.18,0.26,0.22], xy:[0.82,0.20]},
+  {w:'truck', g:'transport', v:[0.78,0.16,0.28,0.20], xy:[0.86,0.14]},
+  {w:'bus', g:'transport', v:[0.72,0.20,0.24,0.18], xy:[0.78,0.12]},
+  {w:'train', g:'transport', v:[0.80,0.22,0.18,0.16], xy:[0.90,0.22]}
+];
+
+const byWord = Object.fromEntries(words.map(x => [x.w, x]));
+const groups = ['all', ...new Set(words.map(x => x.g))];
+const plot = document.getElementById('plot');
+const ctx = plot.getContext('2d');
+const selectedWordEl = document.getElementById('selectedWord');
+const vectorBox = document.getElementById('vectorBox');
+const neighborTable = document.getElementById('neighborTable');
+const groupTags = document.getElementById('groupTags');
+const searchBox = document.getElementById('searchBox');
+let selected = 'king';
+let highlightedArithmetic = null;
+
+function cosine(a,b){
+  const dot = a.reduce((s,x,i)=>s+x*b[i],0);
+  const na = Math.sqrt(a.reduce((s,x)=>s+x*x,0));
+  const nb = Math.sqrt(b.reduce((s,x)=>s+x*x,0));
+  return dot/(na*nb);
+}
+function vecStr(v){ return '[' + v.map(x=>x.toFixed(2)).join(', ') + ']'; }
+function nearest(wordVec, exclude=[]){
+  return words
+    .filter(x=>!exclude.includes(x.w))
+    .map(x=>({word:x.w, sim:cosine(wordVec,x.v)}))
+    .sort((a,b)=>b.sim-a.sim);
+}
+function updateSelected(word){
+  selected = word;
+  const item = byWord[word];
+  selectedWordEl.textContent = word;
+  vectorBox.textContent = vecStr(item.v);
+  groupTags.innerHTML = `<span class="pill">group: ${item.g}</span>`;
+  const neighbors = nearest(item.v,[word]).slice(0,6);
+  neighborTable.innerHTML = neighbors.map(n=>`<tr><td>${n.word}</td><td>${n.sim.toFixed(3)}</td></tr>`).join('');
+  draw();
+}
+function draw(){
+  ctx.clearRect(0,0,plot.width,plot.height);
+  const filter = document.getElementById('groupFilter').value;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,plot.width,plot.height);
+  ctx.strokeStyle = '#e6e6ef';
+  for(let i=1;i<10;i++){
+    const x=i*plot.width/10, y=i*plot.height/10;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,plot.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(plot.width,y); ctx.stroke();
+  }
+  if(highlightedArithmetic){
+    const pt = byWord[highlightedArithmetic];
+    const [x,y] = [pt.xy[0]*plot.width, (1-pt.xy[1])*plot.height];
+    ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.strokeStyle = '#ff6a00'; ctx.lineWidth = 3; ctx.stroke();
+  }
+  words.forEach(item => {
+    const [x,y] = [item.xy[0]*plot.width, (1-item.xy[1])*plot.height];
+    const active = item.w===selected;
+    const faded = filter!=='all' && item.g!==filter;
+    ctx.globalAlpha = faded ? 0.18 : 1;
+    ctx.beginPath();
+    ctx.fillStyle = active ? '#d7263d' : ({royalty:'#9467bd', people:'#1f77b4', professions:'#2ca02c', animals:'#8c564b', food:'#ff7f0e', transport:'#17becf'})[item.g] || '#555';
+    ctx.arc(x,y,active ? 11 : 8,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.font = active ? 'bold 16px Arial' : '13px Arial';
+    ctx.fillText(item.w, x+12, y-10);
+  });
+  ctx.globalAlpha = 1;
+}
+
+plot.addEventListener('click', e => {
+  const rect = plot.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * plot.width / rect.width;
+  const my = (e.clientY - rect.top) * plot.height / rect.height;
+  let best = null;
+  let bestDist = 1e9;
+  words.forEach(item => {
+    const x = item.xy[0]*plot.width, y = (1-item.xy[1])*plot.height;
+    const d = Math.hypot(mx-x,my-y);
+    if(d < bestDist){ bestDist = d; best = item.w; }
+  });
+  if(bestDist < 25) updateSelected(best);
+});
+
+function populateSelect(id){
+  const sel = document.getElementById(id);
+  sel.innerHTML = words.map(x=>`<option value="${x.w}">${x.w}</option>`).join('');
+}
+['aSelect','bSelect','cSelect'].forEach(populateSelect);
+document.getElementById('aSelect').value = 'king';
+document.getElementById('bSelect').value = 'man';
+document.getElementById('cSelect').value = 'woman';
+
+document.getElementById('computeBtn').addEventListener('click', () => {
+  const a = byWord[document.getElementById('aSelect').value].v;
+  const b = byWord[document.getElementById('bSelect').value].v;
+  const c = byWord[document.getElementById('cSelect').value].v;
+  const target = a.map((x,i)=>x-b[i]+c[i]);
+  const result = nearest(target, [document.getElementById('aSelect').value, document.getElementById('bSelect').value, document.getElementById('cSelect').value])[0];
+  highlightedArithmetic = result.word;
+  document.getElementById('arithResult').innerHTML = `<b>${document.getElementById('aSelect').value} - ${document.getElementById('bSelect').value} + ${document.getElementById('cSelect').value}</b> ≈ <b>${result.word}</b> (cosine ${result.sim.toFixed(3)})`;
+  updateSelected(result.word);
+});
+
+const groupFilter = document.getElementById('groupFilter');
+groupFilter.innerHTML = groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+groupFilter.addEventListener('change', draw);
+searchBox.addEventListener('input', () => {
+  const q = searchBox.value.trim().toLowerCase();
+  const match = words.find(x=>x.w.startsWith(q));
+  if(match) updateSelected(match.w);
+});
+updateSelected('king');
+</script>
+</body>
+</html>

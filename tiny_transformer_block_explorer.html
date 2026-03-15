@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tiny Transformer Block Explorer</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; background:#f6f8fc; color:#202534; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 20px; }
+  .panel { background:white; border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); margin-bottom:18px; }
+  .steps { display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-top:12px; }
+  .step { border:1px solid #e6e6ef; border-radius:12px; padding:10px; background:#fbfcff; }
+  .token { display:inline-block; padding:7px 10px; margin:4px 6px 0 0; border-radius:999px; background:#edf3ff; cursor:pointer; }
+  .token.active { background:#1f6feb; color:white; }
+  input { width:100%; padding:9px 10px; border-radius:8px; border:1px solid #bbb; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:8px 6px; border-bottom:1px solid #eee; text-align:left; vertical-align:top; }
+  .mono { font-family: Menlo, Consolas, monospace; }
+  .small { color:#666; font-size:13px; }
+  .pred { font-size:20px; padding:10px 12px; border-radius:10px; background:#eef4ff; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1 style="margin-top:0">Tiny Transformer Block Explorer</h1>
+    <label><b>Input sequence</b></label>
+    <input id="sentenceInput" value="the curious student reads" />
+    <p class="small">This is a toy single-block decoder: tokenize → embedding → + position → self-attention → residual → MLP → logits. Click a token position to inspect its path through the block.</p>
+    <div id="tokenBar"></div>
+    <div class="steps" id="steps"></div>
+  </div>
+  <div class="panel">
+    <h2 style="margin-top:0">Detailed vectors for selected position</h2>
+    <table>
+      <thead><tr><th>Stage</th><th>Vector</th></tr></thead>
+      <tbody id="detailTable"></tbody>
+    </table>
+    <h3>Next-token prediction from final position</h3>
+    <div id="prediction" class="pred"></div>
+  </div>
+</div>
+<script>
+const vocab = {
+  the:[0.15,0.18,0.12], curious:[0.62,0.70,0.28], student:[0.72,0.44,0.34], reads:[0.56,0.24,0.84], book:[0.48,0.60,0.76], dog:[0.22,0.56,0.70], runs:[0.66,0.22,0.78], quickly:[0.48,0.66,0.42]
+};
+const outputVocab = {book:[0.46,0.58,0.82], quickly:[0.50,0.70,0.44], dog:[0.20,0.56,0.72], school:[0.78,0.44,0.22], story:[0.52,0.66,0.70]};
+let selectedIndex = 0;
+function emb(tok){
+  if(vocab[tok.toLowerCase()]) return vocab[tok.toLowerCase()];
+  const c=[...tok].map(x=>x.charCodeAt(0));
+  return [0.14+(c.reduce((a,b)=>a+b,0)%75)/100, 0.12+(c.reduce((a,b,i)=>a+b*(i+1),0)%70)/100, 0.12+(c.reduce((a,b)=>a+(b%17),0)%80)/100];
+}
+function pos(i){ return [Math.sin(i), Math.cos(i), Math.sin(i/10)]; }
+function add(a,b){ return a.map((x,i)=>x+b[i]); }
+function dot(a,b){ return a.reduce((s,x,i)=>s+x*b[i],0); }
+function softmax(arr){ const m = Math.max(...arr); const ex = arr.map(x=>Math.exp(x-m)); const z = ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/z); }
+function mlp(v){ return [Math.max(0, 1.1*v[0]-0.2*v[1]), Math.max(0, 1.0*v[1]+0.1*v[2]), Math.max(0, 0.9*v[2]+0.2*v[0])]; }
+function fmt(v){ return '['+v.map(x=>x.toFixed(2)).join(', ')+']'; }
+
+function render(){
+  const tokens = document.getElementById('sentenceInput').value.trim().split(/\s+/).filter(Boolean).slice(0,8);
+  selectedIndex = Math.min(selectedIndex, tokens.length-1);
+  document.getElementById('tokenBar').innerHTML = tokens.map((t,i)=>`<span class="token ${i===selectedIndex?'active':''}" data-i="${i}">${t}</span>`).join('');
+  document.querySelectorAll('.token').forEach(el=>el.onclick=()=>{ selectedIndex=+el.dataset.i; render(); });
+  const E = tokens.map(emb);
+  const P = tokens.map((_,i)=>pos(i));
+  const H0 = E.map((e,i)=>add(e,P[i]));
+  const A = H0.map((q,i)=>{
+    const scores = H0.map((k,j)=> j>i ? -1e9 : dot(q,k)/Math.sqrt(3));
+    const w = softmax(scores);
+    return H0[0].map((_,d)=>H0.reduce((s,h,j)=>s+w[j]*h[d],0));
+  });
+  const H1 = H0.map((h,i)=>add(h,A[i]));
+  const M = H1.map(mlp);
+  const H2 = H1.map((h,i)=>add(h,M[i]));
+  const final = H2[H2.length-1];
+  const logits = Object.entries(outputVocab).map(([w,v])=>({w, score:dot(final,v)})).sort((a,b)=>b.score-a.score);
+
+  document.getElementById('steps').innerHTML = [
+    {name:'Tokenize', text:tokens.join(' | ')},
+    {name:'Embeddings', text:fmt(E[selectedIndex])},
+    {name:'+ Position', text:fmt(H0[selectedIndex])},
+    {name:'Attention', text:fmt(A[selectedIndex])},
+    {name:'Residual', text:fmt(H1[selectedIndex])},
+    {name:'MLP + residual', text:fmt(H2[selectedIndex])}
+  ].map(s=>`<div class="step"><b>${s.name}</b><div class="mono" style="margin-top:8px">${s.text}</div></div>`).join('');
+
+  document.getElementById('detailTable').innerHTML = `
+    <tr><td>Embedding</td><td class="mono">${fmt(E[selectedIndex])}</td></tr>
+    <tr><td>Position encoding</td><td class="mono">${fmt(P[selectedIndex])}</td></tr>
+    <tr><td>Embedding + position</td><td class="mono">${fmt(H0[selectedIndex])}</td></tr>
+    <tr><td>Attention output</td><td class="mono">${fmt(A[selectedIndex])}</td></tr>
+    <tr><td>After first residual</td><td class="mono">${fmt(H1[selectedIndex])}</td></tr>
+    <tr><td>MLP output</td><td class="mono">${fmt(M[selectedIndex])}</td></tr>
+    <tr><td>Final block output</td><td class="mono">${fmt(H2[selectedIndex])}</td></tr>`;
+  document.getElementById('prediction').innerHTML = `Predicted next token: <b>${logits[0].w}</b>`;
+}
+document.getElementById('sentenceInput').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

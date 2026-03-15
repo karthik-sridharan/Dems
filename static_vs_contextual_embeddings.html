@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Static vs Contextual Embeddings</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; background: #f6f7fb; color: #1f2430; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 22px; }
+  .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+  .panel { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 5px 18px rgba(0,0,0,0.08); }
+  select { padding: 8px 10px; border-radius: 8px; border: 1px solid #bbb; }
+  canvas { width: 100%; height: 440px; border: 1px solid #ddd; border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 8px 6px; border-bottom: 1px solid #eee; text-align: left; }
+  .vec { font-family: Menlo, Consolas, monospace; font-size: 13px; }
+  .sentence { padding: 12px; border-radius: 10px; background: #f2f4fb; margin-bottom: 10px; }
+  .highlight { background: #ffe89a; padding: 2px 5px; border-radius: 6px; }
+  .small { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Static vs Contextual Embeddings</h1>
+  <p class="small">A static embedding gives the same vector to a word in every sentence. A contextual embedding changes with the surrounding words.</p>
+  <div class="panel" style="margin-bottom:18px;">
+    <label><b>Choose an ambiguous word:</b></label>
+    <select id="caseSelect"></select>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2>Sentences</h2>
+      <div id="sentence1" class="sentence"></div>
+      <div id="sentence2" class="sentence"></div>
+      <h2>Vectors</h2>
+      <table>
+        <thead><tr><th>Representation</th><th>Sentence 1</th><th>Sentence 2</th></tr></thead>
+        <tbody id="vectorTable"></tbody>
+      </table>
+      <h2>Sense similarity</h2>
+      <table>
+        <thead><tr><th></th><th id="senseA"></th><th id="senseB"></th></tr></thead>
+        <tbody id="senseTable"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>2D view</h2>
+      <canvas id="plot" width="520" height="440"></canvas>
+      <p class="small">Gray = static representation. Colored points = contextualized representation in each sentence.</p>
+    </div>
+  </div>
+</div>
+<script>
+const cases = {
+  bank: {
+    target: 'bank',
+    s1: 'She deposited the check at the bank.',
+    s2: 'The canoe drifted toward the bank of the river.',
+    static: [0.55,0.52,0.55,0.48],
+    contexts: [[0.42,0.88,0.30,0.26],[0.24,0.20,0.88,0.80]],
+    senses: {finance:[0.35,0.95,0.20,0.20], river:[0.20,0.20,0.95,0.78]}
+  },
+  bat: {
+    target: 'bat',
+    s1: 'The bat flew out of the cave at dusk.',
+    s2: 'He swung the bat and hit a line drive.',
+    static: [0.52,0.47,0.54,0.44],
+    contexts: [[0.18,0.28,0.92,0.72],[0.88,0.32,0.18,0.16]],
+    senses: {animal:[0.15,0.26,0.96,0.74], sports:[0.95,0.28,0.16,0.12]}
+  },
+  crane: {
+    target: 'crane',
+    s1: 'A crane stood still in the marsh.',
+    s2: 'The crane lifted steel beams into place.',
+    static: [0.48,0.52,0.51,0.46],
+    contexts: [[0.22,0.34,0.90,0.78],[0.90,0.70,0.22,0.18]],
+    senses: {bird:[0.18,0.30,0.94,0.76], machine:[0.96,0.78,0.20,0.16]}
+  }
+};
+
+const select = document.getElementById('caseSelect');
+select.innerHTML = Object.keys(cases).map(k=>`<option value="${k}">${k}</option>`).join('');
+const plot = document.getElementById('plot');
+const ctx = plot.getContext('2d');
+
+function cosine(a,b){
+  const dot = a.reduce((s,x,i)=>s+x*b[i],0);
+  const na = Math.sqrt(a.reduce((s,x)=>s+x*x,0));
+  const nb = Math.sqrt(b.reduce((s,x)=>s+x*x,0));
+  return dot/(na*nb);
+}
+function fmt(v){ return '['+v.map(x=>x.toFixed(2)).join(', ')+']'; }
+function contextual(staticVec, ctxVec){
+  return staticVec.map((x,i)=>0.45*x + 0.70*ctxVec[i]);
+}
+function project(v){ return [70 + 330*v[0], 370 - 280*v[2]]; }
+
+function render(){
+  const c = cases[select.value];
+  document.getElementById('sentence1').innerHTML = c.s1.replace(c.target, `<span class="highlight">${c.target}</span>`);
+  document.getElementById('sentence2').innerHTML = c.s2.replace(c.target, `<span class="highlight">${c.target}</span>`);
+  const ctx1 = contextual(c.static, c.contexts[0]);
+  const ctx2 = contextual(c.static, c.contexts[1]);
+  document.getElementById('senseA').textContent = Object.keys(c.senses)[0];
+  document.getElementById('senseB').textContent = Object.keys(c.senses)[1];
+  document.getElementById('vectorTable').innerHTML = `
+    <tr><td><b>Static embedding</b></td><td class="vec">${fmt(c.static)}</td><td class="vec">${fmt(c.static)}</td></tr>
+    <tr><td><b>Contextual embedding</b></td><td class="vec">${fmt(ctx1)}</td><td class="vec">${fmt(ctx2)}</td></tr>`;
+  const senseNames = Object.keys(c.senses);
+  document.getElementById('senseTable').innerHTML = `
+    <tr><td><b>Static</b></td><td>${cosine(c.static, c.senses[senseNames[0]]).toFixed(3)}</td><td>${cosine(c.static, c.senses[senseNames[1]]).toFixed(3)}</td></tr>
+    <tr><td><b>Contextual (sentence 1)</b></td><td>${cosine(ctx1, c.senses[senseNames[0]]).toFixed(3)}</td><td>${cosine(ctx1, c.senses[senseNames[1]]).toFixed(3)}</td></tr>
+    <tr><td><b>Contextual (sentence 2)</b></td><td>${cosine(ctx2, c.senses[senseNames[0]]).toFixed(3)}</td><td>${cosine(ctx2, c.senses[senseNames[1]]).toFixed(3)}</td></tr>`;
+
+  ctx.clearRect(0,0,plot.width,plot.height);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,plot.width,plot.height);
+  ctx.strokeStyle = '#ececf2';
+  for(let i=1;i<5;i++){
+    ctx.beginPath(); ctx.moveTo(i*plot.width/5,0); ctx.lineTo(i*plot.width/5,plot.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*plot.height/5); ctx.lineTo(plot.width,i*plot.height/5); ctx.stroke();
+  }
+  ctx.fillStyle = '#555';
+  ctx.fillText('x-axis: semantic feature 1', 12, 20);
+  ctx.fillText('y-axis: semantic feature 3', 12, 36);
+
+  const pts = [
+    {name:'static', vec:c.static, color:'#777'},
+    {name:'context sentence 1', vec:ctx1, color:'#1f77b4'},
+    {name:'context sentence 2', vec:ctx2, color:'#d62728'},
+    {name:senseNames[0]+' prototype', vec:c.senses[senseNames[0]], color:'#2ca02c'},
+    {name:senseNames[1]+' prototype', vec:c.senses[senseNames[1]], color:'#9467bd'},
+  ];
+  pts.forEach((p,idx)=>{
+    const [x,y]=project(p.vec);
+    ctx.beginPath(); ctx.fillStyle=p.color; ctx.arc(x,y, idx===0?8:10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#222'; ctx.fillText(p.name, x+12, y-10);
+  });
+}
+select.addEventListener('change', render);
+render();
+</script>
+</body>
+</html>
