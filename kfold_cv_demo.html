@@ -442,7 +442,7 @@
         <div id="statusLine" class="status-line"></div>
 
         <div class="small-note">
-          Background shading in each fold panel shows the learned classifier on that training split.
+          Background shading in each fold panel shows the learned classifier on that training split, and the black curve shows the classification boundary.
           Classification error is measured by the sign of the learned score.
         </div>
       </section>
@@ -845,6 +845,92 @@
       }
     }
 
+    function interpolateBoundaryPoint(x1, y1, v1, x2, y2, v2) {
+      const denom = v2 - v1;
+      const t = Math.abs(denom) < 1e-10 ? 0.5 : clamp((-v1) / denom, 0, 1);
+      return {
+        x: x1 + t * (x2 - x1),
+        y: y1 + t * (y2 - y1),
+      };
+    }
+
+    function drawBoundarySegment(ctx, a, b) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDecisionBoundary(ctx, size, model, gridSteps) {
+      if (!model) return;
+      const cell = size / gridSteps;
+      const scores = Array.from({ length: gridSteps + 1 }, () => new Float64Array(gridSteps + 1));
+
+      for (let gy = 0; gy <= gridSteps; gy++) {
+        for (let gx = 0; gx <= gridSteps; gx++) {
+          const point = canvasToPoint(gx * cell, gy * cell, size);
+          scores[gy][gx] = predictScore(model, point);
+        }
+      }
+
+      for (let gy = 0; gy < gridSteps; gy++) {
+        for (let gx = 0; gx < gridSteps; gx++) {
+          const x0 = gx * cell;
+          const x1 = (gx + 1) * cell;
+          const y0 = gy * cell;
+          const y1 = (gy + 1) * cell;
+
+          const tl = scores[gy][gx];
+          const tr = scores[gy][gx + 1];
+          const br = scores[gy + 1][gx + 1];
+          const bl = scores[gy + 1][gx];
+
+          const topCross = (tl >= 0) !== (tr >= 0);
+          const rightCross = (tr >= 0) !== (br >= 0);
+          const bottomCross = (bl >= 0) !== (br >= 0);
+          const leftCross = (tl >= 0) !== (bl >= 0);
+
+          const topPt = topCross ? interpolateBoundaryPoint(x0, y0, tl, x1, y0, tr) : null;
+          const rightPt = rightCross ? interpolateBoundaryPoint(x1, y0, tr, x1, y1, br) : null;
+          const bottomPt = bottomCross ? interpolateBoundaryPoint(x0, y1, bl, x1, y1, br) : null;
+          const leftPt = leftCross ? interpolateBoundaryPoint(x0, y0, tl, x0, y1, bl) : null;
+
+          const crossings = [];
+          if (topPt) crossings.push(['top', topPt]);
+          if (rightPt) crossings.push(['right', rightPt]);
+          if (bottomPt) crossings.push(['bottom', bottomPt]);
+          if (leftPt) crossings.push(['left', leftPt]);
+
+          if (crossings.length === 2) {
+            drawBoundarySegment(ctx, crossings[0][1], crossings[1][1]);
+          } else if (crossings.length === 4) {
+            const center = (tl + tr + br + bl) / 4;
+            if (center >= 0) {
+              drawBoundarySegment(ctx, topPt, leftPt);
+              drawBoundarySegment(ctx, rightPt, bottomPt);
+            } else {
+              drawBoundarySegment(ctx, topPt, rightPt);
+              drawBoundarySegment(ctx, bottomPt, leftPt);
+            }
+          }
+        }
+      }
+    }
+
     function updateDatasetStats() {
       const total = state.points.length;
       const red = state.points.filter(p => p.label === -1).length;
@@ -1004,6 +1090,7 @@
       const ctx = canvas.getContext('2d');
       drawAxes(ctx, FOLD_CANVAS_SIZE);
       drawDecisionBackground(ctx, FOLD_CANVAS_SIZE, result.model, state.decisionGrid);
+      drawDecisionBoundary(ctx, FOLD_CANVAS_SIZE, result.model, Math.max(28, state.decisionGrid));
       drawAxes(ctx, FOLD_CANVAS_SIZE);
       for (const point of result.training) drawPoint(ctx, point, FOLD_CANVAS_SIZE, false);
       for (const point of result.validation) drawPoint(ctx, point, FOLD_CANVAS_SIZE, true);
