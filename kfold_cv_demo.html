@@ -836,11 +836,12 @@
         for (let gx = 0; gx < gridSteps; gx++) {
           const point = canvasToPoint((gx + 0.5) * cell, (gy + 0.5) * cell, size);
           const score = predictScore(model, point);
-          const intensity = 0.03 + 0.16 * Math.min(1, Math.abs(Math.tanh(score)));
+          const confidence = Math.min(1, Math.abs(Math.tanh(0.9 * score)));
+          const intensity = 0.22 + 0.26 * confidence;
           ctx.fillStyle = score >= 0
             ? `rgba(63, 115, 241, ${intensity})`
             : `rgba(220, 75, 75, ${intensity})`;
-          ctx.fillRect(gx * cell, gy * cell, cell + 0.6, cell + 0.6);
+          ctx.fillRect(gx * cell, gy * cell, cell + 1.2, cell + 1.2);
         }
       }
     }
