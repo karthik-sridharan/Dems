@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-fold Cross Validation Demo for Kernel Classifiers</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #59637a;
+      --border: #d7ddea;
+      --red: #dc4b4b;
+      --blue: #3f73f1;
+      --accent: #111827;
+      --shadow: 0 10px 28px rgba(24, 39, 75, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    .page {
+      max-width: 1450px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 980px;
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, 480px) minmax(420px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card h2 {
+      font-size: 1.15rem;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .toolbar, .mini-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .segmented {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    select,
+    input[type="number"] {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover,
+    select:hover,
+    input[type="number"]:hover {
+      border-color: #aeb7cb;
+    }
+
+    button.active {
+      border-color: #8794b5;
+      background: #eef2fb;
+      font-weight: 700;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .danger {
+      color: var(--red);
+    }
+
+    .canvas-wrap {
+      display: grid;
+      gap: 8px;
+      justify-items: start;
+    }
+
+    canvas {
+      display: block;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      touch-action: none;
+      max-width: 100%;
+      height: auto;
+    }
+
+    #datasetCanvas {
+      width: min(100%, 420px);
+      cursor: crosshair;
+    }
+
+    .dataset-stats,
+    .summary-box,
+    .status-line {
+      background: #f8faff;
+      border: 1px solid #e2e7f3;
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--ink);
+    }
+
+    .dataset-stats,
+    .status-line,
+    .summary-box {
+      font-size: 0.95rem;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(250px, 1fr));
+      gap: 12px 16px;
+      align-items: end;
+    }
+
+    .control {
+      display: grid;
+      gap: 6px;
+    }
+
+    .control label,
+    .checkbox-label {
+      font-weight: 600;
+      font-size: 0.96rem;
+    }
+
+    .inline-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .range-wrap {
+      display: grid;
+      gap: 4px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2f5edf;
+      cursor: pointer;
+    }
+
+    .value-chip {
+      display: inline-block;
+      width: fit-content;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2fb;
+      border: 1px solid #d8e0f2;
+      color: #24304a;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .kernel-subcontrols {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 12px 16px;
+      padding-top: 2px;
+      border-top: 1px dashed #dbe2f1;
+    }
+
+    .fold-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 16px;
+    }
+
+    .fold-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .fold-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .fold-title {
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .fold-subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .fold-canvas {
+      width: 100%;
+      height: auto;
+    }
+
+    .metrics {
+      display: grid;
+      gap: 6px;
+      font-size: 0.95rem;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .metric-label {
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot,
+    .square {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+      border: 2px solid rgba(0,0,0,0.15);
+    }
+
+    .dot { border-radius: 999px; }
+    .square { border-radius: 2px; }
+    .red { background: var(--red); }
+    .blue { background: var(--blue); }
+
+    .warning {
+      color: #8a5a00;
+      background: #fff6df;
+      border: 1px solid #f0d596;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 16px; }
+      .top-grid { grid-template-columns: 1fr; }
+      .controls-grid,
+      .kernel-subcontrols { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>K-fold cross-validation demo for kernel classifiers</h1>
+      <p>
+        Build a 2D binary classification dataset, choose a kernelized classifier and its hyperparameters,
+        and then inspect each fold’s training/validation split. In every fold view,
+        <strong>training points are circles</strong> and <strong>validation points are squares</strong>.
+      </p>
+    </div>
+
+    <div class="top-grid">
+      <section class="card">
+        <h2>1. Create a 2D binary classification dataset</h2>
+        <div class="canvas-wrap">
+          <canvas id="datasetCanvas" width="420" height="420"></canvas>
+          <div class="legend">
+            <span class="legend-item"><span class="dot red"></span> Red class (label -1)</span>
+            <span class="legend-item"><span class="dot blue"></span> Blue class (label +1)</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="segmented">
+            <button id="addModeBtn" class="active">Add points</button>
+            <button id="eraseModeBtn">Erase nearest</button>
+          </div>
+          <div class="segmented">
+            <button id="redClassBtn" class="active">Add red points</button>
+            <button id="blueClassBtn">Add blue points</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button id="undoBtn">Undo</button>
+          <button id="clearBtn">Clear</button>
+          <button id="xorBtn">Load XOR preset</button>
+          <button id="ringsBtn">Load rings preset</button>
+          <button id="moonsBtn">Load moons preset</button>
+        </div>
+
+        <div class="small-note">
+          Click anywhere in the square to add points. You can erase the nearest point in erase mode.
+          Coordinates run from -1 to 1 on both axes.
+        </div>
+
+        <div id="datasetStats" class="dataset-stats"></div>
+      </section>
+
+      <section class="card">
+        <h2>2. Choose the cross-validation and model settings</h2>
+
+        <div class="controls-grid">
+          <div class="control">
+            <label for="kSlider">Number of folds k</label>
+            <div class="range-wrap">
+              <input id="kSlider" type="range" min="2" max="10" step="1" value="5" />
+              <span id="kValue" class="value-chip"></span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label class="checkbox-label">
+              <input id="stratifiedCheck" type="checkbox" checked /> Stratified split
+            </label>
+            <div class="inline-row">
+              <button id="reshuffleBtn">Reshuffle folds</button>
+              <span id="seedDisplay" class="value-chip"></span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="lossSelect">Loss</label>
+            <select id="lossSelect">
+              <option value="logistic">Logistic loss</option>
+              <option value="hinge">Hinge loss</option>
+              <option value="squaredHinge">Squared hinge loss</option>
+              <option value="exponential">Exponential loss</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <label for="kernelSelect">Kernel</label>
+            <select id="kernelSelect">
+              <option value="rbf">RBF / Gaussian</option>
+              <option value="linear">Linear</option>
+              <option value="polynomial">Polynomial</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <label for="lambdaSlider">Regularization λ</label>
+            <div class="range-wrap">
+              <input id="lambdaSlider" type="range" min="-4" max="0.7" step="0.05" value="-2" />
+              <span id="lambdaValue" class="value-chip"></span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="lrSlider">Learning rate</label>
+            <div class="range-wrap">
+              <input id="lrSlider" type="range" min="-3.2" max="-0.4" step="0.05" value="-1.1" />
+              <span id="lrValue" class="value-chip"></span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="epochsSlider">Epochs</label>
+            <div class="range-wrap">
+              <input id="epochsSlider" type="range" min="40" max="420" step="10" value="220" />
+              <span id="epochsValue" class="value-chip"></span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="decisionGridSlider">Boundary resolution</label>
+            <div class="range-wrap">
+              <input id="decisionGridSlider" type="range" min="18" max="55" step="1" value="30" />
+              <span id="decisionGridValue" class="value-chip"></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="kernelControls" class="kernel-subcontrols"></div>
+
+        <div id="summaryBox" class="summary-box"></div>
+        <div id="statusLine" class="status-line"></div>
+
+        <div class="small-note">
+          Background shading in each fold panel shows the learned classifier on that training split.
+          Classification error is measured by the sign of the learned score.
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>3. The k validation split panels</h2>
+      <div class="legend">
+        <span class="legend-item"><span class="dot red"></span> Red training point</span>
+        <span class="legend-item"><span class="dot blue"></span> Blue training point</span>
+        <span class="legend-item"><span class="square red"></span> Red validation point</span>
+        <span class="legend-item"><span class="square blue"></span> Blue validation point</span>
+      </div>
+      <div id="warningBox" class="warning" hidden></div>
+      <div id="foldContainer" class="fold-grid"></div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      points: [],
+      nextId: 0,
+      mode: 'add',
+      currentLabel: -1,
+      k: 5,
+      stratified: true,
+      seed: 174237,
+      kernel: 'rbf',
+      loss: 'logistic',
+      lambdaLog10: -2,
+      lrLog10: -1.1,
+      epochs: 220,
+      decisionGrid: 30,
+      degree: 3,
+      coef0: 1.0,
+      polyGamma: 1.0,
+      sigma: 0.35,
+      scheduled: null,
+      renderedKernelUi: null,
+    };
+
+    const DATASET_SIZE = 420;
+    const FOLD_CANVAS_SIZE = 250;
+
+    const datasetCanvas = document.getElementById('datasetCanvas');
+    const datasetCtx = datasetCanvas.getContext('2d');
+    const foldContainer = document.getElementById('foldContainer');
+    const datasetStats = document.getElementById('datasetStats');
+    const summaryBox = document.getElementById('summaryBox');
+    const statusLine = document.getElementById('statusLine');
+    const warningBox = document.getElementById('warningBox');
+    const kernelControls = document.getElementById('kernelControls');
+
+    const controls = {
+      addModeBtn: document.getElementById('addModeBtn'),
+      eraseModeBtn: document.getElementById('eraseModeBtn'),
+      redClassBtn: document.getElementById('redClassBtn'),
+      blueClassBtn: document.getElementById('blueClassBtn'),
+      undoBtn: document.getElementById('undoBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      xorBtn: document.getElementById('xorBtn'),
+      ringsBtn: document.getElementById('ringsBtn'),
+      moonsBtn: document.getElementById('moonsBtn'),
+      kSlider: document.getElementById('kSlider'),
+      kValue: document.getElementById('kValue'),
+      stratifiedCheck: document.getElementById('stratifiedCheck'),
+      reshuffleBtn: document.getElementById('reshuffleBtn'),
+      seedDisplay: document.getElementById('seedDisplay'),
+      lossSelect: document.getElementById('lossSelect'),
+      kernelSelect: document.getElementById('kernelSelect'),
+      lambdaSlider: document.getElementById('lambdaSlider'),
+      lambdaValue: document.getElementById('lambdaValue'),
+      lrSlider: document.getElementById('lrSlider'),
+      lrValue: document.getElementById('lrValue'),
+      epochsSlider: document.getElementById('epochsSlider'),
+      epochsValue: document.getElementById('epochsValue'),
+      decisionGridSlider: document.getElementById('decisionGridSlider'),
+      decisionGridValue: document.getElementById('decisionGridValue'),
+    };
+
+    function formatNumber(v) {
+      if (!Number.isFinite(v)) return '—';
+      if (Math.abs(v) >= 1000 || (Math.abs(v) > 0 && Math.abs(v) < 0.001)) {
+        return v.toExponential(2);
+      }
+      if (Math.abs(v) >= 10) return v.toFixed(2);
+      if (Math.abs(v) >= 1) return v.toFixed(3);
+      return v.toFixed(4);
+    }
+
+    function formatPct(x) {
+      return `${(100 * x).toFixed(1)}%`;
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function() {
+        a |= 0;
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function shuffleInPlace(arr, rng) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function pointToCanvas(point, size) {
+      return {
+        x: ((point.x + 1) / 2) * size,
+        y: ((1 - point.y) / 2) * size,
+      };
+    }
+
+    function canvasToPoint(px, py, size) {
+      return {
+        x: clamp((px / size) * 2 - 1, -1, 1),
+        y: clamp(1 - (py / size) * 2, -1, 1),
+      };
+    }
+
+    function getCurrentParams() {
+      return {
+        loss: state.loss,
+        kernel: state.kernel,
+        lambda: Math.pow(10, state.lambdaLog10),
+        learningRate: Math.pow(10, state.lrLog10),
+        epochs: state.epochs,
+        degree: state.degree,
+        coef0: state.coef0,
+        polyGamma: state.polyGamma,
+        sigma: state.sigma,
+      };
+    }
+
+    function kernelValue(a, b, params) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dot = a.x * b.x + a.y * b.y;
+      if (params.kernel === 'linear') {
+        return dot;
+      }
+      if (params.kernel === 'polynomial') {
+        return Math.pow(params.polyGamma * dot + params.coef0, params.degree);
+      }
+      const sigma2 = Math.max(1e-6, params.sigma * params.sigma);
+      return Math.exp(-(dx * dx + dy * dy) / (2 * sigma2));
+    }
+
+    function buildKernelMatrix(pointsA, pointsB, params) {
+      const rows = pointsA.length;
+      const cols = pointsB.length;
+      const out = new Float64Array(rows * cols);
+      for (let i = 0; i < rows; i++) {
+        const rowOffset = i * cols;
+        for (let j = 0; j < cols; j++) {
+          out[rowOffset + j] = kernelValue(pointsA[i], pointsB[j], params);
+        }
+      }
+      return out;
+    }
+
+    function lossDerivative(score, y, lossName) {
+      const margin = y * score;
+      if (lossName === 'logistic') {
+        const z = clamp(margin, -40, 40);
+        return -y / (1 + Math.exp(z));
+      }
+      if (lossName === 'hinge') {
+        return margin < 1 ? -y : 0;
+      }
+      if (lossName === 'squaredHinge') {
+        return margin < 1 ? -2 * y * (1 - margin) : 0;
+      }
+      const z = clamp(margin, -20, 20);
+      return -y * Math.exp(-z);
+    }
+
+    function trainKernelClassifier(trainPoints, params) {
+      const n = trainPoints.length;
+      if (n === 0) {
+        return null;
+      }
+
+      const K = buildKernelMatrix(trainPoints, trainPoints, params);
+      const alpha = new Float64Array(n);
+      const mAlpha = new Float64Array(n);
+      const vAlpha = new Float64Array(n);
+      const Ka = new Float64Array(n);
+      const f = new Float64Array(n);
+      const gradF = new Float64Array(n);
+      const gradAlpha = new Float64Array(n);
+      let b = 0;
+      let mb = 0;
+      let vb = 0;
+
+      const beta1 = 0.9;
+      const beta2 = 0.999;
+      const eps = 1e-8;
+      const lr = params.learningRate;
+
+      for (let epoch = 1; epoch <= params.epochs; epoch++) {
+        for (let i = 0; i < n; i++) {
+          const row = i * n;
+          let sum = 0;
+          for (let j = 0; j < n; j++) {
+            sum += K[row + j] * alpha[j];
+          }
+          Ka[i] = sum;
+          f[i] = sum + b;
+        }
+
+        let gradB = 0;
+        for (let i = 0; i < n; i++) {
+          const yi = trainPoints[i].label;
+          const d = lossDerivative(f[i], yi, params.loss) / n;
+          gradF[i] = d;
+          gradB += d;
+        }
+
+        for (let i = 0; i < n; i++) {
+          const row = i * n;
+          let sum = 0;
+          for (let j = 0; j < n; j++) {
+            sum += K[row + j] * gradF[j];
+          }
+          gradAlpha[i] = sum + params.lambda * Ka[i];
+        }
+
+        const biasCorrect1 = 1 - Math.pow(beta1, epoch);
+        const biasCorrect2 = 1 - Math.pow(beta2, epoch);
+
+        for (let i = 0; i < n; i++) {
+          mAlpha[i] = beta1 * mAlpha[i] + (1 - beta1) * gradAlpha[i];
+          vAlpha[i] = beta2 * vAlpha[i] + (1 - beta2) * gradAlpha[i] * gradAlpha[i];
+          const mHat = mAlpha[i] / biasCorrect1;
+          const vHat = vAlpha[i] / biasCorrect2;
+          alpha[i] -= lr * mHat / (Math.sqrt(vHat) + eps);
+        }
+
+        mb = beta1 * mb + (1 - beta1) * gradB;
+        vb = beta2 * vb + (1 - beta2) * gradB * gradB;
+        const mbHat = mb / biasCorrect1;
+        const vbHat = vb / biasCorrect2;
+        b -= lr * mbHat / (Math.sqrt(vbHat) + eps);
+      }
+
+      return {
+        trainPoints: trainPoints.slice(),
+        alpha,
+        b,
+        params: { ...params },
+      };
+    }
+
+    function predictScore(model, point) {
+      if (!model) return 0;
+      let sum = model.b;
+      for (let i = 0; i < model.trainPoints.length; i++) {
+        sum += model.alpha[i] * kernelValue(model.trainPoints[i], point, model.params);
+      }
+      return sum;
+    }
+
+    function errorStats(model, points) {
+      if (!points.length) {
+        return { total: 0, mistakes: 0, rate: 0 };
+      }
+      let mistakes = 0;
+      for (const point of points) {
+        const pred = predictScore(model, point) >= 0 ? 1 : -1;
+        if (pred !== point.label) mistakes += 1;
+      }
+      return {
+        total: points.length,
+        mistakes,
+        rate: mistakes / points.length,
+      };
+    }
+
+    function splitIntoFolds(points, k, seed, stratified) {
+      const buckets = Array.from({ length: k }, () => []);
+      const rng = mulberry32(seed);
+      const indices = points.map((_, i) => i);
+
+      if (stratified) {
+        const neg = indices.filter(i => points[i].label === -1);
+        const pos = indices.filter(i => points[i].label === 1);
+        shuffleInPlace(neg, rng);
+        shuffleInPlace(pos, rng);
+        let cursor = 0;
+        [neg, pos].forEach(group => {
+          group.forEach((idx, i) => buckets[(cursor + i) % k].push(idx));
+          cursor = (cursor + group.length) % k;
+        });
+      } else {
+        shuffleInPlace(indices, rng);
+        indices.forEach((idx, i) => buckets[i % k].push(idx));
+      }
+
+      for (const bucket of buckets) bucket.sort((a, b) => a - b);
+      return buckets;
+    }
+
+    function drawAxes(ctx, size) {
+      ctx.save();
+      ctx.clearRect(0, 0, size, size);
+
+      const gridColor = '#edf1f8';
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+      for (let g = 1; g < 4; g++) {
+        const t = (g / 4) * size;
+        ctx.beginPath();
+        ctx.moveTo(t, 0);
+        ctx.lineTo(t, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, t);
+        ctx.lineTo(size, t);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#adb7cc';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(size / 2, 0);
+      ctx.lineTo(size / 2, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, size / 2);
+      ctx.lineTo(size, size / 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#94a0ba';
+      ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+
+      ctx.fillStyle = '#5d6981';
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('-1', 8, size / 2 - 6);
+      ctx.fillText('1', size - 16, size / 2 - 6);
+      ctx.fillText('1', size / 2 + 6, 14);
+      ctx.fillText('-1', size / 2 + 6, size - 8);
+      ctx.fillText('x', size - 14, size / 2 - 12);
+      ctx.fillText('y', size / 2 + 10, 16);
+      ctx.restore();
+    }
+
+    function drawPoint(ctx, point, size, isValidation) {
+      const { x, y } = pointToCanvas(point, size);
+      const color = point.label === -1 ? '#dc4b4b' : '#3f73f1';
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = 1.4;
+      if (isValidation) {
+        const half = 6;
+        ctx.beginPath();
+        ctx.rect(x - half, y - half, 2 * half, 2 * half);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawDatasetCanvas() {
+      drawAxes(datasetCtx, DATASET_SIZE);
+      for (const point of state.points) {
+        drawPoint(datasetCtx, point, DATASET_SIZE, false);
+      }
+    }
+
+    function drawDecisionBackground(ctx, size, model, gridSteps) {
+      if (!model) return;
+      const cell = size / gridSteps;
+      for (let gy = 0; gy < gridSteps; gy++) {
+        for (let gx = 0; gx < gridSteps; gx++) {
+          const point = canvasToPoint((gx + 0.5) * cell, (gy + 0.5) * cell, size);
+          const score = predictScore(model, point);
+          const intensity = 0.03 + 0.16 * Math.min(1, Math.abs(Math.tanh(score)));
+          ctx.fillStyle = score >= 0
+            ? `rgba(63, 115, 241, ${intensity})`
+            : `rgba(220, 75, 75, ${intensity})`;
+          ctx.fillRect(gx * cell, gy * cell, cell + 0.6, cell + 0.6);
+        }
+      }
+    }
+
+    function updateDatasetStats() {
+      const total = state.points.length;
+      const red = state.points.filter(p => p.label === -1).length;
+      const blue = total - red;
+      const maxK = Math.max(2, Math.min(10, total || 2));
+      controls.kSlider.max = String(maxK);
+      if (state.k > maxK) {
+        state.k = maxK;
+        controls.kSlider.value = String(maxK);
+      }
+      datasetStats.innerHTML = `
+        <strong>${total}</strong> total points &nbsp;|&nbsp;
+        <span class="danger"><strong>${red}</strong> red</span> &nbsp;|&nbsp;
+        <span style="color:#3f73f1;"><strong>${blue}</strong> blue</span>
+      `;
+    }
+
+    function updateControlReadouts() {
+      controls.kValue.textContent = String(state.k);
+      controls.seedDisplay.textContent = `seed ${state.seed}`;
+      controls.lambdaValue.textContent = `${formatNumber(Math.pow(10, state.lambdaLog10))}`;
+      controls.lrValue.textContent = `${formatNumber(Math.pow(10, state.lrLog10))}`;
+      controls.epochsValue.textContent = `${state.epochs}`;
+      controls.decisionGridValue.textContent = `${state.decisionGrid} × ${state.decisionGrid}`;
+      controls.lossSelect.value = state.loss;
+      controls.kernelSelect.value = state.kernel;
+      controls.stratifiedCheck.checked = state.stratified;
+      controls.lambdaSlider.value = String(state.lambdaLog10);
+      controls.lrSlider.value = String(state.lrLog10);
+      controls.epochsSlider.value = String(state.epochs);
+      controls.decisionGridSlider.value = String(state.decisionGrid);
+      controls.kSlider.value = String(state.k);
+    }
+
+    function renderKernelControls() {
+      if (state.kernel === 'linear') {
+        kernelControls.innerHTML = `
+          <div class="control">
+            <label>Linear kernel</label>
+            <div class="small-note">No additional kernel parameters are needed.</div>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.kernel === 'rbf') {
+        kernelControls.innerHTML = `
+          <div class="control">
+            <label for="sigmaSlider">RBF bandwidth σ</label>
+            <div class="range-wrap">
+              <input id="sigmaSlider" type="range" min="0.08" max="1.1" step="0.01" value="${state.sigma}" />
+              <span id="sigmaValue" class="value-chip"></span>
+            </div>
+          </div>
+          <div class="control">
+            <label>Interpretation</label>
+            <div class="small-note">Small σ makes the decision rule more local. Large σ makes it smoother and more global.</div>
+          </div>
+        `;
+        const sigmaSlider = document.getElementById('sigmaSlider');
+        const sigmaValue = document.getElementById('sigmaValue');
+        sigmaSlider.addEventListener('input', () => {
+          state.sigma = parseFloat(sigmaSlider.value);
+          sigmaValue.textContent = formatNumber(state.sigma);
+          scheduleRefresh();
+        });
+        sigmaValue.textContent = formatNumber(state.sigma);
+        return;
+      }
+
+      kernelControls.innerHTML = `
+        <div class="control">
+          <label for="degreeSlider">Polynomial degree</label>
+          <div class="range-wrap">
+            <input id="degreeSlider" type="range" min="1" max="8" step="1" value="${state.degree}" />
+            <span id="degreeValue" class="value-chip"></span>
+          </div>
+        </div>
+        <div class="control">
+          <label for="coef0Slider">Offset c₀</label>
+          <div class="range-wrap">
+            <input id="coef0Slider" type="range" min="0" max="3" step="0.05" value="${state.coef0}" />
+            <span id="coef0Value" class="value-chip"></span>
+          </div>
+        </div>
+        <div class="control">
+          <label for="polyGammaSlider">Scale γ</label>
+          <div class="range-wrap">
+            <input id="polyGammaSlider" type="range" min="0.2" max="3" step="0.05" value="${state.polyGamma}" />
+            <span id="polyGammaValue" class="value-chip"></span>
+          </div>
+        </div>
+        <div class="control">
+          <label>Interpretation</label>
+          <div class="small-note">Larger degree produces richer feature interactions. γ rescales the dot product before taking powers.</div>
+        </div>
+      `;
+
+      const degreeSlider = document.getElementById('degreeSlider');
+      const coef0Slider = document.getElementById('coef0Slider');
+      const polyGammaSlider = document.getElementById('polyGammaSlider');
+      const degreeValue = document.getElementById('degreeValue');
+      const coef0Value = document.getElementById('coef0Value');
+      const polyGammaValue = document.getElementById('polyGammaValue');
+
+      degreeSlider.addEventListener('input', () => {
+        state.degree = parseInt(degreeSlider.value, 10);
+        degreeValue.textContent = String(state.degree);
+        scheduleRefresh();
+      });
+      coef0Slider.addEventListener('input', () => {
+        state.coef0 = parseFloat(coef0Slider.value);
+        coef0Value.textContent = formatNumber(state.coef0);
+        scheduleRefresh();
+      });
+      polyGammaSlider.addEventListener('input', () => {
+        state.polyGamma = parseFloat(polyGammaSlider.value);
+        polyGammaValue.textContent = formatNumber(state.polyGamma);
+        scheduleRefresh();
+      });
+
+      degreeValue.textContent = String(state.degree);
+      coef0Value.textContent = formatNumber(state.coef0);
+      polyGammaValue.textContent = formatNumber(state.polyGamma);
+    }
+
+    function showWarning(message) {
+      if (message) {
+        warningBox.hidden = false;
+        warningBox.textContent = message;
+      } else {
+        warningBox.hidden = true;
+        warningBox.textContent = '';
+      }
+    }
+
+    function renderFoldCard(result) {
+      const card = document.createElement('div');
+      card.className = 'fold-card';
+
+      const head = document.createElement('div');
+      head.className = 'fold-head';
+      head.innerHTML = `
+        <div>
+          <div class="fold-title">Fold ${result.foldIndex}</div>
+          <div class="fold-subtitle">validation points = ${result.validation.length}, training points = ${result.training.length}</div>
+        </div>
+      `;
+      card.appendChild(head);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = FOLD_CANVAS_SIZE;
+      canvas.height = FOLD_CANVAS_SIZE;
+      canvas.className = 'fold-canvas';
+      card.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+      drawAxes(ctx, FOLD_CANVAS_SIZE);
+      drawDecisionBackground(ctx, FOLD_CANVAS_SIZE, result.model, state.decisionGrid);
+      drawAxes(ctx, FOLD_CANVAS_SIZE);
+      for (const point of result.training) drawPoint(ctx, point, FOLD_CANVAS_SIZE, false);
+      for (const point of result.validation) drawPoint(ctx, point, FOLD_CANVAS_SIZE, true);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'metrics';
+      metrics.innerHTML = `
+        <div class="metric-row"><span class="metric-label">Training error</span><strong>${formatPct(result.trainError.rate)} (${result.trainError.mistakes}/${result.trainError.total})</strong></div>
+        <div class="metric-row"><span class="metric-label">Validation error</span><strong>${formatPct(result.valError.rate)} (${result.valError.mistakes}/${result.valError.total})</strong></div>
+      `;
+      card.appendChild(metrics);
+      return card;
+    }
+
+    function scheduleRefresh() {
+      if (state.scheduled) clearTimeout(state.scheduled);
+      state.scheduled = setTimeout(() => {
+        state.scheduled = null;
+        renderAll();
+      }, 30);
+    }
+
+    function renderSummary(results, effectiveK) {
+      if (!results.length) {
+        summaryBox.innerHTML = 'Add at least one red point and one blue point to see fold-by-fold training and validation errors.';
+        statusLine.innerHTML = 'No models have been fit yet.';
+        return;
+      }
+
+      const avgTrain = results.reduce((s, r) => s + r.trainError.rate, 0) / results.length;
+      const avgVal = results.reduce((s, r) => s + r.valError.rate, 0) / results.length;
+      const totalValMistakes = results.reduce((s, r) => s + r.valError.mistakes, 0);
+      const totalValPoints = results.reduce((s, r) => s + r.valError.total, 0);
+      const totalTrainMistakes = results.reduce((s, r) => s + r.trainError.mistakes, 0);
+      const totalTrainPoints = results.reduce((s, r) => s + r.trainError.total, 0);
+      const params = getCurrentParams();
+
+      let kernelText = 'linear';
+      if (params.kernel === 'rbf') kernelText = `RBF with σ = ${formatNumber(params.sigma)}`;
+      if (params.kernel === 'polynomial') kernelText = `polynomial with degree = ${params.degree}, γ = ${formatNumber(params.polyGamma)}, c₀ = ${formatNumber(params.coef0)}`;
+
+      summaryBox.innerHTML = `
+        <strong>Using k = ${effectiveK}</strong> &nbsp;|&nbsp;
+        Loss = <strong>${controls.lossSelect.options[controls.lossSelect.selectedIndex].text}</strong> &nbsp;|&nbsp;
+        Kernel = <strong>${kernelText}</strong><br />
+        Average fold training error = <strong>${formatPct(avgTrain)}</strong> &nbsp;|&nbsp;
+        Average fold validation error = <strong>${formatPct(avgVal)}</strong><br />
+        Pooled training error = <strong>${formatPct(totalTrainMistakes / Math.max(1, totalTrainPoints))}</strong> &nbsp;|&nbsp;
+        Pooled validation error = <strong>${formatPct(totalValMistakes / Math.max(1, totalValPoints))}</strong>
+      `;
+
+      statusLine.innerHTML = `
+        λ = <strong>${formatNumber(params.lambda)}</strong>, learning rate = <strong>${formatNumber(params.learningRate)}</strong>,
+        epochs = <strong>${params.epochs}</strong>, stratified split = <strong>${state.stratified ? 'yes' : 'no'}</strong>.
+      `;
+    }
+
+    function renderFolds() {
+      foldContainer.innerHTML = '';
+      const n = state.points.length;
+      const labelSet = new Set(state.points.map(p => p.label));
+
+      if (n < 2 || labelSet.size < 2) {
+        renderSummary([], state.k);
+        showWarning('You need at least one red point and one blue point before the fold views become meaningful.');
+        return;
+      }
+
+      const effectiveK = Math.min(state.k, n);
+      if (effectiveK < 2) {
+        renderSummary([], effectiveK);
+        showWarning('Add more points to build at least two folds.');
+        return;
+      }
+
+      showWarning('');
+      const foldIndices = splitIntoFolds(state.points, effectiveK, state.seed, state.stratified);
+      const params = getCurrentParams();
+      const results = [];
+
+      for (let foldIndex = 0; foldIndex < effectiveK; foldIndex++) {
+        const valIndexSet = new Set(foldIndices[foldIndex]);
+        const validation = state.points.filter((_, i) => valIndexSet.has(i));
+        const training = state.points.filter((_, i) => !valIndexSet.has(i));
+        const model = trainKernelClassifier(training, params);
+        const trainError = errorStats(model, training);
+        const valError = errorStats(model, validation);
+        const result = {
+          foldIndex: foldIndex + 1,
+          training,
+          validation,
+          model,
+          trainError,
+          valError,
+        };
+        results.push(result);
+        foldContainer.appendChild(renderFoldCard(result));
+      }
+
+      renderSummary(results, effectiveK);
+    }
+
+    function renderAll() {
+      updateDatasetStats();
+      updateControlReadouts();
+      if (state.renderedKernelUi !== state.kernel || kernelControls.children.length === 0) {
+        renderKernelControls();
+        state.renderedKernelUi = state.kernel;
+      }
+      drawDatasetCanvas();
+      renderFolds();
+    }
+
+    function addPointFromPointerEvent(evt) {
+      const rect = datasetCanvas.getBoundingClientRect();
+      const scaleX = datasetCanvas.width / rect.width;
+      const scaleY = datasetCanvas.height / rect.height;
+      const px = (evt.clientX - rect.left) * scaleX;
+      const py = (evt.clientY - rect.top) * scaleY;
+      const point = canvasToPoint(px, py, DATASET_SIZE);
+
+      if (state.mode === 'erase') {
+        if (!state.points.length) return;
+        let bestIndex = -1;
+        let bestDist = Infinity;
+        state.points.forEach((p, i) => {
+          const q = pointToCanvas(p, DATASET_SIZE);
+          const d2 = (q.x - px) * (q.x - px) + (q.y - py) * (q.y - py);
+          if (d2 < bestDist) {
+            bestDist = d2;
+            bestIndex = i;
+          }
+        });
+        if (bestIndex >= 0 && Math.sqrt(bestDist) <= 18) {
+          state.points.splice(bestIndex, 1);
+        }
+      } else {
+        state.points.push({
+          id: state.nextId++,
+          x: point.x,
+          y: point.y,
+          label: state.currentLabel,
+        });
+      }
+
+      renderAll();
+    }
+
+    function setPoints(newPoints) {
+      state.points = newPoints.map(p => ({ id: state.nextId++, ...p }));
+      renderAll();
+    }
+
+    function loadXorPreset() {
+      const pts = [
+        [-0.75, -0.75, -1], [-0.55, -0.35, -1], [-0.20, -0.70, -1], [-0.42, -0.62, -1],
+        [0.60, 0.62, -1], [0.77, 0.33, -1], [0.42, 0.85, -1], [0.20, 0.58, -1],
+        [-0.72, 0.68, 1], [-0.45, 0.28, 1], [-0.20, 0.82, 1], [-0.62, 0.44, 1],
+        [0.72, -0.62, 1], [0.35, -0.78, 1], [0.80, -0.22, 1], [0.48, -0.48, 1],
+      ].map(([x, y, label]) => ({ x, y, label }));
+      setPoints(pts);
+    }
+
+    function loadRingsPreset() {
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const t = (2 * Math.PI * i) / 10;
+        pts.push({ x: 0.28 * Math.cos(t), y: 0.28 * Math.sin(t), label: -1 });
+      }
+      for (let i = 0; i < 16; i++) {
+        const t = (2 * Math.PI * i) / 16 + 0.08;
+        pts.push({ x: 0.78 * Math.cos(t), y: 0.78 * Math.sin(t), label: 1 });
+      }
+      setPoints(pts);
+    }
+
+    function loadMoonsPreset() {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const t = Math.PI * (i / 11);
+        pts.push({ x: 0.75 * Math.cos(t) - 0.15, y: 0.45 * Math.sin(t) + 0.18, label: -1 });
+      }
+      for (let i = 0; i < 12; i++) {
+        const t = Math.PI * (i / 11);
+        pts.push({ x: 0.75 * Math.cos(t) + 0.15, y: -0.45 * Math.sin(t) - 0.18, label: 1 });
+      }
+      setPoints(pts);
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      controls.addModeBtn.classList.toggle('active', mode === 'add');
+      controls.eraseModeBtn.classList.toggle('active', mode === 'erase');
+      datasetCanvas.style.cursor = mode === 'erase' ? 'not-allowed' : 'crosshair';
+    }
+
+    function setCurrentLabel(label) {
+      state.currentLabel = label;
+      controls.redClassBtn.classList.toggle('active', label === -1);
+      controls.blueClassBtn.classList.toggle('active', label === 1);
+    }
+
+    controls.addModeBtn.addEventListener('click', () => setMode('add'));
+    controls.eraseModeBtn.addEventListener('click', () => setMode('erase'));
+    controls.redClassBtn.addEventListener('click', () => setCurrentLabel(-1));
+    controls.blueClassBtn.addEventListener('click', () => setCurrentLabel(1));
+
+    controls.undoBtn.addEventListener('click', () => {
+      state.points.pop();
+      renderAll();
+    });
+
+    controls.clearBtn.addEventListener('click', () => {
+      state.points = [];
+      renderAll();
+    });
+
+    controls.xorBtn.addEventListener('click', loadXorPreset);
+    controls.ringsBtn.addEventListener('click', loadRingsPreset);
+    controls.moonsBtn.addEventListener('click', loadMoonsPreset);
+
+    datasetCanvas.addEventListener('pointerdown', addPointFromPointerEvent);
+    datasetCanvas.addEventListener('contextmenu', evt => evt.preventDefault());
+
+    controls.kSlider.addEventListener('input', () => {
+      state.k = parseInt(controls.kSlider.value, 10);
+      scheduleRefresh();
+    });
+
+    controls.stratifiedCheck.addEventListener('change', () => {
+      state.stratified = controls.stratifiedCheck.checked;
+      scheduleRefresh();
+    });
+
+    controls.reshuffleBtn.addEventListener('click', () => {
+      state.seed = Math.floor(Math.random() * 1_000_000_000);
+      renderAll();
+    });
+
+    controls.lossSelect.addEventListener('change', () => {
+      state.loss = controls.lossSelect.value;
+      scheduleRefresh();
+    });
+
+    controls.kernelSelect.addEventListener('change', () => {
+      state.kernel = controls.kernelSelect.value;
+      renderAll();
+    });
+
+    controls.lambdaSlider.addEventListener('input', () => {
+      state.lambdaLog10 = parseFloat(controls.lambdaSlider.value);
+      scheduleRefresh();
+    });
+
+    controls.lrSlider.addEventListener('input', () => {
+      state.lrLog10 = parseFloat(controls.lrSlider.value);
+      scheduleRefresh();
+    });
+
+    controls.epochsSlider.addEventListener('input', () => {
+      state.epochs = parseInt(controls.epochsSlider.value, 10);
+      scheduleRefresh();
+    });
+
+    controls.decisionGridSlider.addEventListener('input', () => {
+      state.decisionGrid = parseInt(controls.decisionGridSlider.value, 10);
+      scheduleRefresh();
+    });
+
+    window.addEventListener('keydown', evt => {
+      if (evt.key === 'r' || evt.key === 'R') setCurrentLabel(-1);
+      if (evt.key === 'b' || evt.key === 'B') setCurrentLabel(1);
+      if (evt.key === 'e' || evt.key === 'E') setMode('erase');
+      if (evt.key === 'a' || evt.key === 'A') setMode('add');
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
