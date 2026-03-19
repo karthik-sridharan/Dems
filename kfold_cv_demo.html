@@ -800,6 +800,50 @@
       ctx.restore();
     }
 
+    function drawAxesOverlay(ctx, size) {
+      ctx.save();
+
+      const gridColor = 'rgba(237, 241, 248, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = gridColor;
+      for (let g = 1; g < 4; g++) {
+        const t = (g / 4) * size;
+        ctx.beginPath();
+        ctx.moveTo(t, 0);
+        ctx.lineTo(t, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, t);
+        ctx.lineTo(size, t);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.95)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(size / 2, 0);
+      ctx.lineTo(size / 2, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, size / 2);
+      ctx.lineTo(size, size / 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(148, 160, 186, 0.95)';
+      ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('-1', 8, size / 2 - 6);
+      ctx.fillText('1', size - 16, size / 2 - 6);
+      ctx.fillText('1', size / 2 + 6, 14);
+      ctx.fillText('-1', size / 2 + 6, size - 8);
+      ctx.fillText('x', size - 14, size / 2 - 12);
+      ctx.fillText('y', size / 2 + 10, 16);
+
+      ctx.restore();
+    }
+
     function drawPoint(ctx, point, size, isValidation) {
       const { x, y } = pointToCanvas(point, size);
       const color = point.label === -1 ? '#dc4b4b' : '#3f73f1';
@@ -1089,10 +1133,10 @@
       card.appendChild(canvas);
 
       const ctx = canvas.getContext('2d');
-      drawAxes(ctx, FOLD_CANVAS_SIZE);
+      ctx.clearRect(0, 0, FOLD_CANVAS_SIZE, FOLD_CANVAS_SIZE);
       drawDecisionBackground(ctx, FOLD_CANVAS_SIZE, result.model, state.decisionGrid);
       drawDecisionBoundary(ctx, FOLD_CANVAS_SIZE, result.model, Math.max(28, state.decisionGrid));
-      drawAxes(ctx, FOLD_CANVAS_SIZE);
+      drawAxesOverlay(ctx, FOLD_CANVAS_SIZE);
       for (const point of result.training) drawPoint(ctx, point, FOLD_CANVAS_SIZE, false);
       for (const point of result.validation) drawPoint(ctx, point, FOLD_CANVAS_SIZE, true);
 
