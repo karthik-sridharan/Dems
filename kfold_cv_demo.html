@@ -438,6 +438,11 @@
 
         <div id="kernelControls" class="kernel-subcontrols"></div>
 
+        <div class="toolbar">
+          <button id="fitBtn">Fit</button>
+          <button id="clearClassBtn">Clear class</button>
+        </div>
+
         <div id="summaryBox" class="summary-box"></div>
         <div id="statusLine" class="status-line"></div>
 
@@ -482,6 +487,7 @@
       sigma: 0.35,
       scheduled: null,
       renderedKernelUi: null,
+      hasFit: false,
     };
 
     const DATASET_SIZE = 420;
@@ -521,6 +527,8 @@
       epochsValue: document.getElementById('epochsValue'),
       decisionGridSlider: document.getElementById('decisionGridSlider'),
       decisionGridValue: document.getElementById('decisionGridValue'),
+      fitBtn: document.getElementById('fitBtn'),
+      clearClassBtn: document.getElementById('clearClassBtn'),
     };
 
     function formatNumber(v) {
@@ -846,7 +854,9 @@
 
     function drawPoint(ctx, point, size, isValidation) {
       const { x, y } = pointToCanvas(point, size);
-      const color = point.label === -1 ? '#dc4b4b' : '#3f73f1';
+      const color = isValidation
+        ? (point.label === -1 ? '#8b1e1e' : '#173d93')
+        : (point.label === -1 ? '#dc4b4b' : '#3f73f1');
       ctx.save();
       ctx.fillStyle = color;
       ctx.strokeStyle = 'rgba(0,0,0,0.28)';
@@ -881,10 +891,10 @@
           const point = canvasToPoint((gx + 0.5) * cell, (gy + 0.5) * cell, size);
           const score = predictScore(model, point);
           const confidence = Math.min(1, Math.abs(Math.tanh(0.9 * score)));
-          const intensity = 0.22 + 0.26 * confidence;
+          const intensity = 0.16 + 0.12 * confidence;
           ctx.fillStyle = score >= 0
-            ? `rgba(63, 115, 241, ${intensity})`
-            : `rgba(220, 75, 75, ${intensity})`;
+            ? `rgba(124, 161, 255, ${intensity})`
+            : `rgba(255, 156, 156, ${intensity})`;
           ctx.fillRect(gx * cell, gy * cell, cell + 1.2, cell + 1.2);
         }
       }
@@ -1040,6 +1050,7 @@
         sigmaSlider.addEventListener('input', () => {
           state.sigma = parseFloat(sigmaSlider.value);
           sigmaValue.textContent = formatNumber(state.sigma);
+          invalidateFit();
           scheduleRefresh();
         });
         sigmaValue.textContent = formatNumber(state.sigma);
@@ -1084,16 +1095,19 @@
       degreeSlider.addEventListener('input', () => {
         state.degree = parseInt(degreeSlider.value, 10);
         degreeValue.textContent = String(state.degree);
+        invalidateFit();
         scheduleRefresh();
       });
       coef0Slider.addEventListener('input', () => {
         state.coef0 = parseFloat(coef0Slider.value);
         coef0Value.textContent = formatNumber(state.coef0);
+        invalidateFit();
         scheduleRefresh();
       });
       polyGammaSlider.addEventListener('input', () => {
         state.polyGamma = parseFloat(polyGammaSlider.value);
         polyGammaValue.textContent = formatNumber(state.polyGamma);
+        invalidateFit();
         scheduleRefresh();
       });
 
@@ -1134,20 +1148,33 @@
 
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, FOLD_CANVAS_SIZE, FOLD_CANVAS_SIZE);
-      drawDecisionBackground(ctx, FOLD_CANVAS_SIZE, result.model, state.decisionGrid);
-      drawDecisionBoundary(ctx, FOLD_CANVAS_SIZE, result.model, Math.max(28, state.decisionGrid));
+      if (result.model) {
+        drawDecisionBackground(ctx, FOLD_CANVAS_SIZE, result.model, state.decisionGrid);
+        drawDecisionBoundary(ctx, FOLD_CANVAS_SIZE, result.model, Math.max(28, state.decisionGrid));
+      }
       drawAxesOverlay(ctx, FOLD_CANVAS_SIZE);
       for (const point of result.training) drawPoint(ctx, point, FOLD_CANVAS_SIZE, false);
       for (const point of result.validation) drawPoint(ctx, point, FOLD_CANVAS_SIZE, true);
 
       const metrics = document.createElement('div');
       metrics.className = 'metrics';
-      metrics.innerHTML = `
-        <div class="metric-row"><span class="metric-label">Training error</span><strong>${formatPct(result.trainError.rate)} (${result.trainError.mistakes}/${result.trainError.total})</strong></div>
-        <div class="metric-row"><span class="metric-label">Validation error</span><strong>${formatPct(result.valError.rate)} (${result.valError.mistakes}/${result.valError.total})</strong></div>
-      `;
+      if (result.model && result.trainError && result.valError) {
+        metrics.innerHTML = `
+          <div class="metric-row"><span class="metric-label">Training error</span><strong>${formatPct(result.trainError.rate)} (${result.trainError.mistakes}/${result.trainError.total})</strong></div>
+          <div class="metric-row"><span class="metric-label">Validation error</span><strong>${formatPct(result.valError.rate)} (${result.valError.mistakes}/${result.valError.total})</strong></div>
+        `;
+      } else {
+        metrics.innerHTML = `
+          <div class="metric-row"><span class="metric-label">Model status</span><strong>Not fit yet</strong></div>
+          <div class="small-note">The split is shown above. Click <strong>Fit</strong> to draw the classification regions and compute errors.</div>
+        `;
+      }
       card.appendChild(metrics);
       return card;
+    }
+
+    function invalidateFit() {
+      state.hasFit = false;
     }
 
     function scheduleRefresh() {
@@ -1160,8 +1187,17 @@
 
     function renderSummary(results, effectiveK) {
       if (!results.length) {
-        summaryBox.innerHTML = 'Add at least one red point and one blue point to see fold-by-fold training and validation errors.';
+        summaryBox.innerHTML = 'Add at least one red point and one blue point to see the fold splits.';
         statusLine.innerHTML = 'No models have been fit yet.';
+        return;
+      }
+
+      if (!state.hasFit) {
+        summaryBox.innerHTML = `
+          <strong>Using k = ${effectiveK}</strong>. The fold splits are shown, but the classifier has not been fit yet.
+          Click <strong>Fit</strong> to draw the classification regions and compute training and validation errors.
+        `;
+        statusLine.innerHTML = 'No models have been fit yet. Changing points or hyperparameters keeps the split panels but clears the classifier view.';
         return;
       }
 
@@ -1220,9 +1256,16 @@
         const valIndexSet = new Set(foldIndices[foldIndex]);
         const validation = state.points.filter((_, i) => valIndexSet.has(i));
         const training = state.points.filter((_, i) => !valIndexSet.has(i));
-        const model = trainKernelClassifier(training, params);
-        const trainError = errorStats(model, training);
-        const valError = errorStats(model, validation);
+
+        let model = null;
+        let trainError = null;
+        let valError = null;
+        if (state.hasFit) {
+          model = trainKernelClassifier(training, params);
+          trainError = errorStats(model, training);
+          valError = errorStats(model, validation);
+        }
+
         const result = {
           foldIndex: foldIndex + 1,
           training,
@@ -1281,11 +1324,13 @@
         });
       }
 
+      invalidateFit();
       renderAll();
     }
 
     function setPoints(newPoints) {
       state.points = newPoints.map(p => ({ id: state.nextId++, ...p }));
+      invalidateFit();
       renderAll();
     }
 
@@ -1344,12 +1389,15 @@
     controls.blueClassBtn.addEventListener('click', () => setCurrentLabel(1));
 
     controls.undoBtn.addEventListener('click', () => {
+      if (!state.points.length) return;
       state.points.pop();
+      invalidateFit();
       renderAll();
     });
 
     controls.clearBtn.addEventListener('click', () => {
       state.points = [];
+      invalidateFit();
       renderAll();
     });
 
@@ -1362,47 +1410,72 @@
 
     controls.kSlider.addEventListener('input', () => {
       state.k = parseInt(controls.kSlider.value, 10);
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.stratifiedCheck.addEventListener('change', () => {
       state.stratified = controls.stratifiedCheck.checked;
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.reshuffleBtn.addEventListener('click', () => {
       state.seed = Math.floor(Math.random() * 1_000_000_000);
+      invalidateFit();
       renderAll();
     });
 
     controls.lossSelect.addEventListener('change', () => {
       state.loss = controls.lossSelect.value;
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.kernelSelect.addEventListener('change', () => {
       state.kernel = controls.kernelSelect.value;
+      invalidateFit();
       renderAll();
     });
 
     controls.lambdaSlider.addEventListener('input', () => {
       state.lambdaLog10 = parseFloat(controls.lambdaSlider.value);
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.lrSlider.addEventListener('input', () => {
       state.lrLog10 = parseFloat(controls.lrSlider.value);
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.epochsSlider.addEventListener('input', () => {
       state.epochs = parseInt(controls.epochsSlider.value, 10);
+      invalidateFit();
       scheduleRefresh();
     });
 
     controls.decisionGridSlider.addEventListener('input', () => {
       state.decisionGrid = parseInt(controls.decisionGridSlider.value, 10);
+      invalidateFit();
       scheduleRefresh();
+    });
+
+    controls.fitBtn.addEventListener('click', () => {
+      const labelSet = new Set(state.points.map(p => p.label));
+      if (state.points.length < 2 || labelSet.size < 2) {
+        showWarning('You need at least one red point and one blue point before fitting.');
+        renderAll();
+        return;
+      }
+      state.hasFit = true;
+      renderAll();
+    });
+
+    controls.clearClassBtn.addEventListener('click', () => {
+      invalidateFit();
+      renderAll();
     });
 
     window.addEventListener('keydown', evt => {
