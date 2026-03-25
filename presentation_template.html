@@ -333,6 +333,18 @@
       .presenter-help, .drawer { display: none !important; }
     }
   </style>
+  <script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(','\\)'], ['$','$']],
+      displayMath: [['\\[','\\]'], ['$$','$$']]
+    },
+    svg: {
+      fontCache: 'global'
+    }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body>
   <div class="app">
@@ -586,6 +598,116 @@
           </div>
         </div>
       </section>
+
+
+
+
+
+
+
+    
+
+      <section class="slide" data-title="Kernel ridge regression" data-section="Math example">
+  <div class="slide-shell">
+    <div class="slide-topbar">
+      <div class="slide-meta">
+        <span class="pill">Math example</span>
+        <span class="pill">Kernel methods</span>
+      </div>
+      <div class="slide-tools">
+        <button class="open-refs-btn hidden">References</button>
+        <button class="open-toc-btn">Slides</button>
+      </div>
+    </div>
+
+    <div class="slide-content">
+      <!-- ==================== SLIDE HTML START ==================== -->
+      <h1 class="slide-title">Kernel ridge regression</h1>
+      <p class="slide-subtitle">
+        We solve a regularized least-squares problem in an RKHS.
+      </p>
+
+      <div class="two-col">
+        <div class="card">
+          <h2>Objective</h2>
+          <p style="font-size: 1.2rem; line-height: 1.6;">
+            Given training data \((x_1,y_1),\dots,(x_n,y_n)\), we minimize
+          </p>
+
+          <p style="font-size: 1.35rem; text-align: center;">
+            \[
+            \min_{f \in \mathcal H}
+            \sum_{i=1}^n \bigl(f(x_i)-y_i\bigr)^2
+            + \lambda \|f\|_{\mathcal H}^2 .
+            \]
+          </p>
+
+          <p style="font-size: 1.15rem; line-height: 1.6;">
+            By the representer theorem, the solution has the form
+          </p>
+
+          <p style="font-size: 1.3rem; text-align: center;">
+            \[
+            f(\cdot)=\sum_{i=1}^n \alpha_i K(x_i,\cdot).
+            \]
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>Closed-form coefficient solution</h2>
+
+          <p style="font-size: 1.15rem; line-height: 1.6;">
+            Let \(K \in \mathbb R^{n\times n}\) be the kernel matrix,
+            where \(K_{ij}=K(x_i,x_j)\). Then
+          </p>
+
+          <p style="font-size: 1.35rem; text-align: center;">
+            \[
+            \alpha = (K+\lambda I)^{-1} y.
+            \]
+          </p>
+
+          <p style="font-size: 1.15rem; line-height: 1.6;">
+            Prediction at a new point \(x\) is
+          </p>
+
+          <p style="font-size: 1.3rem; text-align: center;">
+            \[
+            \hat f(x)=\sum_{i=1}^n \alpha_i K(x_i,x).
+            \]
+          </p>
+        </div>
+      </div>
+      <!-- ===================== SLIDE HTML END ===================== -->
+
+      <div class="slide-references hidden">
+        <a href="https://en.wikipedia.org/wiki/Representer_theorem"
+           data-desc="Short reference on the representer theorem.">
+          Representer theorem
+        </a>
+        <a href="https://en.wikipedia.org/wiki/Tikhonov_regularization"
+           data-desc="Background on regularization in least-squares problems.">
+          Tikhonov regularization
+        </a>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="mini">Math is rendered with MathJax.</div>
+      <div class="progress-wrap">
+        <div class="progress"><div class="progress-bar"></div></div>
+        <div class="slideCounterLocal">? / ?</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+      
 
       <!-- ========================================================= -->
       <!-- SLIDE TEMPLATE END                                        -->
