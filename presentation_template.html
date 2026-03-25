@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML Presentation Template</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --shell: rgba(17, 24, 39, 0.88);
+      --shell-2: rgba(255,255,255,0.03);
+      --text: #eef2ff;
+      --muted: #b8c2df;
+      --accent: #82a8ff;
+      --accent-2: #90f0c0;
+      --border: rgba(255,255,255,0.12);
+      --shadow: 0 18px 48px rgba(0,0,0,0.34);
+      --radius: 24px;
+      --content-pad: 34px;
+      --maxw: 1340px;
+      --title: clamp(2.3rem, 4.2vw, 3.9rem);
+      --subtitle: clamp(1.05rem, 1.4vw, 1.22rem);
+      --body: clamp(1rem, 1.15vw, 1.2rem);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top right, rgba(130,168,255,0.16), transparent 26%),
+        radial-gradient(circle at bottom left, rgba(144,240,192,0.09), transparent 22%),
+        linear-gradient(180deg, #09101f 0%, #0a1020 100%);
+    }
+
+    a { color: #bdd0ff; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(255,255,255,0.06);
+      padding: 0.12em 0.35em;
+      border-radius: 8px;
+    }
+
+    .app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slides {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      padding: 26px;
+    }
+
+    .slide.active { display: block; }
+
+    .slide-shell {
+      width: min(var(--maxw), calc(100vw - 52px));
+      height: calc(100vh - 52px);
+      margin: 0 auto;
+      background: var(--shell);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .slide-topbar, .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 22px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .slide-topbar { border-bottom: 1px solid var(--border); }
+    .slide-footer { border-top: 1px solid var(--border); color: var(--muted); }
+
+    .slide-meta, .slide-tools, .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 9px 13px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: rgba(255,255,255,0.11);
+    }
+
+    .slide-content {
+      padding: var(--content-pad);
+      overflow: auto;
+      position: relative;
+    }
+
+    .slide-title {
+      margin: 0 0 10px 0;
+      font-size: var(--title);
+      line-height: 1.03;
+      letter-spacing: -0.03em;
+    }
+
+    .slide-subtitle {
+      margin: 0 0 24px 0;
+      color: var(--muted);
+      font-size: var(--subtitle);
+      max-width: 78ch;
+      line-height: 1.35;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.045);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: clamp(1.3rem, 2vw, 2rem);
+    }
+
+    .big-list {
+      margin: 0;
+      padding-left: 1.22em;
+      display: grid;
+      gap: 12px;
+      font-size: var(--body);
+      line-height: 1.45;
+    }
+
+    .big-list li { padding-left: 0.15em; }
+
+    .demo-frame-wrap {
+      display: grid;
+      gap: 10px;
+    }
+
+    .demo-frame {
+      width: 100%;
+      height: min(72vh, 760px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    .inline-demo-box {
+      min-height: 420px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: #fff;
+      overflow: hidden;
+      color: #111827;
+    }
+
+    .notes, .mini {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 0.86rem;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+
+    .progress {
+      flex: 1;
+      min-width: 180px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .drawer {
+      position: absolute;
+      top: 18px;
+      bottom: 18px;
+      width: min(430px, calc(100vw - 36px));
+      background: rgba(8, 12, 24, 0.98);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      overflow: auto;
+      display: none;
+      z-index: 50;
+    }
+
+    .drawer.open { display: block; }
+    #refsDrawer { right: 18px; }
+    #tocDrawer { left: 18px; }
+
+    .drawer-head {
+      position: sticky;
+      top: 0;
+      background: rgba(8, 12, 24, 0.98);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .drawer-head h3 {
+      margin: 0;
+      font-size: 1.16rem;
+    }
+
+    .drawer-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .drawer-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .drawer-item a {
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .drawer-desc {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.35;
+    }
+
+    .presenter-help {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.42);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.92rem;
+      z-index: 20;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 980px) {
+      .two-col { grid-template-columns: 1fr; }
+      .slide { padding: 10px; }
+      .slide-shell {
+        width: calc(100vw - 20px);
+        height: calc(100vh - 20px);
+      }
+      .slide-content { padding: 22px; }
+      .demo-frame { height: 56vh; }
+    }
+
+    @media print {
+      body { overflow: visible; }
+      .slide {
+        position: relative;
+        display: block !important;
+        padding: 0;
+        page-break-after: always;
+      }
+      .slide-shell {
+        width: 100%;
+        min-height: 100vh;
+        height: auto;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .presenter-help, .drawer { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div id="slides" class="slides">
+
+      <!-- ========================================================= -->
+      <!-- SLIDE TEMPLATE START                                      -->
+      <!-- To add a new slide, duplicate an entire                   -->
+      <!-- <section class="slide"> ... </section> block.             -->
+      <!-- Then paste your HTML inside the marked slide body area.   -->
+      <!-- ========================================================= -->
+
+      <section class="slide active" data-title="Opening Slide" data-section="Intro">
+        <div class="slide-shell">
+          <div class="slide-topbar">
+            <div class="slide-meta">
+              <span class="pill">Course / Lecture</span>
+              <span class="pill">Intro</span>
+            </div>
+            <div class="slide-tools">
+              <button class="open-refs-btn hidden">References</button>
+              <button class="open-toc-btn">Slides</button>
+            </div>
+          </div>
+
+          <div class="slide-content">
+            <!-- ==================== SLIDE BODY START ==================== -->
+            <h1 class="slide-title">Kernel Methods</h1>
+            <p class="slide-subtitle">
+              This is a reusable HTML presentation template. Add slides by duplicating whole slide blocks,
+              then paste new HTML into the clearly marked slide body area.
+            </p>
+
+            <div class="two-col">
+              <div class="card">
+                <h2>How to add slides</h2>
+                <ol class="big-list">
+                  <li>Duplicate a full <code>&lt;section class="slide"&gt;...&lt;/section&gt;</code> block.</li>
+                  <li>Change the slide’s <code>data-title</code> and <code>data-section</code> attributes.</li>
+                  <li>Replace the HTML between <code>SLIDE BODY START</code> and <code>SLIDE BODY END</code>.</li>
+                  <li>Add optional references inside the hidden <code>.slide-references</code> block.</li>
+                  <li>Use an iframe slide for full demos and the inline demo box for smaller snippets.</li>
+                </ol>
+              </div>
+
+              <div class="card">
+                <h2>Keyboard controls</h2>
+                <ul class="big-list">
+                  <li><span class="kbd">→</span> or <span class="kbd">Space</span>: next slide</li>
+                  <li><span class="kbd">←</span>: previous slide</li>
+                  <li><span class="kbd">Home</span> / <span class="kbd">End</span>: first / last slide</li>
+                  <li><span class="kbd">T</span>: open slide list</li>
+                  <li><span class="kbd">R</span>: open references for current slide</li>
+                  <li><span class="kbd">F</span>: fullscreen</li>
+                </ul>
+              </div>
+            </div>
+            <!-- ===================== SLIDE BODY END ===================== -->
+
+            <!-- ================= OPTIONAL REFERENCES START ============== -->
+            <div class="slide-references hidden">
+              <a href="https://en.wikipedia.org/wiki/Kernel_method"
+                 data-desc="A quick background page on kernel methods. This only appears if students click References.">
+                Kernel methods overview
+              </a>
+              <a href="https://scikit-learn.org/stable/modules/cross_validation.html"
+                 data-desc="A practical reference page for k-fold cross-validation.">
+                Scikit-learn cross-validation guide
+              </a>
+            </div>
+            <!-- ================== OPTIONAL REFERENCES END =============== -->
+          </div>
+
+          <div class="slide-footer">
+            <div class="mini">Use the footer for brief notes, reminders, or attribution.</div>
+            <div class="progress-wrap">
+              <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+              <div id="slideCounter">1 / 1</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" data-title="Standard Content Slide" data-section="Content">
+        <div class="slide-shell">
+          <div class="slide-topbar">
+            <div class="slide-meta">
+              <span class="pill">Example</span>
+              <span class="pill">Regular slide</span>
+            </div>
+            <div class="slide-tools">
+              <button class="open-refs-btn hidden">References</button>
+              <button class="open-toc-btn">Slides</button>
+            </div>
+          </div>
+
+          <div class="slide-content">
+            <!-- ==================== SLIDE BODY START ==================== -->
+            <h1 class="slide-title">Use plain HTML for regular slides</h1>
+            <p class="slide-subtitle">
+              You can mix headings, lists, equations, images, tables, callouts, or anything else you want.
+            </p>
+
+            <div class="two-col">
+              <div class="card">
+                <h2>Good uses</h2>
+                <ul class="big-list">
+                  <li>lecture outline</li>
+                  <li>definitions</li>
+                  <li>worked examples</li>
+                  <li>summary slides</li>
+                  <li>in-class prompts</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h2>Why this format is handy</h2>
+                <p style="font-size: var(--body); line-height: 1.5; margin: 0;">
+                  It lets you keep your full lecture flow, your demos, and your optional reading links together in one place.
+                </p>
+              </div>
+            </div>
+            <!-- ===================== SLIDE BODY END ===================== -->
+
+            <div class="slide-references hidden">
+              <a href="https://developer.mozilla.org/en-US/docs/Web/HTML"
+                 data-desc="Useful if you want to customize or extend slide markup.">
+                MDN HTML guide
+              </a>
+            </div>
+          </div>
+
+          <div class="slide-footer">
+            <div class="mini">This example slide is built entirely from ordinary HTML.</div>
+            <div class="progress-wrap">
+              <div class="progress"><div class="progress-bar"></div></div>
+              <div class="slideCounterLocal">2 / ?</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" data-title="External Demo Slide" data-section="Demo">
+        <div class="slide-shell">
+          <div class="slide-topbar">
+            <div class="slide-meta">
+              <span class="pill">Demo</span>
+              <span class="pill">Embedded HTML file</span>
+            </div>
+            <div class="slide-tools">
+              <button class="open-refs-btn hidden">References</button>
+              <button class="open-toc-btn">Slides</button>
+            </div>
+          </div>
+
+          <div class="slide-content">
+            <!-- ==================== SLIDE BODY START ==================== -->
+            <h1 class="slide-title">Embed a standalone HTML demo</h1>
+            <p class="slide-subtitle">
+              Put the demo HTML file in the same folder as this presentation and point the iframe’s <code>src</code> at it.
+            </p>
+
+            <div class="demo-frame-wrap">
+              <iframe class="demo-frame"
+                      src="kfold_kernel_cv_demo_fit_button.html"
+                      title="K-fold cross-validation demo"></iframe>
+              <div class="notes">
+                This example uses the k-fold demo file included in the package. Replace the <code>src</code>
+                with any other local HTML demo file you want to present.
+              </div>
+            </div>
+            <!-- ===================== SLIDE BODY END ===================== -->
+
+            <div class="slide-references hidden">
+              <a href="https://en.wikipedia.org/wiki/Cross-validation_(statistics)"
+                 data-desc="Background page on cross-validation.">
+                Cross-validation reference
+              </a>
+            </div>
+          </div>
+
+          <div class="slide-footer">
+            <div class="mini">Use this pattern for full interactive demos that already live in their own HTML files.</div>
+            <div class="progress-wrap">
+              <div class="progress"><div class="progress-bar"></div></div>
+              <div class="slideCounterLocal">3 / ?</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" data-title="Inline Demo Slide" data-section="Demo">
+        <div class="slide-shell">
+          <div class="slide-topbar">
+            <div class="slide-meta">
+              <span class="pill">Demo</span>
+              <span class="pill">Inline HTML area</span>
+            </div>
+            <div class="slide-tools">
+              <button class="open-refs-btn hidden">References</button>
+              <button class="open-toc-btn">Slides</button>
+            </div>
+          </div>
+
+          <div class="slide-content">
+            <!-- ==================== SLIDE BODY START ==================== -->
+            <h1 class="slide-title">Or paste small demo HTML directly into a slide</h1>
+            <p class="slide-subtitle">
+              This is best for lightweight widgets. For large self-contained demos, the iframe approach above is cleaner.
+            </p>
+
+            <div class="inline-demo-box">
+              <!-- ============ INLINE DEMO HTML START: paste here ============ -->
+              <div style="padding: 28px; font-family: system-ui, sans-serif;">
+                <h2 style="margin-top: 0;">Mini inline demo placeholder</h2>
+                <p>Replace this block with any small self-contained HTML snippet you want students to interact with.</p>
+                <label>
+                  Example slider:
+                  <input id="miniSlider" type="range" min="0" max="10" value="5" />
+                </label>
+                <div id="miniOutput" style="margin-top: 12px; font-weight: 700;">Value: 5</div>
+                <script>
+                  (function () {
+                    const slider = document.getElementById('miniSlider');
+                    const out = document.getElementById('miniOutput');
+                    if (slider && out) {
+                      slider.addEventListener('input', () => {
+                        out.textContent = 'Value: ' + slider.value;
+                      });
+                    }
+                  })();
+                </script>
+              </div>
+              <!-- ============= INLINE DEMO HTML END: paste here ============= -->
+            </div>
+            <!-- ===================== SLIDE BODY END ===================== -->
+
+            <div class="slide-references hidden">
+              <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model"
+                 data-desc="Helpful if you want to add small inline JavaScript interactions.">
+                DOM scripting basics
+              </a>
+            </div>
+          </div>
+
+          <div class="slide-footer">
+            <div class="mini">This lets you keep a quick teaching widget inside the main presentation file itself.</div>
+            <div class="progress-wrap">
+              <div class="progress"><div class="progress-bar"></div></div>
+              <div class="slideCounterLocal">4 / ?</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- SLIDE TEMPLATE END                                        -->
+      <!-- ========================================================= -->
+
+    </div>
+
+    <aside id="refsDrawer" class="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <h3>References</h3>
+        <button id="closeRefsBtn">Close</button>
+      </div>
+      <div id="refsList" class="drawer-list"></div>
+    </aside>
+
+    <aside id="tocDrawer" class="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <h3>Slide list</h3>
+        <button id="closeTocBtn">Close</button>
+      </div>
+      <div id="tocList" class="drawer-list"></div>
+    </aside>
+
+    <div class="presenter-help">
+      <strong>Tip:</strong> <span class="kbd">T</span> opens the slide list, <span class="kbd">R</span> opens references for the current slide.
+    </div>
+  </div>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let current = 0;
+
+    const refsDrawer = document.getElementById('refsDrawer');
+    const refsList = document.getElementById('refsList');
+    const tocDrawer = document.getElementById('tocDrawer');
+    const tocList = document.getElementById('tocList');
+
+    function showSlide(index) {
+      current = Math.max(0, Math.min(index, slides.length - 1));
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+
+      const active = slides[current];
+      document.title = `${active.dataset.title || `Slide ${current + 1}`} — HTML Presentation`;
+      updateCounters();
+      configureReferencesForSlide(active);
+      closeToc();
+    }
+
+    function updateCounters() {
+      slides.forEach((slide, i) => {
+        slide.querySelectorAll('#slideCounter, .slideCounterLocal').forEach(el => {
+          el.textContent = `${i + 1} / ${slides.length}`;
+        });
+        slide.querySelectorAll('#progressBar, .progress-bar').forEach(el => {
+          el.style.width = `${((i + 1) / slides.length) * 100}%`;
+        });
+      });
+    }
+
+    function configureReferencesForSlide(slide) {
+      refsList.innerHTML = '';
+      const refs = [...slide.querySelectorAll('.slide-references a')];
+      const btn = slide.querySelector('.open-refs-btn');
+
+      if (!refs.length) {
+        if (btn) btn.classList.add('hidden');
+        closeRefs();
+        return;
+      }
+
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.onclick = openRefs;
+      }
+
+      refs.forEach((a, idx) => {
+        const item = document.createElement('div');
+        item.className = 'drawer-item';
+        const desc = a.dataset.desc ? `<div class="drawer-desc">${a.dataset.desc}</div>` : '';
+        item.innerHTML = `
+          <div><a href="${a.href}" target="_blank" rel="noopener noreferrer">${idx + 1}. ${a.textContent}</a></div>
+          ${desc}
+        `;
+        refsList.appendChild(item);
+      });
+    }
+
+    function buildToc() {
+      tocList.innerHTML = '';
+      slides.forEach((slide, idx) => {
+        const item = document.createElement('div');
+        item.className = 'drawer-item';
+        item.innerHTML = `
+          <div><a href="#" data-index="${idx}">${idx + 1}. ${slide.dataset.title || `Slide ${idx + 1}`}</a></div>
+          <div class="drawer-desc">${slide.dataset.section || ''}</div>
+        `;
+        item.querySelector('a').addEventListener('click', (evt) => {
+          evt.preventDefault();
+          showSlide(idx);
+        });
+        tocList.appendChild(item);
+      });
+
+      document.querySelectorAll('.open-toc-btn').forEach(btn => {
+        btn.addEventListener('click', openToc);
+      });
+    }
+
+    function openRefs() {
+      refsDrawer.classList.add('open');
+      refsDrawer.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeRefs() {
+      refsDrawer.classList.remove('open');
+      refsDrawer.setAttribute('aria-hidden', 'true');
+    }
+
+    function openToc() {
+      tocDrawer.classList.add('open');
+      tocDrawer.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeToc() {
+      tocDrawer.classList.remove('open');
+      tocDrawer.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('closeRefsBtn').addEventListener('click', closeRefs);
+    document.getElementById('closeTocBtn').addEventListener('click', closeToc);
+
+    document.addEventListener('keydown', (evt) => {
+      const tag = (evt.target.tagName || '').toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || evt.target.isContentEditable;
+      if (typing) return;
+
+      if (evt.key === 'ArrowRight' || evt.key === 'PageDown' || evt.key === ' ') {
+        evt.preventDefault();
+        showSlide(current + 1);
+      } else if (evt.key === 'ArrowLeft' || evt.key === 'PageUp') {
+        evt.preventDefault();
+        showSlide(current - 1);
+      } else if (evt.key === 'Home') {
+        evt.preventDefault();
+        showSlide(0);
+      } else if (evt.key === 'End') {
+        evt.preventDefault();
+        showSlide(slides.length - 1);
+      } else if (evt.key === 't' || evt.key === 'T') {
+        evt.preventDefault();
+        tocDrawer.classList.contains('open') ? closeToc() : openToc();
+      } else if (evt.key === 'r' || evt.key === 'R') {
+        evt.preventDefault();
+        const activeRefs = slides[current].querySelectorAll('.slide-references a');
+        if (activeRefs.length) {
+          refsDrawer.classList.contains('open') ? closeRefs() : openRefs();
+        }
+      } else if (evt.key === 'Escape') {
+        closeRefs();
+        closeToc();
+      } else if (evt.key === 'f' || evt.key === 'F') {
+        evt.preventDefault();
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+    });
+
+    buildToc();
+    showSlide(0);
+  </script>
+</body>
+</html>
