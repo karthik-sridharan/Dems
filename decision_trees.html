@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Decision Trees and CART - HTML Lecture Deck</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$','$']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root{
+      --bg:#0a1020; --panel:#11182f; --panel2:#182345; --ink:#f4f7ff; --muted:#b9c5e8;
+      --accent:#7da8ff; --accent2:#98ffd6; --border:rgba(255,255,255,.12);
+      --red:#d95c5c; --blue:#4d7fff; --gold:#ffd36e; --shadow:0 18px 50px rgba(0,0,0,.35);
+      --maxw:1320px; --h1:clamp(2.2rem, 4vw, 3.9rem); --h2:clamp(1.3rem, 2vw, 2rem);
+      --body:clamp(1rem, 1.2vw, 1.22rem); --r:22px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+    body{overflow:hidden}
+    a{color:#c9d7ff}
+    code{background:rgba(255,255,255,.08); padding:.08em .32em; border-radius:.4em}
+    .app{
+      position:relative;height:100vh;width:100vw;
+      background:
+        radial-gradient(circle at 15% 12%, rgba(125,168,255,.15), transparent 24%),
+        radial-gradient(circle at 82% 84%, rgba(152,255,214,.08), transparent 22%),
+        linear-gradient(180deg,#0c1328 0%,#0a1020 100%);
+    }
+    .slides{height:100%;width:100%;position:relative}
+    .slide{position:absolute;inset:0;display:none;padding:22px}
+    .slide.active{display:block}
+    .shell{
+      width:min(var(--maxw), calc(100vw - 44px));
+      height:calc(100vh - 44px);
+      margin:0 auto;
+      background:rgba(17,24,47,.86);
+      border:1px solid var(--border);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      backdrop-filter: blur(12px);
+    }
+    .topbar,.footer{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:15px 20px;background:rgba(255,255,255,.02)
+    }
+    .topbar{border-bottom:1px solid var(--border)}
+    .footer{border-top:1px solid var(--border); color:var(--muted); font-size:.95rem}
+    .meta,.tools,.progresswrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted)}
+    button{
+      border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--ink);
+      border-radius:12px;padding:10px 14px;font:inherit;cursor:pointer
+    }
+    button:hover{background:rgba(255,255,255,.11)}
+    .content{padding:34px;overflow:auto;position:relative}
+    .title{margin:0 0 10px 0;font-size:var(--h1);line-height:1.01;letter-spacing:-.03em}
+    .subtitle{margin:0 0 22px 0;color:var(--muted);font-size:1.12rem;max-width:78ch}
+    .grid2{display:grid;grid-template-columns:1.08fr .92fr;gap:28px;align-items:start}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{
+      background:rgba(255,255,255,.045);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      padding:22px;
+      min-width:0;
+    }
+    .card h2,.card h3{margin:.1rem 0 .6rem 0}
+    .body{font-size:var(--body);line-height:1.48}
+    .bullets{margin:0;padding-left:1.2em;display:grid;gap:11px;font-size:var(--body);line-height:1.45}
+    .formula{
+      margin:14px 0;padding:16px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);font-size:1.1rem;overflow:auto
+    }
+    .hero{
+      display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:stretch
+    }
+    .tagline{
+      display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;
+      background:rgba(125,168,255,.12);border:1px solid rgba(125,168,255,.28);color:#dbe6ff;font-weight:700
+    }
+    .tree-svg, .xor-svg, .boundary-svg{width:100%;height:auto;display:block}
+    .statband{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px
+    }
+    .stat{
+      background:rgba(255,255,255,.04);border:1px solid var(--border);padding:14px;border-radius:16px
+    }
+    .stat strong{display:block;font-size:1.15rem;color:#fff}
+    .callout{
+      border-left:4px solid var(--gold);
+      background:rgba(255,211,110,.08);
+      padding:14px 16px;border-radius:14px;color:#fff
+    }
+    .demo-frame{width:100%;height:min(67vh,700px);border:1px solid var(--border);border-radius:18px;background:white}
+    .note{font-size:.95rem;color:var(--muted)}
+    .refs,.toc{
+      position:absolute;top:18px;bottom:18px;width:min(420px, calc(100vw - 30px));display:none;
+      z-index:25;overflow:auto;background:rgba(8,12,24,.98);border:1px solid var(--border);
+      border-radius:22px;box-shadow:var(--shadow);padding:16px
+    }
+    .refs{right:18px} .toc{left:18px}
+    .refs.open,.toc.open{display:block}
+    .drawer-head{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:rgba(8,12,24,.98);padding-bottom:10px}
+    .drawer-list{display:grid;gap:10px}
+    .drawer-item{border:1px solid var(--border);padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04)}
+    .drawer-desc{margin-top:6px;color:var(--muted);font-size:.95rem;line-height:1.35}
+    .kbd{display:inline-block;border:1px solid var(--border);border-bottom-width:2px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.05)}
+    .progress{height:8px;min-width:180px;flex:1;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .help{position:absolute;left:18px;bottom:18px;padding:11px 14px;border-radius:14px;background:rgba(0,0,0,.38);border:1px solid var(--border);color:var(--muted);font-size:.9rem}
+    .twoeq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .minidiagram{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .tableish{display:grid;gap:8px}
+    .row{display:grid;grid-template-columns:1.15fr .85fr .85fr;gap:8px}
+    .cell{background:rgba(255,255,255,.04);border:1px solid var(--border);padding:12px;border-radius:12px}
+    .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);font-size:.9rem;color:#e6edff}
+    .slide-references{display:none}
+    @media (max-width: 980px){
+      .grid2,.grid3,.hero,.statband,.twoeq,.minidiagram,.row{grid-template-columns:1fr}
+      .slide{padding:10px}
+      .shell{width:calc(100vw - 20px);height:calc(100vh - 20px)}
+      .content{padding:22px}
+      .demo-frame{height:56vh}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="slides">
+
+    <section class="slide active" data-title="Decision Trees and CART" data-section="Title">
+      <div class="shell">
+        <div class="topbar">
+          <div class="meta"><span class="pill">CS / ML lecture</span><span class="pill">Decision Trees</span></div>
+          <div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div>
+        </div>
+        <div class="content">
+          <div class="hero">
+            <div class="card">
+              <div class="tagline">Lecture deck built from Cornell note 15</div>
+              <h1 class="title">Decision Trees and CART</h1>
+              <p class="subtitle">A visual, interactive lecture on recursive partitioning, impurity, ID3, XOR failure modes, and regression trees.</p>
+              <ul class="bullets">
+                <li>Why trees can replace local-neighbor reasoning with region-based reasoning</li>
+                <li>How greedy splits use impurity reduction</li>
+                <li>Why XOR exposes the myopia of one-step split decisions</li>
+                <li>How CART turns the same idea into a regression model</li>
+              </ul>
+              <div class="statband">
+                <div class="stat"><strong>Fast test-time</strong><span class="note">follow thresholds to a leaf</span></div>
+                <div class="stat"><strong>No metric needed</strong><span class="note">splits use features and thresholds</span></div>
+                <div class="stat"><strong>Works for classification</strong><span class="note">majority label in a leaf</span></div>
+                <div class="stat"><strong>Works for regression</strong><span class="note">leaf prediction can be a mean</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <svg class="tree-svg" viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="g1" x1="0" x2="1">
+                    <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
+                  </linearGradient>
+                </defs>
+                <rect width="560" height="420" rx="22" fill="#0c1328"/>
+                <rect x="50" y="38" width="180" height="110" rx="16" fill="#111b39" stroke="rgba(255,255,255,.16)"/>
+                <circle cx="92" cy="82" r="8" fill="#d95c5c"/><circle cx="124" cy="92" r="8" fill="#d95c5c"/>
+                <circle cx="156" cy="74" r="8" fill="#4d7fff"/><circle cx="193" cy="113" r="8" fill="#4d7fff"/>
+                <line x1="142" y1="46" x2="142" y2="142" stroke="#ffd36e" stroke-width="4" stroke-dasharray="8 8"/>
+                <text x="62" y="162" fill="#d7e1ff" font-size="18" font-family="system-ui">split: x₁ ≤ t</text>
+
+                <line x1="142" y1="148" x2="242" y2="228" stroke="url(#g1)" stroke-width="5"/>
+                <line x1="142" y1="148" x2="340" y2="228" stroke="url(#g1)" stroke-width="5"/>
+
+                <rect x="190" y="228" width="120" height="78" rx="16" fill="#141e3f" stroke="rgba(255,255,255,.16)"/>
+                <text x="220" y="272" fill="#eef3ff" font-size="22" font-family="system-ui">red leaf</text>
+                <rect x="308" y="228" width="140" height="78" rx="16" fill="#141e3f" stroke="rgba(255,255,255,.16)"/>
+                <text x="334" y="272" fill="#eef3ff" font-size="22" font-family="system-ui">blue leaf</text>
+
+                <text x="54" y="342" fill="#b9c5e8" font-size="20" font-family="system-ui">A tree stores a sequence of yes/no threshold tests.</text>
+                <text x="54" y="372" fill="#b9c5e8" font-size="20" font-family="system-ui">Prediction = the label (or value) attached to the reached leaf.</text>
+              </svg>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Primary lecture-note source used as the content template.">Cornell CS4780 Lecture Note 15</a>
+          </div>
+        </div>
+        <div class="footer"><div>Press <span class="kbd">F</span> for fullscreen, <span class="kbd">R</span> for references.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter">1 / ?</div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Motivation" data-section="Why trees">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Motivation</span><span class="pill">From kNN to regions</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Why not just keep all the neighbors?</h1>
+          <p class="subtitle">The notes motivate trees by contrasting them with k-nearest neighbors: kNN can model nonlinear boundaries, but it stores the whole training set, slows down at test time, and depends on a good distance metric.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Key intuition</h2>
+              <ul class="bullets">
+                <li>If a test point lands in a region where almost all nearby training examples share one label, we do not need to remember every neighbor individually.</li>
+                <li>Decision trees compress that idea into a sequence of threshold tests that divide space into increasingly pure regions.</li>
+                <li>After training, prediction only requires traversing the tree to a leaf and reading off the majority label.</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">
+                Trees trade “remember every example” for “remember a compact partition of the space.”
+              </div>
+            </div>
+            <div class="card">
+              <svg class="boundary-svg" viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg">
+                <rect width="560" height="420" rx="22" fill="#0c1328"/>
+                <rect x="42" y="40" width="214" height="214" rx="18" fill="#121b39" stroke="rgba(255,255,255,.16)"/>
+                <text x="70" y="30" fill="#eef3ff" font-size="22" font-family="system-ui">Memory-heavy kNN view</text>
+                <g fill="#d95c5c">
+                  <circle cx="80" cy="78" r="8"/><circle cx="104" cy="102" r="8"/><circle cx="132" cy="84" r="8"/><circle cx="156" cy="120" r="8"/>
+                  <circle cx="76" cy="152" r="8"/><circle cx="115" cy="176" r="8"/><circle cx="152" cy="154" r="8"/><circle cx="192" cy="184" r="8"/>
+                </g>
+                <g fill="#4d7fff">
+                  <circle cx="242" cy="74" r="8"/><circle cx="218" cy="108" r="8"/><circle cx="200" cy="132" r="8"/><circle cx="232" cy="164" r="8"/>
+                  <circle cx="208" cy="206" r="8"/><circle cx="174" cy="210" r="8"/>
+                </g>
+                <circle cx="156" cy="128" r="68" fill="none" stroke="#ffd36e" stroke-width="4" stroke-dasharray="8 8"/>
+                <text x="60" y="282" fill="#b9c5e8" font-size="18" font-family="system-ui">Prediction uses many stored examples + distances</text>
+
+                <rect x="306" y="40" width="214" height="214" rx="18" fill="#121b39" stroke="rgba(255,255,255,.16)"/>
+                <text x="338" y="30" fill="#eef3ff" font-size="22" font-family="system-ui">Decision-tree view</text>
+                <rect x="322" y="56" width="86" height="90" fill="rgba(217,92,92,.35)"/><rect x="408" y="56" width="96" height="90" fill="rgba(77,127,255,.28)"/>
+                <rect x="322" y="146" width="104" height="92" fill="rgba(217,92,92,.22)"/><rect x="426" y="146" width="78" height="92" fill="rgba(77,127,255,.42)"/>
+                <line x1="408" y1="56" x2="408" y2="238" stroke="#ffd36e" stroke-width="4"/>
+                <line x1="322" y1="146" x2="504" y2="146" stroke="#ffd36e" stroke-width="4"/>
+                <text x="324" y="282" fill="#b9c5e8" font-size="18" font-family="system-ui">Prediction uses a few threshold tests</text>
+              </svg>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Motivation section comparing kNN and trees.">Cornell notes - motivation</a>
+          </div>
+        </div>
+        <div class="footer"><div>Region-based reasoning replaces storage-heavy neighbor lookup.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="What the tree is optimizing" data-section="Greedy induction">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Greedy induction</span><span class="pill">Purity + compactness</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">The ideal tree is compact and pure</h1>
+          <p class="subtitle">The notes ask for a tree that is maximally compact and whose leaves are pure. Finding the minimum-size consistent tree is NP-hard, so practical learning uses a greedy impurity-reduction strategy instead.</p>
+          <div class="grid3">
+            <div class="card">
+              <h2>Goal 1: compact</h2>
+              <p class="body">Use as few nodes as possible while still separating the labels well.</p>
+              <div class="formula">Smaller tree \(\Rightarrow\) lower storage, simpler test-time path, easier to inspect.</div>
+            </div>
+            <div class="card">
+              <h2>Goal 2: pure leaves</h2>
+              <p class="body">Each leaf should contain mostly one label, ideally exactly one.</p>
+              <div class="formula">Leaf impurity near \(0\) means the leaf prediction is reliable.</div>
+            </div>
+            <div class="card">
+              <h2>Reality: greedy search</h2>
+              <p class="body">Try many candidate feature-threshold splits and choose the one that most reduces impurity right now.</p>
+              <div class="formula">best split = arg min weighted child impurity</div>
+            </div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div class="card">
+              <h2>Greedy template</h2>
+              <ol class="bullets">
+                <li>At a node, enumerate candidate splits \((f,t)\).</li>
+                <li>Send points left if \(x_f \le t\), right if \(x_f > t\).</li>
+                <li>Compute the weighted impurity of the two children.</li>
+                <li>Pick the split with the smallest weighted impurity.</li>
+                <li>Recurse until leaves are pure or no useful split remains.</li>
+              </ol>
+            </div>
+            <div class="card">
+              <h2>Consistency question</h2>
+              <p class="body">A consistent tree exists exactly when there are no duplicate feature vectors carrying conflicting labels. If identical inputs have different labels, no deterministic tree can classify them both correctly.</p>
+              <div class="callout body" style="margin-top:16px">This is one reason real pipelines often regularize depth or prune rather than forcing a full-depth exact fit.</div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Compactness, pure leaves, consistency, NP-hardness, and greedy impurity minimization.">Cornell notes - greedy tree learning</a>
+          </div>
+        </div>
+        <div class="footer"><div>Exact optimization is hard; greedy impurity reduction is the practical compromise.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Impurity functions" data-section="Gini and entropy">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Impurity</span><span class="pill">Classification trees</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">How do we measure “purity”?</h1>
+          <p class="subtitle">For a subset \(S\), let \(p_k\) be the fraction of examples in class \(k\). Two common choices are Gini impurity and entropy.</p>
+          <div class="twoeq">
+            <div class="card">
+              <h2>Gini impurity</h2>
+              <div class="formula">\[
+                G(S)=\sum_{k=1}^{c} p_k(1-p_k)
+              \]</div>
+              <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
+            </div>
+            <div class="card">
+              <h2>Entropy</h2>
+              <div class="formula">\[
+                H(S)=-\sum_{k=1}^{c} p_k\log p_k
+              \]</div>
+              <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
+            </div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div class="card">
+              <h2>Split objective</h2>
+              <div class="formula">\[
+                I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
+              \]</div>
+              <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
+            </div>
+            <div class="card">
+              <h2>Teaching takeaway</h2>
+              <ul class="bullets">
+                <li>Impurity is local: it only sees the child leaves produced by the next split.</li>
+                <li>That makes training efficient, but also explains why trees can be myopic.</li>
+                <li>Gini and entropy often lead to similar trees in practice.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Definitions of Gini impurity, entropy, and tree impurity.">Cornell notes - impurity functions</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Practical reference on decision-tree criteria.">scikit-learn tree guide</a>
+          </div>
+        </div>
+        <div class="footer"><div>Tree learning is driven by local impurity reduction.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="ID3" data-section="Algorithm">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">ID3</span><span class="pill">Recursive splitting</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">ID3 in one slide</h1>
+          <p class="subtitle">The notes present ID3 as a recursive algorithm with simple base cases and a greedy split rule.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Base cases</h2>
+              <ul class="bullets">
+                <li>If all examples in \(S\) have the same label, return a leaf with that label.</li>
+                <li>If no distinct attribute values remain to separate the examples, return a leaf with the mode label (or mean for regression).</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">Notice what is <em>not</em> a base case in the notes: we do not stop just because the next split fails to improve impurity.</div>
+            </div>
+            <div class="card">
+              <h2>Recursive step</h2>
+              <div class="formula">\[
+                S_L=\{(x,y)\in S:x_f\le t\}, \qquad
+                S_R=\{(x,y)\in S:x_f>t\}
+              \]</div>
+              <ol class="bullets">
+                <li>Try candidate features \(f\) and thresholds \(t\).</li>
+                <li>Pick the split minimizing weighted child impurity.</li>
+                <li>Apply ID3 recursively to \(S_L\) and \(S_R\).</li>
+              </ol>
+            </div>
+          </div>
+          <div class="card" style="margin-top:18px">
+            <h2>Why not stop when no immediate impurity improvement happens?</h2>
+            <p class="body">Because some useful structures only emerge after multiple coordinated splits. The XOR pattern is the canonical example: no single first split solves it, but a depth-2 tree does.</p>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="ID3 base cases and recursive split rule.">Cornell notes - ID3</a>
+          </div>
+        </div>
+        <div class="footer"><div>ID3 is recursive greedy search with simple stopping rules.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="XOR and myopia" data-section="Failure mode">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Failure mode</span><span class="pill">XOR</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">XOR exposes the tree’s myopia</h1>
+          <p class="subtitle">A depth-2 tree can represent XOR perfectly, but the first split does not necessarily reduce impurity. Greedy local optimization can therefore struggle.</p>
+          <div class="grid2">
+            <div class="card">
+              <svg class="xor-svg" viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg">
+                <rect width="520" height="420" rx="22" fill="#0c1328"/>
+                <text x="40" y="36" fill="#eef3ff" font-size="24" font-family="system-ui">XOR data</text>
+                <rect x="42" y="54" width="436" height="308" rx="16" fill="#111a39" stroke="rgba(255,255,255,.16)"/>
+                <line x1="260" y1="54" x2="260" y2="362" stroke="#6f7c9c" stroke-width="2"/>
+                <line x1="42" y1="208" x2="478" y2="208" stroke="#6f7c9c" stroke-width="2"/>
+                <circle cx="120" cy="130" r="13" fill="#d95c5c"/><circle cx="392" cy="286" r="13" fill="#d95c5c"/>
+                <circle cx="390" cy="128" r="13" fill="#4d7fff"/><circle cx="128" cy="286" r="13" fill="#4d7fff"/>
+                <line x1="260" y1="64" x2="260" y2="352" stroke="#ffd36e" stroke-width="4" stroke-dasharray="10 9"/>
+                <text x="278" y="105" fill="#ffd36e" font-size="18" font-family="system-ui">1st split:</text>
+                <text x="278" y="129" fill="#ffd36e" font-size="18" font-family="system-ui">still mixed</text>
+                <line x1="52" y1="208" x2="250" y2="208" stroke="#98ffd6" stroke-width="4" stroke-dasharray="8 7"/>
+                <line x1="270" y1="208" x2="468" y2="208" stroke="#98ffd6" stroke-width="4" stroke-dasharray="8 7"/>
+                <text x="62" y="388" fill="#b9c5e8" font-size="20" font-family="system-ui">Needs a coordinated second split in each branch.</text>
+              </svg>
+            </div>
+            <div class="card">
+              <h2>Teaching interpretation</h2>
+              <ul class="bullets">
+                <li>Greedy split selection only looks one step ahead.</li>
+                <li>XOR needs a combination of two splits before purity appears.</li>
+                <li>So “no immediate gain” does not imply “no useful future subtree.”</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">
+                Trees are powerful, but their standard training rule is myopic. Ensembles often help overcome this weakness.
+              </div>
+              <div class="formula" style="margin-top:18px">XOR = “different quadrants, different labels”<br/>Depth 1: still mixed<br/>Depth 2: separable</div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="XOR example and myopia remark.">Cornell notes - XOR example</a>
+          </div>
+        </div>
+        <div class="footer"><div>Local impurity reduction is efficient, but not globally farsighted.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="CART for regression" data-section="Regression trees">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">CART</span><span class="pill">Regression trees</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">CART: the same structure, but with continuous targets</h1>
+          <p class="subtitle">For regression, leaves predict numeric values. The notes use squared loss as impurity and predict the mean label in each leaf.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Regression-tree impurity</h2>
+              <div class="formula">\[
+                L(S)=\frac{1}{|S|}\sum_{(x,y)\in S}(y-\bar{y}_S)^2
+              \]</div>
+              <p class="body">Here \(\bar{y}_S\) is the average label in subset \(S\). A split is good if it creates children whose values are tightly concentrated around their own means.</p>
+            </div>
+            <div class="card">
+              <h2>Prediction at a leaf</h2>
+              <div class="formula">\[
+                \hat{y}(x)=\bar{y}_{\text{leaf}(x)}
+              \]</div>
+              <p class="body">The learned function becomes piecewise constant: each leaf corresponds to a region with its own average response.</p>
+            </div>
+          </div>
+          <div class="minidiagram" style="margin-top:18px">
+            <div class="card">
+              <h2>Classification view</h2>
+              <p class="body">Leaf stores a class label or class histogram.</p>
+              <div class="formula">output = majority label</div>
+            </div>
+            <div class="card">
+              <h2>Regression view</h2>
+              <p class="body">Leaf stores a real number, usually the mean of the training targets in that leaf.</p>
+              <div class="formula">output = local mean</div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Regression trees and squared-loss impurity.">Cornell notes - CART</a>
+          </div>
+        </div>
+        <div class="footer"><div>Regression trees approximate functions with region-wise constant predictions.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Overfitting and model class" data-section="Generalization">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Generalization</span><span class="pill">Depth matters</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Depth helps fit the training set - and can overfit it</h1>
+          <p class="subtitle">The notes point out that deeper ID3 trees tend to overfit. They also place decision trees on the parametric/non-parametric spectrum depending on whether depth is fixed.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Overfitting intuition</h2>
+              <ul class="bullets">
+                <li>As depth increases, leaves become smaller and can memorize idiosyncratic noise.</li>
+                <li>Training error usually falls monotonically.</li>
+                <li>Test error may first fall and then rise.</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">This motivates validation, pruning, minimum-leaf-size constraints, and ensembles.</div>
+            </div>
+            <div class="card">
+              <h2>Parametric vs non-parametric</h2>
+              <div class="tableish">
+                <div class="row">
+                  <div class="cell"><strong>Model family</strong></div>
+                  <div class="cell"><strong>If depth fixed</strong></div>
+                  <div class="cell"><strong>If grown with data</strong></div>
+                </div>
+                <div class="row">
+                  <div class="cell">Decision tree</div>
+                  <div class="cell">Acts parametric-ish<br/><span class="note">size has a known upper bound</span></div>
+                  <div class="cell">Non-parametric<br/><span class="note">size can grow with dataset complexity</span></div>
+                </div>
+              </div>
+              <p class="body" style="margin-top:14px">This framing connects trees to the broader model-capacity story from earlier parts of the course.</p>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Overfitting with depth and parametric/non-parametric discussion.">Cornell notes - depth and model class</a>
+          </div>
+        </div>
+        <div class="footer"><div>Controlling depth is one of the main levers for tree generalization.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interactive demo: decision tree classification" data-section="Demo 1">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Demo 1</span><span class="pill">Classification tree</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: a basic decision tree classifier</h1>
+          <p class="subtitle">Use this demo live: switch datasets, tree depth, criterion, and minimum leaf size. The shaded background shows the learned partition; the rule list shows the tree structure.</p>
+          <iframe class="demo-frame" src="decision_tree_classifier_demo.html" title="Decision tree classifier demo"></iframe>
+          <div class="slide-references">
+            <a href="https://en.wikipedia.org/wiki/Decision_tree_learning" data-desc="General background reading on decision-tree learning.">Decision tree learning reference</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: which datasets need depth 2 or more?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interactive demo: CART regression" data-section="Demo 2">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Demo 2</span><span class="pill">CART regression</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: CART for regression</h1>
+          <p class="subtitle">Here the target is continuous. Adjust depth and leaf size to see the classic step-function fit become more or less flexible, and compare training MSE across presets.</p>
+          <iframe class="demo-frame" src="cart_regression_demo.html" title="CART regression demo"></iframe>
+          <div class="slide-references">
+            <a href="https://scikit-learn.org/stable/modules/tree.html#regression" data-desc="Practical regression-tree reference.">Regression tree reference</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: why are the predictions piecewise constant?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Recap" data-section="Takeaways">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Recap</span><span class="pill">Takeaways</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">What students should leave with</h1>
+          <div class="grid2">
+            <div class="card">
+              <h2>Conceptual</h2>
+              <ul class="bullets">
+                <li>A decision tree is a recursive partition of feature space.</li>
+                <li>Training is greedy local impurity reduction.</li>
+                <li>XOR shows why greediness can be shortsighted.</li>
+                <li>CART extends the same template to regression with squared loss.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h2>Practical</h2>
+              <ul class="bullets">
+                <li>Deeper trees fit more patterns but can overfit.</li>
+                <li>Minimum leaf size and max depth are core regularizers.</li>
+                <li>Single trees are often weaker than ensembles, but extremely interpretable.</li>
+                <li>The demos make the partitioning story concrete.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card" style="margin-top:18px">
+            <h2>Optional next bridge</h2>
+            <p class="body">From here, a natural follow-up lecture is: bagging \(\rightarrow\) random forests, or boosting \(\rightarrow\) gradient-boosted trees.</p>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Main lecture-note reference.">Cornell notes - full lecture</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Tree implementation details and practical usage notes.">scikit-learn trees</a>
+          </div>
+        </div>
+        <div class="footer"><div>Optional reading stays hidden unless students open References.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <aside class="refs" id="refs">
+    <div class="drawer-head"><h3>References</h3><button id="closeRefs">Close</button></div>
+    <div class="drawer-list" id="refList"></div>
+  </aside>
+
+  <aside class="toc" id="toc">
+    <div class="drawer-head"><h3>Slide list</h3><button id="closeToc">Close</button></div>
+    <div class="drawer-list" id="tocList"></div>
+  </aside>
+
+  <div class="help">Navigation: <span class="kbd">→</span>/<span class="kbd">Space</span> next, <span class="kbd">←</span> previous, <span class="kbd">T</span> list, <span class="kbd">R</span> references, <span class="kbd">F</span> fullscreen.</div>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const refs = document.getElementById('refs');
+  const refList = document.getElementById('refList');
+  const toc = document.getElementById('toc');
+  const tocList = document.getElementById('tocList');
+  let current = 0;
+
+  function showSlide(i){
+    current = Math.max(0, Math.min(i, slides.length-1));
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===current));
+    document.title = (slides[current].dataset.title || 'Lecture') + ' - HTML deck';
+    updateUi();
+    closeToc();
+  }
+
+  function updateUi(){
+    slides.forEach((slide, idx)=>{
+      slide.querySelectorAll('.counter').forEach(el => el.textContent = `${idx+1} / ${slides.length}`);
+      slide.querySelectorAll('.bar').forEach(el => el.style.width = `${(idx+1)/slides.length*100}%`);
+      const btn = slide.querySelector('.open-refs');
+      const refsHere = [...slide.querySelectorAll('.slide-references a')];
+      if (btn){
+        if (refsHere.length){ btn.classList.remove('hidden'); btn.onclick = openRefs; }
+        else btn.classList.add('hidden');
+      }
+    });
+    configureRefs(slides[current]);
+  }
+
+  function configureRefs(slide){
+    refList.innerHTML = '';
+    const links = [...slide.querySelectorAll('.slide-references a')];
+    if (!links.length){ closeRefs(); return; }
+    links.forEach((a,idx)=>{
+      const item = document.createElement('div');
+      item.className='drawer-item';
+      item.innerHTML = `<div><a href="${a.href}" target="_blank" rel="noopener noreferrer">${idx+1}. ${a.textContent}</a></div>${a.dataset.desc?`<div class="drawer-desc">${a.dataset.desc}</div>`:''}`;
+      refList.appendChild(item);
+    });
+  }
+
+  function buildToc(){
+    tocList.innerHTML = '';
+    slides.forEach((slide, idx)=>{
+      const item = document.createElement('div');
+      item.className='drawer-item';
+      item.innerHTML = `<a href="#" data-i="${idx}">${idx+1}. ${slide.dataset.title || ('Slide '+(idx+1))}</a><div class="drawer-desc">${slide.dataset.section || ''}</div>`;
+      item.querySelector('a').addEventListener('click', e=>{ e.preventDefault(); showSlide(idx); });
+      tocList.appendChild(item);
+    });
+    document.querySelectorAll('.open-toc').forEach(btn => btn.addEventListener('click', openToc));
+  }
+
+  function openRefs(){ refs.classList.add('open'); refs.setAttribute('aria-hidden','false'); }
+  function closeRefs(){ refs.classList.remove('open'); refs.setAttribute('aria-hidden','true'); }
+  function openToc(){ toc.classList.add('open'); toc.setAttribute('aria-hidden','false'); }
+  function closeToc(){ toc.classList.remove('open'); toc.setAttribute('aria-hidden','true'); }
+  document.getElementById('closeRefs').addEventListener('click', closeRefs);
+  document.getElementById('closeToc').addEventListener('click', closeToc);
+
+  document.addEventListener('keydown', evt=>{
+    const tag = (evt.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || evt.target.isContentEditable) return;
+    if (evt.key === 'ArrowRight' || evt.key === 'PageDown' || evt.key === ' ') { evt.preventDefault(); showSlide(current+1); }
+    else if (evt.key === 'ArrowLeft' || evt.key === 'PageUp') { evt.preventDefault(); showSlide(current-1); }
+    else if (evt.key === 'Home'){ evt.preventDefault(); showSlide(0); }
+    else if (evt.key === 'End'){ evt.preventDefault(); showSlide(slides.length-1); }
+    else if (evt.key === 'r' || evt.key === 'R'){ evt.preventDefault(); if ([...slides[current].querySelectorAll('.slide-references a')].length) refs.classList.contains('open') ? closeRefs() : openRefs(); }
+    else if (evt.key === 't' || evt.key === 'T'){ evt.preventDefault(); toc.classList.contains('open') ? closeToc() : openToc(); }
+    else if (evt.key === 'Escape'){ closeRefs(); closeToc(); }
+    else if (evt.key === 'f' || evt.key === 'F'){ evt.preventDefault(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+  });
+
+  buildToc();
+  showSlide(0);
+</script>
+</body>
+</html>

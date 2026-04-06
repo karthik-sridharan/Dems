@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CART Regression Demo</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#fff; --ink:#162033; --muted:#647089; --border:#d7deea;
+    --accent:#4d7fff; --green:#28a37a; --shadow:0 10px 28px rgba(24,39,75,.08)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:18px;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .page{display:grid;gap:16px}
+  .top{display:grid;grid-template-columns:350px 1fr;gap:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px}
+  h1,h2,p{margin:0}
+  .control{display:grid;gap:6px}
+  label{font-weight:700;font-size:.95rem}
+  select,input[type=range],button{font:inherit}
+  select,button{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink)}
+  input[type=range]{width:100%}
+  .chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3fb;border:1px solid #dbe4f5;font-size:.88rem;font-weight:700}
+  canvas{display:block;border:1px solid var(--border);border-radius:16px;background:#fff;width:100%;height:auto}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{padding:12px;border-radius:14px;background:#f8faff;border:1px solid #e4eaf5}
+  .stat strong{display:block;font-size:1.05rem}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
+  .sw{display:inline-block;width:14px;height:4px;vertical-align:middle;margin-right:6px;border-radius:999px}
+  .note{color:var(--muted);font-size:.94rem}
+  .rules{display:grid;gap:8px}
+  .rule{padding:10px 12px;border-radius:12px;background:#f8faff;border:1px solid #e4eaf5;font-size:.95rem}
+  @media (max-width: 900px){ .top{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <section class="card">
+      <h2>CART regression demo</h2>
+      <p class="note">Greedy splits minimize weighted squared loss, and each leaf predicts the local mean.</p>
+
+      <div class="control">
+        <label for="preset">Function preset</label>
+        <select id="preset">
+          <option value="sine">Noisy sine</option>
+          <option value="piecewise">Piecewise jumps</option>
+          <option value="curve">Quadratic-ish curve</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="depth">Max depth</label>
+        <input id="depth" type="range" min="0" max="6" step="1" value="3"/>
+        <span id="depthVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="leaf">Min leaf size</label>
+        <input id="leaf" type="range" min="1" max="12" step="1" value="4"/>
+        <span id="leafVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="noise">Noise level</label>
+        <input id="noise" type="range" min="0" max="0.45" step="0.01" value="0.12"/>
+        <span id="noiseVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="n">Number of points</label>
+        <input id="n" type="range" min="20" max="100" step="2" value="48"/>
+        <span id="nVal" class="chip"></span>
+      </div>
+      <button id="regen">Regenerate data</button>
+
+      <div class="legend">
+        <span><span class="sw" style="background:#4d7fff;height:4px"></span>true / reference trend</span>
+        <span><span class="sw" style="background:#28a37a;height:4px"></span>CART step fit</span>
+        <span><span class="sw" style="background:#d1aa00;height:4px"></span>split locations</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <canvas id="canvas" width="760" height="470"></canvas>
+      <div class="stats">
+        <div class="stat"><strong id="nodeCount">0</strong><span class="note">nodes</span></div>
+        <div class="stat"><strong id="leafCount">0</strong><span class="note">leaves</span></div>
+        <div class="stat"><strong id="mse">0</strong><span class="note">training MSE</span></div>
+        <div class="stat"><strong id="depthUsed">0</strong><span class="note">depth used</span></div>
+      </div>
+      <div>
+        <h2 style="margin-bottom:8px">Leaf rules</h2>
+        <div id="rules" class="rules"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const controls = {
+  preset: document.getElementById('preset'),
+  depth: document.getElementById('depth'),
+  leaf: document.getElementById('leaf'),
+  noise: document.getElementById('noise'),
+  n: document.getElementById('n'),
+  regen: document.getElementById('regen')
+};
+const values = {
+  depth: document.getElementById('depthVal'),
+  leaf: document.getElementById('leafVal'),
+  noise: document.getElementById('noiseVal'),
+  n: document.getElementById('nVal')
+};
+const outputs = {
+  nodeCount: document.getElementById('nodeCount'),
+  leafCount: document.getElementById('leafCount'),
+  mse: document.getElementById('mse'),
+  depthUsed: document.getElementById('depthUsed'),
+  rules: document.getElementById('rules')
+};
+
+let state = { pts: [], seed: 9, tree: null };
+
+function mulberry32(a){ return function(){ a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function randn(rng){
+  let u=0,v=0; while(!u)u=rng(); while(!v)v=rng();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function mean(arr){ return arr.reduce((s,v)=>s+v,0)/Math.max(1,arr.length); }
+function msePoints(points){
+  if (!points.length) return 0;
+  const m = mean(points.map(p=>p.y));
+  let s = 0; for (const p of points) s += (p.y - m) * (p.y - m);
+  return s / points.length;
+}
+function split(points, thr){
+  const left = [], right = [];
+  for (const p of points) (p.x <= thr ? left : right).push(p);
+  return {left, right};
+}
+function candidateThresholds(points){
+  const xs = [...new Set(points.map(p=>p.x).sort((a,b)=>a-b))];
+  const out = [];
+  for (let i=0;i<xs.length-1;i++) out.push((xs[i] + xs[i+1]) / 2);
+  return out;
+}
+function build(points, depth, maxDepth, minLeaf){
+  const yhat = mean(points.map(p=>p.y));
+  const node = {points, depth, yhat, splitValue:null, left:null, right:null};
+  if (depth >= maxDepth || points.length <= minLeaf * 2) return node;
+  let best = null;
+  for (const thr of candidateThresholds(points)){
+    const {left,right} = split(points, thr);
+    if (left.length < minLeaf || right.length < minLeaf) continue;
+    const score = (left.length / points.length) * msePoints(left) + (right.length / points.length) * msePoints(right);
+    if (!best || score < best.score) best = {thr, left, right, score};
+  }
+  if (!best) return node;
+  node.splitValue = best.thr;
+  node.left = build(best.left, depth + 1, maxDepth, minLeaf);
+  node.right = build(best.right, depth + 1, maxDepth, minLeaf);
+  return node;
+}
+function predict(node, x){
+  let cur = node;
+  while (cur.left && cur.right) cur = x <= cur.splitValue ? cur.left : cur.right;
+  return cur.yhat;
+}
+function countNodes(node){
+  if (!node.left || !node.right) return {nodes:1, leaves:1, maxDepth:node.depth};
+  const a = countNodes(node.left), b = countNodes(node.right);
+  return {nodes:1+a.nodes+b.nodes, leaves:a.leaves+b.leaves, maxDepth:Math.max(node.depth,a.maxDepth,b.maxDepth)};
+}
+function leaves(node, lo=-1, hi=1, out=[]){
+  if (!node.left || !node.right){ out.push({lo, hi, yhat: node.yhat, n: node.points.length}); return out; }
+  leaves(node.left, lo, node.splitValue, out);
+  leaves(node.right, node.splitValue, hi, out);
+  return out;
+}
+function rules(node){
+  const ls = leaves(node, -1, 1, []);
+  return ls.map(leaf => `${leaf.lo.toFixed(2)} < x ≤ ${leaf.hi.toFixed(2)} → predict ${leaf.yhat.toFixed(2)} (${leaf.n} pts)`);
+}
+function trueFn(x){
+  const p = controls.preset.value;
+  if (p === 'sine') return 0.62 * Math.sin(2.2 * Math.PI * x);
+  if (p === 'piecewise') return x < -0.35 ? -0.65 : (x < 0.15 ? 0.05 : 0.68);
+  return 0.9 * x * x - 0.4 + 0.18 * Math.sin(3.2 * Math.PI * x);
+}
+function generateData(){
+  state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
+  const rng = mulberry32(state.seed || 2);
+  const n = +controls.n.value;
+  const noise = +controls.noise.value;
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const x = -0.96 + (i/(n-1))*1.92;
+    const y = trueFn(x) + noise * randn(rng);
+    pts.push({x,y});
+  }
+  state.pts = pts;
+}
+function xToPx(x){ return (x + 1) * 0.5 * canvas.width; }
+function yToPy(y){ return canvas.height - ((y + 1.25) / 2.5) * canvas.height; }
+function drawAxes(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = '#edf1f8';
+  ctx.lineWidth = 1;
+  for (let g=1; g<5; g++){
+    const x = g/5 * canvas.width, y = g/5 * canvas.height;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  ctx.strokeStyle = '#aeb8cc'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(xToPx(-1), yToPy(0)); ctx.lineTo(xToPx(1), yToPy(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xToPx(0), yToPy(-1.25)); ctx.lineTo(xToPx(0), yToPy(1.25)); ctx.stroke();
+}
+function drawTrueFn(){
+  ctx.strokeStyle = '#4d7fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i=0;i<=260;i++){
+    const x = -1 + 2*i/260;
+    const px = xToPx(x), py = yToPy(trueFn(x));
+    if (i === 0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+}
+function drawPoints(){
+  for (const p of state.pts){
+    ctx.beginPath(); ctx.arc(xToPx(p.x), yToPy(p.y), 4.6, 0, Math.PI * 2);
+    ctx.fillStyle = '#13253f'; ctx.fill();
+  }
+}
+function drawFit(){
+  const leafSegs = leaves(state.tree, -1, 1, []);
+  ctx.strokeStyle = '#28a37a';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  let first = true;
+  for (const seg of leafSegs){
+    const x1 = xToPx(seg.lo), x2 = xToPx(seg.hi), y = yToPy(seg.yhat);
+    if (first){ ctx.moveTo(x1,y); first = false; }
+    else ctx.lineTo(x1,y);
+    ctx.lineTo(x2,y);
+  }
+  ctx.stroke();
+
+  function drawSplits(node){
+    if (!node.left || !node.right) return;
+    ctx.strokeStyle = '#d1aa00';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8,6]);
+    const x = xToPx(node.splitValue);
+    ctx.beginPath(); ctx.moveTo(x, 18); ctx.lineTo(x, canvas.height - 18); ctx.stroke();
+    ctx.setLineDash([]);
+    drawSplits(node.left); drawSplits(node.right);
+  }
+  drawSplits(state.tree);
+}
+function fitAndDraw(){
+  values.depth.textContent = controls.depth.value;
+  values.leaf.textContent = controls.leaf.value;
+  values.noise.textContent = (+controls.noise.value).toFixed(2);
+  values.n.textContent = controls.n.value;
+  state.tree = build(state.pts, 0, +controls.depth.value, +controls.leaf.value);
+  drawAxes();
+  drawTrueFn();
+  drawFit();
+  drawPoints();
+
+  const counts = countNodes(state.tree);
+  let mse = 0;
+  for (const p of state.pts){
+    const err = p.y - predict(state.tree, p.x);
+    mse += err * err;
+  }
+  mse /= Math.max(1, state.pts.length);
+  outputs.nodeCount.textContent = counts.nodes;
+  outputs.leafCount.textContent = counts.leaves;
+  outputs.depthUsed.textContent = counts.maxDepth;
+  outputs.mse.textContent = mse.toFixed(4);
+  outputs.rules.innerHTML = '';
+  for (const line of rules(state.tree)){
+    const div = document.createElement('div');
+    div.className = 'rule';
+    div.textContent = line;
+    outputs.rules.appendChild(div);
+  }
+}
+for (const el of [controls.preset, controls.depth, controls.leaf, controls.noise, controls.n]){
+  el.addEventListener('input', ()=>{ if (el === controls.preset || el === controls.noise || el === controls.n) generateData(); fitAndDraw(); });
+  el.addEventListener('change', ()=>{ if (el === controls.preset || el === controls.noise || el === controls.n) generateData(); fitAndDraw(); });
+}
+controls.regen.addEventListener('click', ()=>{ generateData(); fitAndDraw(); });
+
+generateData();
+fitAndDraw();
+</script>
+</body>
+</html>
