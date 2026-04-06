@@ -140,8 +140,8 @@
     .mini-table th,.mini-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}
     .mini-table th:last-child,.mini-table td:last-child{border-right:none}
     .mini-table tr:last-child td{border-bottom:none}
-    .mini-table th{background:rgba(255,255,255,.08);color:#eef3ff;font-weight:700}
-    .mini-table td{background:rgba(255,255,255,.035);color:#eef3ff}
+    .mini-table th{background:#f3f4f6;color:#111827;font-weight:700}
+    .mini-table td{background:#ffffff;color:#111827}
     .tree-demo-wrap{display:grid;gap:14px}
     .tree-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .tree-status{padding:10px 12px;border-radius:14px;border:1px solid rgba(23,32,51,.10);background:#f8fafc;color:var(--muted);font-size:.96rem}
@@ -777,8 +777,8 @@
     const mx = (x1 + x2) / 2;
     const my = (y1 + y2) / 2;
     return `
-      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="url(#sbGrad)" stroke-width="4" />
-      ${label ? `<text x="${mx}" y="${my - 8}" fill="#d7e1ff" font-size="16" font-family="system-ui" text-anchor="middle">${label}</text>` : ''}
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111827" stroke-width="4" />
+      ${label ? `<text x="${mx}" y="${my - 8}" fill="#111827" font-size="16" font-family="system-ui" text-anchor="middle">${label}</text>` : ''}
     `;
   }
 
@@ -810,45 +810,45 @@
           <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
         </linearGradient>
       </defs>
-      <rect width="620" height="500" rx="20" fill="#0c1328"/>
+      <rect width="620" height="500" rx="20" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
     `);
 
     // Root is always visible, together with its outgoing yes/no lines.
-    parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#141e3f'));
+    parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#ffffff'));
     parts.push(edge(root.x + 40, root.y + root.h, leftLeaf1.x + 75, leftLeaf1.y, 'no'));
     parts.push(edge(root.x + root.w - 40, root.y + root.h, photos2.x + 105, photos2.y, 'yes'));
 
     // Step 1: reveal children of root, and show outgoing lines for the next internal node.
     if (step >= 1) {
-      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
-      parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#141e3f'));
+      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, '#fee2e2', '#111827'));
+      parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#ffffff'));
       parts.push(edge(photos2.x + 40, photos2.y + photos2.h, sunburn.x + 88, sunburn.y, 'no'));
       parts.push(edge(photos2.x + photos2.w - 40, photos2.y + photos2.h, yesLeaf2.x + 75, yesLeaf2.y, 'yes'));
     }
 
     // Step 2: reveal children of the second internal node, and show outgoing lines for sunburn.
     if (step >= 2) {
-      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
-      parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#141e3f'));
+      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, '#dbeafe', '#111827'));
+      parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#ffffff'));
       parts.push(edge(sunburn.x + 35, sunburn.y + sunburn.h, yesLeaf3.x + 75, yesLeaf3.y, 'yes'));
       parts.push(edge(sunburn.x + sunburn.w - 35, sunburn.y + sunburn.h, sand.x + 90, sand.y, 'no'));
     }
 
     // Step 3: reveal children of sunburn, and show outgoing lines for sand.
     if (step >= 3) {
-      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
-      parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#141e3f'));
+      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, '#dbeafe', '#111827'));
+      parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#ffffff'));
       parts.push(edge(sand.x + 40, sand.y + sand.h, yesLeaf4.x + 75, yesLeaf4.y, 'yes'));
       parts.push(edge(sand.x + sand.w - 40, sand.y + sand.h, noLeaf4.x + 75, noLeaf4.y, 'no'));
     }
 
     // Step 4: reveal final leaves.
     if (step >= 4) {
-      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
-      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
+      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, '#dbeafe', '#111827'));
+      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, '#fee2e2', '#111827'));
     }
 
-    parts.push(`<text x="22" y="408" fill="#b9c5e8" font-size="17" font-family="system-ui">Repeated feature: “Beach photos posted” is used at the root and again deeper in the tree.</text>`);
+    parts.push(`<text x="22" y="408" fill="#111827" font-size="17" font-family="system-ui">Repeated feature: “Beach photos posted” is used at the root and again deeper in the tree.</text>`);
     svg.innerHTML = parts.join('');
     nextBtn.textContent = step >= maxStep ? 'Built' : 'Build next split';
     nextBtn.disabled = step >= maxStep;
