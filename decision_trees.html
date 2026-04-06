@@ -814,38 +814,38 @@
     `);
 
     // Root is always visible, together with its outgoing yes/no lines.
-    parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#ffffff'));
+    parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#ffffff', '#111827', '#111827'));
     parts.push(edge(root.x + 40, root.y + root.h, leftLeaf1.x + 75, leftLeaf1.y, 'no'));
     parts.push(edge(root.x + root.w - 40, root.y + root.h, photos2.x + 105, photos2.y, 'yes'));
 
     // Step 1: reveal children of root, and show outgoing lines for the next internal node.
     if (step >= 1) {
-      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, '#fee2e2', '#111827'));
-      parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#ffffff'));
+      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(photos2.x + 40, photos2.y + photos2.h, sunburn.x + 88, sunburn.y, 'no'));
       parts.push(edge(photos2.x + photos2.w - 40, photos2.y + photos2.h, yesLeaf2.x + 75, yesLeaf2.y, 'yes'));
     }
 
     // Step 2: reveal children of the second internal node, and show outgoing lines for sunburn.
     if (step >= 2) {
-      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, '#dbeafe', '#111827'));
-      parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#ffffff'));
+      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(sunburn.x + 35, sunburn.y + sunburn.h, yesLeaf3.x + 75, yesLeaf3.y, 'yes'));
       parts.push(edge(sunburn.x + sunburn.w - 35, sunburn.y + sunburn.h, sand.x + 90, sand.y, 'no'));
     }
 
     // Step 3: reveal children of sunburn, and show outgoing lines for sand.
     if (step >= 3) {
-      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, '#dbeafe', '#111827'));
-      parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#ffffff'));
+      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(sand.x + 40, sand.y + sand.h, yesLeaf4.x + 75, yesLeaf4.y, 'yes'));
       parts.push(edge(sand.x + sand.w - 40, sand.y + sand.h, noLeaf4.x + 75, noLeaf4.y, 'no'));
     }
 
     // Step 4: reveal final leaves.
     if (step >= 4) {
-      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, '#dbeafe', '#111827'));
-      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, '#fee2e2', '#111827'));
+      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, '#ffffff', '#111827', '#111827'));
     }
 
     parts.push(`<text x="22" y="408" fill="#111827" font-size="17" font-family="system-ui">Repeated feature: “Beach photos posted” is used at the root and again deeper in the tree.</text>`);
