@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Manual Split Builder Demo</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#fff; --ink:#162033; --muted:#647089; --border:#d7deea;
+    --red:#d95c5c; --blue:#4d7fff; --gold:#e1ab00; --shadow:0 10px 28px rgba(24,39,75,.08)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:18px;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .page{display:grid;gap:16px}
+  .top{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px}
+  h1,h2,h3,p{margin:0}
+  .control{display:grid;gap:6px}
+  label{font-weight:700;font-size:.95rem}
+  select,button{font:inherit;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink)}
+  canvas{display:block;border:1px solid var(--border);border-radius:16px;background:#fff;width:100%;height:auto;cursor:crosshair}
+  .chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3fb;border:1px solid #dbe4f5;font-size:.88rem;font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .box{padding:12px;border-radius:14px;background:#f8faff;border:1px solid #e4eaf5}
+  .box strong{display:block;font-size:1.02rem}
+  .rules{display:grid;gap:8px}
+  .rule{padding:10px 12px;border-radius:12px;background:#f8faff;border:1px solid #e4eaf5;font-size:.94rem}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
+  .dot{width:12px;height:12px;border-radius:999px;display:inline-block;vertical-align:middle;margin-right:6px}
+  .note{color:var(--muted);font-size:.94rem;line-height:1.4}
+  @media (max-width: 920px){ .top{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <section class="card">
+      <h2>Demo 1: build the tree by hand</h2>
+      <p class="note">Choose an impurity and split direction, then click inside the <strong>gold active region</strong> to propose a split. The weighted average impurity is shown before you commit the split.</p>
+
+      <div class="control">
+        <label for="preset">Dataset</label>
+        <select id="preset">
+          <option value="gaussian">Two Gaussian blobs</option>
+          <option value="xor">XOR</option>
+          <option value="stripes">Vertical stripes</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="criterion">Impurity</label>
+        <select id="criterion">
+          <option value="gini">Gini impurity</option>
+          <option value="entropy">Entropy</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="axis">Proposed split direction</label>
+        <select id="axis">
+          <option value="x">Vertical split (threshold on x₁)</option>
+          <option value="y">Horizontal split (threshold on x₂)</option>
+        </select>
+      </div>
+
+      <div class="grid">
+        <div class="box"><strong id="regionLabel">—</strong><span class="note">active region</span></div>
+        <div class="box"><strong id="regionCount">—</strong><span class="note">points in active region</span></div>
+        <div class="box"><strong id="parentImp">—</strong><span class="note">current impurity</span></div>
+        <div class="box"><strong id="weightedImp">—</strong><span class="note">avg impurity of proposed split</span></div>
+      </div>
+
+      <div class="grid">
+        <div class="box"><strong id="leftInfo">—</strong><span class="note">left / lower child</span></div>
+        <div class="box"><strong id="rightInfo">—</strong><span class="note">right / upper child</span></div>
+      </div>
+
+      <div class="grid">
+        <button id="commitBtn">Fix split and go to next region</button>
+        <button id="skipBtn">Skip this region</button>
+        <button id="resetBtn">Reset tree</button>
+        <button id="regenBtn">Regenerate data</button>
+      </div>
+
+      <div class="legend">
+        <span><span class="dot" style="background:#d95c5c"></span> majority red region</span>
+        <span><span class="dot" style="background:#4d7fff"></span> majority blue region</span>
+        <span><span class="dot" style="background:#e1ab00"></span> active region border</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <canvas id="canvas" width="760" height="520"></canvas>
+      <div class="grid">
+        <div class="box"><strong id="numLeaves">1</strong><span class="note">current regions / leaves</span></div>
+        <div class="box"><strong id="numPure">0</strong><span class="note">pure regions</span></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Committed split history</h3>
+        <div id="history" class="rules"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
+const controls = { preset:$('preset'), criterion:$('criterion'), axis:$('axis'), commit:$('commitBtn'), skip:$('skipBtn'), reset:$('resetBtn'), regen:$('regenBtn') };
+const outputs = {
+  regionLabel:$('regionLabel'), regionCount:$('regionCount'), parentImp:$('parentImp'), weightedImp:$('weightedImp'),
+  leftInfo:$('leftInfo'), rightInfo:$('rightInfo'), history:$('history'), numLeaves:$('numLeaves'), numPure:$('numPure')
+};
+
+let state = { points:[], regions:[], activeId:null, nextRegionId:1, proposal:null, history:[], seed:7 };
+
+function mulberry32(a){ return function(){ a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function randn(rng){ let u=0,v=0; while(!u)u=rng(); while(!v)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function pointToCanvas(p){ return { x:(p.x+1)*0.5*canvas.width, y:(1-(p.y+1)*0.5)*canvas.height }; }
+function canvasToPoint(px, py){ return { x:px/canvas.width*2-1, y:(1-py/canvas.height)*2-1 }; }
+function regionContains(region,p){ return p.x >= region.xmin-1e-9 && p.x <= region.xmax+1e-9 && p.y >= region.ymin-1e-9 && p.y <= region.ymax+1e-9; }
+function majorityLabel(points){
+  let s=0; for (const p of points) s += p.label;
+  return s >= 0 ? 1 : -1;
+}
+function classCounts(points){
+  let red=0, blue=0;
+  for (const p of points) (p.label===1 ? blue : red)++;
+  return {red, blue};
+}
+function pure(points){
+  if (!points.length) return true;
+  const y = points[0].label;
+  for (const p of points) if (p.label !== y) return false;
+  return true;
+}
+function impurity(points){
+  if (!points.length) return 0;
+  const {red, blue} = classCounts(points);
+  const p1 = blue / points.length, p0 = red / points.length;
+  if (controls.criterion.value === 'entropy'){
+    let h=0;
+    if (p1>0) h -= p1 * Math.log2(p1);
+    if (p0>0) h -= p0 * Math.log2(p0);
+    return h;
+  }
+  return p1*(1-p1)+p0*(1-p0);
+}
+function generateData(){
+  state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
+  const rng = mulberry32(state.seed || 1);
+  const pts = [];
+  const n = 26;
+  const preset = controls.preset.value;
+  if (preset === 'gaussian'){
+    for (let i=0;i<n;i++){
+      pts.push({x:clamp(-0.45 + 0.22*randn(rng),-1,1), y:clamp(-0.05 + 0.26*randn(rng),-1,1), label:-1});
+      pts.push({x:clamp(0.43 + 0.22*randn(rng),-1,1), y:clamp(0.08 + 0.26*randn(rng),-1,1), label:1});
+    }
+  } else if (preset === 'xor'){
+    const cs=[[-0.55,-0.55,-1],[0.55,0.55,-1],[-0.55,0.55,1],[0.55,-0.55,1]];
+    for (const [cx,cy,lab] of cs) for (let i=0;i<n/2;i++) pts.push({x:clamp(cx+0.17*randn(rng),-1,1), y:clamp(cy+0.17*randn(rng),-1,1), label:lab});
+  } else {
+    for (let i=0;i<2*n;i++){
+      const x = -0.95 + 1.9 * rng();
+      const y = -0.92 + 1.84 * rng();
+      const band = Math.floor((x + 1) / 0.52);
+      pts.push({x,y,label:band%2===0 ? -1 : 1});
+    }
+  }
+  state.points = pts;
+}
+function initRegions(){
+  state.regions = [{
+    id: 1, xmin:-1, xmax:1, ymin:-1, ymax:1, points:[...state.points], depth:0
+  }];
+  state.nextRegionId = 2;
+  state.activeId = 1;
+  state.proposal = null;
+  state.history = [];
+}
+function regionById(id){ return state.regions.find(r => r.id === id) || null; }
+function chooseNextRegion(){
+  const candidates = state.regions.filter(r => r.points.length >= 2 && !pure(r.points))
+                                  .sort((a,b)=>a.depth-b.depth || a.id-b.id);
+  state.activeId = candidates.length ? candidates[0].id : null;
+  state.proposal = null;
+}
+function describeMajority(points){
+  const {red, blue} = classCounts(points);
+  if (red === blue) return `tie (${red}/${blue})`;
+  return red > blue ? `red (${red}/${blue})` : `blue (${red}/${blue})`;
+}
+function setOutputs(){
+  const region = regionById(state.activeId);
+  outputs.numLeaves.textContent = String(state.regions.length);
+  outputs.numPure.textContent = String(state.regions.filter(r => pure(r.points)).length);
+
+  if (!region){
+    outputs.regionLabel.textContent = 'All remaining regions are pure';
+    outputs.regionCount.textContent = 'done';
+    outputs.parentImp.textContent = '0.0000';
+    outputs.weightedImp.textContent = '—';
+    outputs.leftInfo.textContent = '—';
+    outputs.rightInfo.textContent = '—';
+    return;
+  }
+  outputs.regionLabel.textContent = describeMajority(region.points);
+  outputs.regionCount.textContent = String(region.points.length);
+  outputs.parentImp.textContent = impurity(region.points).toFixed(4);
+  if (!state.proposal || state.proposal.regionId !== region.id || !state.proposal.valid){
+    outputs.weightedImp.textContent = 'click to propose';
+    outputs.leftInfo.textContent = '—';
+    outputs.rightInfo.textContent = '—';
+    return;
+  }
+  const leftName = state.proposal.axis === 'x' ? 'left' : 'lower';
+  const rightName = state.proposal.axis === 'x' ? 'right' : 'upper';
+  outputs.weightedImp.textContent = state.proposal.weighted.toFixed(4);
+  outputs.leftInfo.textContent = `${leftName}: ${state.proposal.left.length} pts, imp ${state.proposal.leftImp.toFixed(4)}, maj ${describeMajority(state.proposal.left)}`;
+  outputs.rightInfo.textContent = `${rightName}: ${state.proposal.right.length} pts, imp ${state.proposal.rightImp.toFixed(4)}, maj ${describeMajority(state.proposal.right)}`;
+}
+function splitRegion(region, axis, thr){
+  const leftPts = [], rightPts = [];
+  for (const p of region.points){
+    ((axis === 'x' ? p.x : p.y) <= thr ? leftPts : rightPts).push(p);
+  }
+  return {leftPts, rightPts};
+}
+function makeProposal(px, py){
+  const region = regionById(state.activeId);
+  if (!region) return;
+  const p = canvasToPoint(px, py);
+  if (!regionContains(region, p)) return;
+  const axis = controls.axis.value;
+  const thr = axis === 'x' ? clamp(p.x, region.xmin + 0.02, region.xmax - 0.02) : clamp(p.y, region.ymin + 0.02, region.ymax - 0.02);
+  const {leftPts, rightPts} = splitRegion(region, axis, thr);
+  const valid = leftPts.length > 0 && rightPts.length > 0;
+  state.proposal = { regionId: region.id, axis, thr, valid, left:leftPts, right:rightPts };
+  if (valid){
+    state.proposal.leftImp = impurity(leftPts);
+    state.proposal.rightImp = impurity(rightPts);
+    state.proposal.weighted = (leftPts.length / region.points.length) * state.proposal.leftImp + (rightPts.length / region.points.length) * state.proposal.rightImp;
+  }
+}
+function commitProposal(){
+  const region = regionById(state.activeId);
+  if (!region || !state.proposal || !state.proposal.valid || state.proposal.regionId !== region.id) return;
+  const axis = state.proposal.axis, thr = state.proposal.thr;
+  const l = {
+    id: state.nextRegionId++, depth: region.depth + 1,
+    xmin: region.xmin, xmax: axis === 'x' ? thr : region.xmax,
+    ymin: region.ymin, ymax: axis === 'y' ? thr : region.ymax,
+    points: state.proposal.left
+  };
+  const r = {
+    id: state.nextRegionId++, depth: region.depth + 1,
+    xmin: axis === 'x' ? thr : region.xmin, xmax: region.xmax,
+    ymin: axis === 'y' ? thr : region.ymin, ymax: region.ymax,
+    points: state.proposal.right
+  };
+  state.regions = state.regions.filter(x => x.id !== region.id);
+  state.regions.push(l, r);
+  const axisName = axis === 'x' ? 'x₁' : 'x₂';
+  state.history.push(`depth ${region.depth}: split region ${region.id} at ${axisName} = ${thr.toFixed(2)} → avg impurity ${state.proposal.weighted.toFixed(4)}`);
+  chooseNextRegion();
+}
+function skipRegion(){
+  const region = regionById(state.activeId);
+  if (!region) return;
+  const candidates = state.regions.filter(r => r.id !== region.id && r.points.length >= 2 && !pure(r.points))
+                                  .sort((a,b)=>a.depth-b.depth || a.id-b.id);
+  state.activeId = candidates.length ? candidates[0].id : null;
+  state.proposal = null;
+}
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = '#edf1f8';
+  ctx.lineWidth = 1;
+  for (let g=1; g<4; g++){
+    const x = g/4 * canvas.width, y = g/4 * canvas.height;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+
+  for (const region of state.regions){
+    const q1 = pointToCanvas({x:region.xmin,y:region.ymax});
+    const q2 = pointToCanvas({x:region.xmax,y:region.ymin});
+    const maj = majorityLabel(region.points);
+    const imp = impurity(region.points);
+    const alpha = 0.08 + 0.20 * (1 - imp / Math.max(0.0001, controls.criterion.value === 'entropy' ? 1 : 0.5));
+    ctx.fillStyle = maj === 1 ? `rgba(77,127,255,${Math.min(0.32, alpha)})` : `rgba(217,92,92,${Math.min(0.32, alpha)})`;
+    ctx.fillRect(q1.x, q1.y, q2.x - q1.x, q2.y - q1.y);
+    ctx.lineWidth = region.id === state.activeId ? 3 : 1.4;
+    ctx.strokeStyle = region.id === state.activeId ? '#e1ab00' : 'rgba(100,110,130,.65)';
+    ctx.strokeRect(q1.x, q1.y, q2.x - q1.x, q2.y - q1.y);
+
+    const centerX = 0.5 * (q1.x + q2.x), centerY = 0.5 * (q1.y + q2.y);
+    ctx.fillStyle = '#162033';
+    ctx.font = 'bold 13px system-ui, sans-serif';
+    const label = majorityLabel(region.points) === 1 ? 'blue' : 'red';
+    ctx.fillText(`${label}`, centerX - 14, centerY - 4);
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText(`${classCounts(region.points).red}/${classCounts(region.points).blue}`, centerX - 16, centerY + 12);
+  }
+
+  if (state.proposal && state.proposal.valid){
+    const region = regionById(state.proposal.regionId);
+    if (region){
+      ctx.save();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2.6;
+      ctx.setLineDash([10,7]);
+      if (state.proposal.axis === 'x'){
+        const x = pointToCanvas({x:state.proposal.thr, y:0}).x;
+        const top = pointToCanvas({x:0, y:region.ymax}).y;
+        const bot = pointToCanvas({x:0, y:region.ymin}).y;
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bot); ctx.stroke();
+      } else {
+        const y = pointToCanvas({x:0, y:state.proposal.thr}).y;
+        const left = pointToCanvas({x:region.xmin, y:0}).x;
+        const right = pointToCanvas({x:region.xmax, y:0}).x;
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  for (const p of state.points){
+    const q = pointToCanvas(p);
+    ctx.beginPath();
+    ctx.arc(q.x,q.y,5.5,0,Math.PI*2);
+    ctx.fillStyle = p.label === 1 ? '#4d7fff' : '#d95c5c';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.stroke();
+  }
+}
+function renderHistory(){
+  outputs.history.innerHTML = '';
+  if (!state.history.length){
+    const div = document.createElement('div');
+    div.className = 'rule';
+    div.textContent = 'No splits fixed yet.';
+    outputs.history.appendChild(div);
+    return;
+  }
+  for (const item of state.history){
+    const div = document.createElement('div');
+    div.className = 'rule';
+    div.textContent = item;
+    outputs.history.appendChild(div);
+  }
+}
+function render(){ draw(); setOutputs(); renderHistory(); }
+
+canvas.addEventListener('pointerdown', evt => {
+  const rect = canvas.getBoundingClientRect();
+  const px = (evt.clientX - rect.left) * (canvas.width / rect.width);
+  const py = (evt.clientY - rect.top) * (canvas.height / rect.height);
+  makeProposal(px, py);
+  render();
+});
+controls.commit.addEventListener('click', () => { commitProposal(); render(); });
+controls.skip.addEventListener('click', () => { skipRegion(); render(); });
+controls.reset.addEventListener('click', () => { initRegions(); render(); });
+controls.regen.addEventListener('click', () => { generateData(); initRegions(); render(); });
+controls.preset.addEventListener('change', () => { generateData(); initRegions(); render(); });
+controls.criterion.addEventListener('change', () => { state.proposal = null; render(); });
+controls.axis.addEventListener('change', () => { state.proposal = null; render(); });
+
+generateData();
+initRegions();
+render();
+</script>
+</body>
+</html>
