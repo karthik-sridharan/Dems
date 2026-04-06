@@ -203,8 +203,8 @@ function generateData(){
   state.tree = null;
   state.fitted = false;
 }
-function drawAxes(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function drawAxes(clearFirst=true){
+  if (clearFirst) ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle = '#edf1f8';
   ctx.lineWidth = 1;
   for (let g=1; g<4; g++){
@@ -233,11 +233,41 @@ function drawPoints(){
   for (const p of state.points){
     const q = pointToCanvas(p);
     ctx.beginPath();
+    ctx.arc(q.x,q.y,7.0,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.fill();
+    ctx.beginPath();
     ctx.arc(q.x,q.y,5.5,0,Math.PI*2);
     ctx.fillStyle = p.label===1 ? '#4d7fff' : '#d95c5c';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(0,0,0,.24)';
     ctx.stroke();
+  }
+}
+
+function drawSplitLines(node, xmin=-1, xmax=1, ymin=-1, ymax=1){
+  if (!node || !node.left || !node.right) return;
+  ctx.save();
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 2.2;
+  ctx.setLineDash([10,7]);
+  if (node.splitAxis === 0){
+    const x = pointToCanvas({x:node.splitValue, y:0}).x;
+    const top = pointToCanvas({x:0, y:ymax}).y;
+    const bot = pointToCanvas({x:0, y:ymin}).y;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bot); ctx.stroke();
+    ctx.restore();
+    drawSplitLines(node.left, xmin, node.splitValue, ymin, ymax);
+    drawSplitLines(node.right, node.splitValue, xmax, ymin, ymax);
+  } else {
+    const y = pointToCanvas({x:0, y:node.splitValue}).y;
+    const left = pointToCanvas({x:xmin, y:0}).x;
+    const right = pointToCanvas({x:xmax, y:0}).x;
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+    ctx.restore();
+    drawSplitLines(node.left, xmin, xmax, ymin, node.splitValue);
+    drawSplitLines(node.right, xmin, xmax, node.splitValue, ymax);
   }
 }
 function renderStats(){
@@ -265,9 +295,10 @@ function renderStats(){
   }
 }
 function render(){
-  drawAxes();
+  drawAxes(true);
   drawBackground();
-  drawAxes();
+  drawAxes(false);
+  if (state.tree) drawSplitLines(state.tree);
   drawPoints();
   renderStats();
 }
@@ -276,8 +307,12 @@ controls.regen.addEventListener('click', ()=>{ generateData(); render(); });
 controls.preset.addEventListener('change', ()=>{ generateData(); render(); });
 controls.criterion.addEventListener('change', ()=>{ state.tree = null; state.fitted = false; render(); });
 
-generateData();
-render();
+function initializeDemo(){
+  generateData();
+  render();
+}
+initializeDemo();
+window.addEventListener('load', initializeDemo);
 </script>
 </body>
 </html>

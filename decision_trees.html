@@ -512,33 +512,33 @@
       </div>
     </section>
 
-    <section class="slide" data-title="Interactive demo: build the tree by hand" data-section="Demo 1">
+    <section class="slide" data-title="Interactive demo: decision tree classification" data-section="Demo 1">
       <div class="shell">
-        <div class="topbar"><div class="meta"><span class="pill">Demo 1</span><span class="pill">Manual split builder</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="topbar"><div class="meta"><span class="pill">Demo 1</span><span class="pill">Classification tree</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">Interactive demo: build a tree one split at a time</h1>
-          <p class="subtitle">Use this demo live: choose the impurity, propose a split by clicking inside the active region, inspect the weighted average impurity, and then fix the split. Each region displays its current majority-vote class label.</p>
-          <iframe class="demo-frame" src="manual_split_builder_demo.html" title="Manual split builder demo"></iframe>
+          <h1 class="title">Interactive demo: a basic decision tree classifier</h1>
+          <p class="subtitle">Use this demo live: switch datasets, tree depth, criterion, and minimum leaf size. The shaded background shows the learned partition; the rule list shows the tree structure.</p>
+          <iframe class="demo-frame" src="decision_tree_classifier_demo.html" title="Decision tree classifier demo"></iframe>
           <div class="slide-references">
             <a href="https://en.wikipedia.org/wiki/Decision_tree_learning" data-desc="General background reading on decision-tree learning.">Decision tree learning reference</a>
           </div>
         </div>
-        <div class="footer"><div>Good live question: does the locally best first split look globally sensible?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div>Good live question: which datasets need depth 2 or more?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
 
-    <section class="slide" data-title="Interactive demo: ID3 decision boundary" data-section="Demo 2">
+    <section class="slide" data-title="Interactive demo: CART regression" data-section="Demo 2">
       <div class="shell">
-        <div class="topbar"><div class="meta"><span class="pill">Demo 2</span><span class="pill">Automatic ID3</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="topbar"><div class="meta"><span class="pill">Demo 2</span><span class="pill">CART regression</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">Interactive demo: run ID3 automatically</h1>
-          <p class="subtitle">Choose an impurity criterion, then click a button to run the greedy ID3-style procedure and display its decision boundary on the dataset.</p>
-          <iframe class="demo-frame" src="id3_boundary_demo.html" title="ID3 decision boundary demo"></iframe>
+          <h1 class="title">Interactive demo: CART for regression</h1>
+          <p class="subtitle">Here the target is continuous. Adjust depth and leaf size to see the classic step-function fit become more or less flexible, and compare training MSE across presets.</p>
+          <iframe class="demo-frame" src="cart_regression_demo.html" title="CART regression demo"></iframe>
           <div class="slide-references">
-            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="General decision-tree reference, including split criteria and tree structure.">ID3 reference</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html#regression" data-desc="Practical regression-tree reference.">Regression tree reference</a>
           </div>
         </div>
-        <div class="footer"><div>Good live question: how does switching Gini to entropy change the first split?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div>Good live question: why are the predictions piecewise constant?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
 
