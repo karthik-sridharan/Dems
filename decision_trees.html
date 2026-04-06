@@ -159,253 +159,17 @@
 <div class="app">
   <div class="slides">
 
-    <section class="slide active" data-title="Decision Trees and CART" data-section="Title">
-      <div class="shell">
-        <div class="topbar">
-          <div class="meta"><span class="pill">CS / ML lecture</span><span class="pill">Decision Trees</span></div>
-          <div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div>
-        </div>
-        <div class="content">
-          <div class="hero">
-            <div class="card">
-              <div class="tagline">Lecture deck built from Cornell note 15</div>
-              <h1 class="title">Decision Trees and CART</h1>
-              <p class="subtitle">A visual, interactive lecture on recursive partitioning, impurity, ID3, XOR failure modes, and regression trees.</p>
-              <ul class="bullets">
-                <li>Why trees can replace local-neighbor reasoning with region-based reasoning</li>
-                <li>How greedy splits use impurity reduction</li>
-                <li>Why XOR exposes the myopia of one-step split decisions</li>
-                <li>How CART turns the same idea into a regression model</li>
-              </ul>
-              <div class="statband">
-                <div class="stat"><strong>Fast test-time</strong><span class="note">follow thresholds to a leaf</span></div>
-                <div class="stat"><strong>No metric needed</strong><span class="note">splits use features and thresholds</span></div>
-                <div class="stat"><strong>Works for classification</strong><span class="note">majority label in a leaf</span></div>
-                <div class="stat"><strong>Works for regression</strong><span class="note">leaf prediction can be a mean</span></div>
-              </div>
-            </div>
-            <div class="card">
-              <svg class="tree-svg" viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="g1" x1="0" x2="1">
-                    <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
-                  </linearGradient>
-                </defs>
-                <rect width="560" height="420" rx="22" fill="#0c1328"/>
-                <rect x="50" y="38" width="180" height="110" rx="16" fill="#111b39" stroke="rgba(255,255,255,.16)"/>
-                <circle cx="92" cy="82" r="8" fill="#d95c5c"/><circle cx="124" cy="92" r="8" fill="#d95c5c"/>
-                <circle cx="156" cy="74" r="8" fill="#4d7fff"/><circle cx="193" cy="113" r="8" fill="#4d7fff"/>
-                <line x1="142" y1="46" x2="142" y2="142" stroke="#ffd36e" stroke-width="4" stroke-dasharray="8 8"/>
-                <text x="62" y="162" fill="#d7e1ff" font-size="18" font-family="system-ui">split: x₁ ≤ t</text>
-
-                <line x1="142" y1="148" x2="242" y2="228" stroke="url(#g1)" stroke-width="5"/>
-                <line x1="142" y1="148" x2="340" y2="228" stroke="url(#g1)" stroke-width="5"/>
-
-                <rect x="190" y="228" width="120" height="78" rx="16" fill="#141e3f" stroke="rgba(255,255,255,.16)"/>
-                <text x="220" y="272" fill="#eef3ff" font-size="22" font-family="system-ui">red leaf</text>
-                <rect x="308" y="228" width="140" height="78" rx="16" fill="#141e3f" stroke="rgba(255,255,255,.16)"/>
-                <text x="334" y="272" fill="#eef3ff" font-size="22" font-family="system-ui">blue leaf</text>
-
-                <text x="54" y="342" fill="#b9c5e8" font-size="20" font-family="system-ui">A tree stores a sequence of yes/no threshold tests.</text>
-                <text x="54" y="372" fill="#b9c5e8" font-size="20" font-family="system-ui">Prediction = the label (or value) attached to the reached leaf.</text>
-              </svg>
-            </div>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Primary lecture-note source used as the content template.">Cornell CS4780 Lecture Note 15</a>
-          </div>
-        </div>
-        <div class="footer"><div>Press <span class="kbd">F</span> for fullscreen, <span class="kbd">R</span> for references.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter">1 / ?</div></div></div>
-      </div>
-    </section>
-
-    <section class="slide" data-title="Motivation" data-section="Why trees">
+    <section class="slide active" data-title="Decision trees" data-section="Title">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">Why not just keep all the neighbors?</h1>
-          <p class="subtitle">The notes motivate trees by contrasting them with k-nearest neighbors: kNN can model nonlinear boundaries, but it stores the whole training set, slows down at test time, and depends on a good distance metric.</p>
-          <div class="grid2">
-            <div class="card">
-              <h2>Key intuition</h2>
-              <ul class="bullets">
-                <li>If a test point lands in a region where almost all nearby training examples share one label, we do not need to remember every neighbor individually.</li>
-                <li>Decision trees compress that idea into a sequence of threshold tests that divide space into increasingly pure regions.</li>
-                <li>After training, prediction only requires traversing the tree to a leaf and reading off the majority label.</li>
-              </ul>
-              <div class="callout body" style="margin-top:16px">
-                Trees trade “remember every example” for “remember a compact partition of the space.”
-              </div>
-            </div>
-            <div class="card">
-              <svg class="boundary-svg" viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg">
-                <rect width="560" height="420" rx="22" fill="#0c1328"/>
-                <rect x="42" y="40" width="214" height="214" rx="18" fill="#121b39" stroke="rgba(255,255,255,.16)"/>
-                <text x="70" y="30" fill="#eef3ff" font-size="22" font-family="system-ui">Memory-heavy kNN view</text>
-                <g fill="#d95c5c">
-                  <circle cx="80" cy="78" r="8"/><circle cx="104" cy="102" r="8"/><circle cx="132" cy="84" r="8"/><circle cx="156" cy="120" r="8"/>
-                  <circle cx="76" cy="152" r="8"/><circle cx="115" cy="176" r="8"/><circle cx="152" cy="154" r="8"/><circle cx="192" cy="184" r="8"/>
-                </g>
-                <g fill="#4d7fff">
-                  <circle cx="242" cy="74" r="8"/><circle cx="218" cy="108" r="8"/><circle cx="200" cy="132" r="8"/><circle cx="232" cy="164" r="8"/>
-                  <circle cx="208" cy="206" r="8"/><circle cx="174" cy="210" r="8"/>
-                </g>
-                <circle cx="156" cy="128" r="68" fill="none" stroke="#ffd36e" stroke-width="4" stroke-dasharray="8 8"/>
-                <text x="60" y="282" fill="#b9c5e8" font-size="18" font-family="system-ui">Prediction uses many stored examples + distances</text>
-
-                <rect x="306" y="40" width="214" height="214" rx="18" fill="#121b39" stroke="rgba(255,255,255,.16)"/>
-                <text x="338" y="30" fill="#eef3ff" font-size="22" font-family="system-ui">Decision-tree view</text>
-                <rect x="322" y="56" width="86" height="90" fill="rgba(217,92,92,.35)"/><rect x="408" y="56" width="96" height="90" fill="rgba(77,127,255,.28)"/>
-                <rect x="322" y="146" width="104" height="92" fill="rgba(217,92,92,.22)"/><rect x="426" y="146" width="78" height="92" fill="rgba(77,127,255,.42)"/>
-                <line x1="408" y1="56" x2="408" y2="238" stroke="#ffd36e" stroke-width="4"/>
-                <line x1="322" y1="146" x2="504" y2="146" stroke="#ffd36e" stroke-width="4"/>
-                <text x="324" y="282" fill="#b9c5e8" font-size="18" font-family="system-ui">Prediction uses a few threshold tests</text>
-              </svg>
-            </div>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Motivation section comparing kNN and trees.">Cornell notes - motivation</a>
-          </div>
+        <div class="content" style="display:grid;place-items:center;height:100%;padding:0 34px;background:#ffffff;">
+          <h1 class="title" style="margin:0;text-align:center;font-size:clamp(3rem,6vw,5.2rem);">Decision trees</h1>
         </div>
-        <div class="footer"><div>Region-based reasoning replaces storage-heavy neighbor lookup.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div></div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
 
-    <section class="slide" data-title="What the tree is optimizing" data-section="Greedy induction">
-      <div class="shell">
-        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">The ideal tree is compact and pure</h1>
-          <p class="subtitle">The notes ask for a tree that is maximally compact and whose leaves are pure. Finding the minimum-size consistent tree is NP-hard, so practical learning uses a greedy impurity-reduction strategy instead.</p>
-          <div class="grid3">
-            <div class="card">
-              <h2>Goal 1: compact</h2>
-              <p class="body">Use as few nodes as possible while still separating the labels well.</p>
-              <div class="formula">Smaller tree \(\Rightarrow\) lower storage, simpler test-time path, easier to inspect.</div>
-            </div>
-            <div class="card">
-              <h2>Goal 2: pure leaves</h2>
-              <p class="body">Each leaf should contain mostly one label, ideally exactly one.</p>
-              <div class="formula">Leaf impurity near \(0\) means the leaf prediction is reliable.</div>
-            </div>
-            <div class="card">
-              <h2>Reality: greedy search</h2>
-              <p class="body">Try many candidate feature-threshold splits and choose the one that most reduces impurity right now.</p>
-              <div class="formula">best split = arg min weighted child impurity</div>
-            </div>
-          </div>
-          <div class="grid2" style="margin-top:18px">
-            <div class="card">
-              <h2>Greedy template</h2>
-              <ol class="bullets">
-                <li>At a node, enumerate candidate splits \((f,t)\).</li>
-                <li>Send points left if \(x_f \le t\), right if \(x_f > t\).</li>
-                <li>Compute the weighted impurity of the two children.</li>
-                <li>Pick the split with the smallest weighted impurity.</li>
-                <li>Recurse until leaves are pure or no useful split remains.</li>
-              </ol>
-            </div>
-            <div class="card">
-              <h2>Consistency question</h2>
-              <p class="body">A consistent tree exists exactly when there are no duplicate feature vectors carrying conflicting labels. If identical inputs have different labels, no deterministic tree can classify them both correctly.</p>
-              <div class="callout body" style="margin-top:16px">This is one reason real pipelines often regularize depth or prune rather than forcing a full-depth exact fit.</div>
-            </div>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Compactness, pure leaves, consistency, NP-hardness, and greedy impurity minimization.">Cornell notes - greedy tree learning</a>
-          </div>
-        </div>
-        <div class="footer"><div>Exact optimization is hard; greedy impurity reduction is the practical compromise.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
-      </div>
-    </section>
 
-    <section class="slide" data-title="Impurity functions" data-section="Gini and entropy">
-      <div class="shell">
-        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">How do we measure “purity”?</h1>
-          <p class="subtitle">For a subset \(S\), let \(p_k\) be the fraction of examples in class \(k\). Two common choices are Gini impurity and entropy.</p>
-          <div class="twoeq">
-            <div class="card">
-              <h2>Gini impurity</h2>
-              <div class="formula">\[
-                G(S)=\sum_{k=1}^{c} p_k(1-p_k)
-              \]</div>
-              <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
-            </div>
-            <div class="card">
-              <h2>Entropy</h2>
-              <div class="formula">\[
-                H(S)=-\sum_{k=1}^{c} p_k\log p_k
-              \]</div>
-              <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
-            </div>
-          </div>
-          <div class="grid2" style="margin-top:18px">
-            <div class="card">
-              <h2>Split objective</h2>
-              <div class="formula">\[
-                I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
-              \]</div>
-              <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
-            </div>
-            <div class="card">
-              <h2>Teaching takeaway</h2>
-              <ul class="bullets">
-                <li>Impurity is local: it only sees the child leaves produced by the next split.</li>
-                <li>That makes training efficient, but also explains why trees can be myopic.</li>
-                <li>Gini and entropy often lead to similar trees in practice.</li>
-              </ul>
-            </div>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Definitions of Gini impurity, entropy, and tree impurity.">Cornell notes - impurity functions</a>
-            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Practical reference on decision-tree criteria.">scikit-learn tree guide</a>
-          </div>
-        </div>
-        <div class="footer"><div>Tree learning is driven by local impurity reduction.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
-      </div>
-    </section>
-
-    <section class="slide" data-title="ID3" data-section="Algorithm">
-      <div class="shell">
-        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">ID3 in one slide</h1>
-          <p class="subtitle">The notes present ID3 as a recursive algorithm with simple base cases and a greedy split rule.</p>
-          <div class="grid2">
-            <div class="card">
-              <h2>Base cases</h2>
-              <ul class="bullets">
-                <li>If all examples in \(S\) have the same label, return a leaf with that label.</li>
-                <li>If no distinct attribute values remain to separate the examples, return a leaf with the mode label (or mean for regression).</li>
-              </ul>
-              <div class="callout body" style="margin-top:16px">Notice what is <em>not</em> a base case in the notes: we do not stop just because the next split fails to improve impurity.</div>
-            </div>
-            <div class="card">
-              <h2>Recursive step</h2>
-              <div class="formula">\[
-                S_L=\{(x,y)\in S:x_f\le t\}, \qquad
-                S_R=\{(x,y)\in S:x_f>t\}
-              \]</div>
-              <ol class="bullets">
-                <li>Try candidate features \(f\) and thresholds \(t\).</li>
-                <li>Pick the split minimizing weighted child impurity.</li>
-                <li>Apply ID3 recursively to \(S_L\) and \(S_R\).</li>
-              </ol>
-            </div>
-          </div>
-          <div class="card" style="margin-top:18px">
-            <h2>Why not stop when no immediate impurity improvement happens?</h2>
-            <p class="body">Because some useful structures only emerge after multiple coordinated splits. The XOR pattern is the canonical example: no single first split solves it, but a depth-2 tree does.</p>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="ID3 base cases and recursive split rule.">Cornell notes - ID3</a>
-          </div>
-        </div>
-        <div class="footer"><div>ID3 is recursive greedy search with simple stopping rules.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
-      </div>
-    </section>
 
 
     <section class="slide" data-title="Worked example: beach spring break tree" data-section="Worked example">
@@ -465,6 +229,146 @@
       </div>
     </section>
 
+
+    <section class="slide" data-title="What the tree is optimizing" data-section="Greedy induction">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">The ideal tree is compact and pure</h1>
+          <p class="subtitle">The notes ask for a tree that is maximally compact and whose leaves are pure. Finding the minimum-size consistent tree is NP-hard, so practical learning uses a greedy impurity-reduction strategy instead.</p>
+          <div class="grid3">
+            <div class="card">
+              <h2>Goal 1: compact</h2>
+              <p class="body">Use as few nodes as possible while still separating the labels well.</p>
+              <div class="formula">Smaller tree \(\Rightarrow\) lower storage, simpler test-time path, easier to inspect.</div>
+            </div>
+            <div class="card">
+              <h2>Goal 2: pure leaves</h2>
+              <p class="body">Each leaf should contain mostly one label, ideally exactly one.</p>
+              <div class="formula">Leaf impurity near \(0\) means the leaf prediction is reliable.</div>
+            </div>
+            <div class="card">
+              <h2>Reality: greedy search</h2>
+              <p class="body">Try many candidate feature-threshold splits and choose the one that most reduces impurity right now.</p>
+              <div class="formula">best split = arg min weighted child impurity</div>
+            </div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div class="card">
+              <h2>Greedy template</h2>
+              <ol class="bullets">
+                <li>At a node, enumerate candidate splits \((f,t)\).</li>
+                <li>Send points left if \(x_f \le t\), right if \(x_f > t\).</li>
+                <li>Compute the weighted impurity of the two children.</li>
+                <li>Pick the split with the smallest weighted impurity.</li>
+                <li>Recurse until leaves are pure or no useful split remains.</li>
+              </ol>
+            </div>
+            <div class="card">
+              <h2>Consistency question</h2>
+              <p class="body">A consistent tree exists exactly when there are no duplicate feature vectors carrying conflicting labels. If identical inputs have different labels, no deterministic tree can classify them both correctly.</p>
+              <div class="callout body" style="margin-top:16px">This is one reason real pipelines often regularize depth or prune rather than forcing a full-depth exact fit.</div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Compactness, pure leaves, consistency, NP-hardness, and greedy impurity minimization.">Cornell notes - greedy tree learning</a>
+          </div>
+        </div>
+        <div class="footer"><div>Exact optimization is hard; greedy impurity reduction is the practical compromise.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+
+    <section class="slide" data-title="Impurity functions" data-section="Gini and entropy">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">How do we measure “purity”?</h1>
+          <p class="subtitle">For a subset \(S\), let \(p_k\) be the fraction of examples in class \(k\). Two common choices are Gini impurity and entropy.</p>
+          <div class="twoeq">
+            <div class="card">
+              <h2>Gini impurity</h2>
+              <div class="formula">\[
+                G(S)=\sum_{k=1}^{c} p_k(1-p_k)
+              \]</div>
+              <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
+            </div>
+            <div class="card">
+              <h2>Entropy</h2>
+              <div class="formula">\[
+                H(S)=-\sum_{k=1}^{c} p_k\log p_k
+              \]</div>
+              <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
+            </div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div class="card">
+              <h2>Split objective</h2>
+              <div class="formula">\[
+                I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
+              \]</div>
+              <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
+            </div>
+            <div class="card">
+              <h2>Teaching takeaway</h2>
+              <ul class="bullets">
+                <li>Impurity is local: it only sees the child leaves produced by the next split.</li>
+                <li>That makes training efficient, but also explains why trees can be myopic.</li>
+                <li>Gini and entropy often lead to similar trees in practice.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Definitions of Gini impurity, entropy, and tree impurity.">Cornell notes - impurity functions</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Practical reference on decision-tree criteria.">scikit-learn tree guide</a>
+          </div>
+        </div>
+        <div class="footer"><div>Tree learning is driven by local impurity reduction.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+
+    <section class="slide" data-title="ID3" data-section="Algorithm">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">ID3 in one slide</h1>
+          <p class="subtitle">The notes present ID3 as a recursive algorithm with simple base cases and a greedy split rule.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Base cases</h2>
+              <ul class="bullets">
+                <li>If all examples in \(S\) have the same label, return a leaf with that label.</li>
+                <li>If no distinct attribute values remain to separate the examples, return a leaf with the mode label (or mean for regression).</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">Notice what is <em>not</em> a base case in the notes: we do not stop just because the next split fails to improve impurity.</div>
+            </div>
+            <div class="card">
+              <h2>Recursive step</h2>
+              <div class="formula">\[
+                S_L=\{(x,y)\in S:x_f\le t\}, \qquad
+                S_R=\{(x,y)\in S:x_f>t\}
+              \]</div>
+              <ol class="bullets">
+                <li>Try candidate features \(f\) and thresholds \(t\).</li>
+                <li>Pick the split minimizing weighted child impurity.</li>
+                <li>Apply ID3 recursively to \(S_L\) and \(S_R\).</li>
+              </ol>
+            </div>
+          </div>
+          <div class="card" style="margin-top:18px">
+            <h2>Why not stop when no immediate impurity improvement happens?</h2>
+            <p class="body">Because some useful structures only emerge after multiple coordinated splits. The XOR pattern is the canonical example: no single first split solves it, but a depth-2 tree does.</p>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="ID3 base cases and recursive split rule.">Cornell notes - ID3</a>
+          </div>
+        </div>
+        <div class="footer"><div>ID3 is recursive greedy search with simple stopping rules.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+
     <section class="slide" data-title="XOR and myopia" data-section="Failure mode">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -510,6 +414,7 @@
       </div>
     </section>
 
+
     <section class="slide" data-title="CART for regression" data-section="Regression trees">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -552,6 +457,7 @@
       </div>
     </section>
 
+
     <section class="slide" data-title="Overfitting and model class" data-section="Generalization">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -593,6 +499,7 @@
       </div>
     </section>
 
+
     <section class="slide" data-title="Interactive demo: decision tree classification" data-section="Demo 1">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -608,6 +515,7 @@
       </div>
     </section>
 
+
     <section class="slide" data-title="Interactive demo: CART regression" data-section="Demo 2">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -622,6 +530,7 @@
         <div class="footer"><div>Good live question: why are the predictions piecewise constant?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
+
 
     <section class="slide" data-title="Recap" data-section="Takeaways">
       <div class="shell">
@@ -660,8 +569,7 @@
         <div class="footer"><div>Optional reading stays hidden unless students open References.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
-
-  </div>
+    </div>
 
   <aside class="refs" id="refs">
     <div class="drawer-head"><h3>References</h3><button id="closeRefs">Close</button></div>
@@ -820,7 +728,7 @@
 
     // Step 1: reveal children of root, and show outgoing lines for the next internal node.
     if (step >= 1) {
-      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, '#f1f5f9', '#111827', '#111827'));
       parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(photos2.x + 40, photos2.y + photos2.h, sunburn.x + 88, sunburn.y, 'no'));
       parts.push(edge(photos2.x + photos2.w - 40, photos2.y + photos2.h, yesLeaf2.x + 75, yesLeaf2.y, 'yes'));
@@ -828,7 +736,7 @@
 
     // Step 2: reveal children of the second internal node, and show outgoing lines for sunburn.
     if (step >= 2) {
-      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, '#f1f5f9', '#111827', '#111827'));
       parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(sunburn.x + 35, sunburn.y + sunburn.h, yesLeaf3.x + 75, yesLeaf3.y, 'yes'));
       parts.push(edge(sunburn.x + sunburn.w - 35, sunburn.y + sunburn.h, sand.x + 90, sand.y, 'no'));
@@ -836,7 +744,7 @@
 
     // Step 3: reveal children of sunburn, and show outgoing lines for sand.
     if (step >= 3) {
-      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, '#f1f5f9', '#111827', '#111827'));
       parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#ffffff', '#111827', '#111827'));
       parts.push(edge(sand.x + 40, sand.y + sand.h, yesLeaf4.x + 75, yesLeaf4.y, 'yes'));
       parts.push(edge(sand.x + sand.w - 40, sand.y + sand.h, noLeaf4.x + 75, noLeaf4.y, 'no'));
@@ -844,11 +752,10 @@
 
     // Step 4: reveal final leaves.
     if (step >= 4) {
-      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, '#ffffff', '#111827', '#111827'));
-      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, '#ffffff', '#111827', '#111827'));
+      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, '#f1f5f9', '#111827', '#111827'));
+      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, '#f1f5f9', '#111827', '#111827'));
     }
 
-    parts.push(`<text x="22" y="408" fill="#111827" font-size="17" font-family="system-ui">Repeated feature: “Beach photos posted” is used at the root and again deeper in the tree.</text>`);
     svg.innerHTML = parts.join('');
     nextBtn.textContent = step >= maxStep ? 'Built' : 'Build next split';
     nextBtn.disabled = step >= maxStep;
