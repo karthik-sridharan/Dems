@@ -751,17 +751,16 @@
   if (!svg || !nextBtn || !resetBtn || !stepLabel || !explain) return;
 
   let step = 0;
-  const maxStep = 5;
+  const maxStep = 4;
   const explanations = [
-    'Start with the root question. We first ask whether the number of beach/ocean photos posted is at least 1.',
-    'First split added: if photos posted = 0, we already predict “did not go to a beach.”',
-    'Second split added on the yes-branch: ask again about the same feature, now with a larger threshold: photos posted at least 3?',
-    'Third split added: if photos posted is not at least 3, ask whether the person got sunburned.',
-    'Fourth split added: if not sunburned, ask whether there was sand in the bag or shoes.',
-    'Full tree complete. The same numeric feature was reused twice with thresholds 1 and 3.'
+    'The root node is visible right away, together with its yes/no branches. On the first click, the child nodes attached to those branches appear.',
+    'First click: the root children appear. The left branch is already a leaf, while the right branch leads to a second question about the same numeric feature. Its outgoing yes/no branches are shown immediately.',
+    'Second click: the children of “Beach photos posted ≥ 3?” appear. One branch is already a beach leaf; the other opens the sunburn question, with its own yes/no branches shown.',
+    'Third click: the children of “Got sunburned?” appear. One branch is a beach leaf, and the other opens the final sand question with its yes/no branches.',
+    'Fourth click: the final two leaves appear. The full tree is now complete.'
   ];
 
-  function edge(x1, y1, x2, y2, label='') {
+  function edge(x1, y1, x2, y2, label = '') {
     const mx = (x1 + x2) / 2;
     const my = (y1 + y2) / 2;
     return `
@@ -770,7 +769,7 @@
     `;
   }
 
-  function box(x, y, w, h, lines, fill, stroke='rgba(255,255,255,.18)', txt='#eef3ff') {
+  function box(x, y, w, h, lines, fill, stroke = 'rgba(255,255,255,.18)', txt = '#eef3ff') {
     const lineEls = lines.map((line, i) =>
       `<text x="${x + w / 2}" y="${y + 26 + i * 19}" fill="${txt}" font-size="16" font-family="system-ui" text-anchor="middle">${line}</text>`
     ).join('');
@@ -780,16 +779,6 @@
   function render() {
     stepLabel.textContent = `Step ${step} of ${maxStep}`;
     explain.textContent = explanations[step];
-
-    const parts = [];
-    parts.push(`
-      <defs>
-        <linearGradient id="sbGrad" x1="0" x2="1">
-          <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
-        </linearGradient>
-      </defs>
-      <rect width="620" height="500" rx="20" fill="#0c1328"/>
-    `);
 
     const root = {x:205, y:26, w:210, h:64, lines:['Beach photos', 'posted ≥ 1?']};
     const leftLeaf1 = {x:58, y:136, w:150, h:58, lines:['Did not go']};
@@ -801,28 +790,47 @@
     const yesLeaf4 = {x:270, y:430, w:150, h:58, lines:['Went to beach']};
     const noLeaf4 = {x:455, y:430, w:150, h:58, lines:['Did not go']};
 
+    const parts = [];
+    parts.push(`
+      <defs>
+        <linearGradient id="sbGrad" x1="0" x2="1">
+          <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
+        </linearGradient>
+      </defs>
+      <rect width="620" height="500" rx="20" fill="#0c1328"/>
+    `);
+
+    // Root is always visible, together with its outgoing yes/no lines.
     parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#141e3f'));
+    parts.push(edge(root.x + 40, root.y + root.h, leftLeaf1.x + 75, leftLeaf1.y, 'no'));
+    parts.push(edge(root.x + root.w - 40, root.y + root.h, photos2.x + 105, photos2.y, 'yes'));
+
+    // Step 1: reveal children of root, and show outgoing lines for the next internal node.
     if (step >= 1) {
-      parts.push(edge(root.x + 40, root.y + root.h, leftLeaf1.x + 75, leftLeaf1.y, 'no'));
-      parts.push(edge(root.x + root.w - 40, root.y + root.h, photos2.x + 105, photos2.y, 'yes'));
       parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
       parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#141e3f'));
-    }
-    if (step >= 2) {
       parts.push(edge(photos2.x + 40, photos2.y + photos2.h, sunburn.x + 88, sunburn.y, 'no'));
       parts.push(edge(photos2.x + photos2.w - 40, photos2.y + photos2.h, yesLeaf2.x + 75, yesLeaf2.y, 'yes'));
+    }
+
+    // Step 2: reveal children of the second internal node, and show outgoing lines for sunburn.
+    if (step >= 2) {
       parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
       parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#141e3f'));
-    }
-    if (step >= 3) {
       parts.push(edge(sunburn.x + 35, sunburn.y + sunburn.h, yesLeaf3.x + 75, yesLeaf3.y, 'yes'));
       parts.push(edge(sunburn.x + sunburn.w - 35, sunburn.y + sunburn.h, sand.x + 90, sand.y, 'no'));
+    }
+
+    // Step 3: reveal children of sunburn, and show outgoing lines for sand.
+    if (step >= 3) {
       parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
       parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#141e3f'));
-    }
-    if (step >= 4) {
       parts.push(edge(sand.x + 40, sand.y + sand.h, yesLeaf4.x + 75, yesLeaf4.y, 'yes'));
       parts.push(edge(sand.x + sand.w - 40, sand.y + sand.h, noLeaf4.x + 75, noLeaf4.y, 'no'));
+    }
+
+    // Step 4: reveal final leaves.
+    if (step >= 4) {
       parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
       parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
     }
@@ -848,5 +856,6 @@
 })();
 </script>
 </body>
+
 
 </html>
