@@ -123,6 +123,16 @@
     .cell{background:rgba(255,255,255,.04);border:1px solid var(--border);padding:12px;border-radius:12px}
     .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);font-size:.9rem;color:#e6edff}
     .slide-references{display:none}
+    .mini-table{width:100%;border-collapse:separate;border-spacing:0;font-size:0.95rem;line-height:1.3;overflow:hidden;border-radius:16px;border:1px solid var(--border)}
+    .mini-table th,.mini-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}
+    .mini-table th:last-child,.mini-table td:last-child{border-right:none}
+    .mini-table tr:last-child td{border-bottom:none}
+    .mini-table th{background:rgba(255,255,255,.08);color:#eef3ff;font-weight:700}
+    .mini-table td{background:rgba(255,255,255,.035);color:#eef3ff}
+    .tree-demo-wrap{display:grid;gap:14px}
+    .tree-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .tree-status{padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:.96rem}
+    .tree-svg-box{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:18px;padding:10px}
     @media (max-width: 980px){
       .grid2,.grid3,.hero,.statband,.twoeq,.minidiagram,.row{grid-template-columns:1fr}
       .slide{padding:10px}
@@ -381,6 +391,64 @@
           </div>
         </div>
         <div class="footer"><div>ID3 is recursive greedy search with simple stopping rules.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+
+    <section class="slide" data-title="Worked example: beach spring break tree" data-section="Worked example">
+      <div class="shell">
+        <div class="topbar"><div class="meta"><span class="pill">Worked example</span><span class="pill">Feature reused twice</span></div><div class="tools"><button class="open-refs hidden">References</button><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Spring break detective: did they go to a beach?</h1>
+          <p class="subtitle">This example uses one non-binary feature — <strong>beach/ocean photos posted</strong> — and the tree asks about that same feature twice on one path with different thresholds.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Small sample dataset</h2>
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>Beach/ocean photos posted</th>
+                    <th>Got sunburned?</th>
+                    <th>Sand in bag/shoes?</th>
+                    <th>Went to a beach?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>0</td><td>no</td><td>no</td><td>no</td></tr>
+                  <tr><td>0</td><td>yes</td><td>no</td><td>no</td></tr>
+                  <tr><td>1</td><td>no</td><td>no</td><td>no</td></tr>
+                  <tr><td>1</td><td>no</td><td>yes</td><td>yes</td></tr>
+                  <tr><td>2</td><td>yes</td><td>no</td><td>yes</td></tr>
+                  <tr><td>2</td><td>no</td><td>yes</td><td>yes</td></tr>
+                  <tr><td>3</td><td>no</td><td>no</td><td>yes</td></tr>
+                  <tr><td>4</td><td>yes</td><td>yes</td><td>yes</td></tr>
+                </tbody>
+              </table>
+              <div class="callout body" style="margin-top:16px">
+                Notice that the numeric feature <strong>beach/ocean photos posted</strong> is not binary. The tree can threshold it at one value near the root and again at a different value deeper down.
+              </div>
+            </div>
+            <div class="card tree-demo-wrap">
+              <div>
+                <h2>Build the tree stage by stage</h2>
+                <p class="body">Press the button to add the next split.</p>
+              </div>
+              <div class="tree-controls">
+                <button id="sbTreeNextBtn">Build next split</button>
+                <button id="sbTreeResetBtn">Reset</button>
+                <span id="sbTreeStepLabel" class="badge">Step 0 of 5</span>
+              </div>
+              <div id="sbTreeExplain" class="tree-status">Start with the root question. We first ask whether the number of beach/ocean photos posted is at least 1.</div>
+              <div class="tree-svg-box">
+                <svg id="sbTreeSvg" viewBox="0 0 620 500" class="tree-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Beach spring break decision tree"></svg>
+              </div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Decision-tree lecture note that motivates recursive splitting and threshold reuse.">Cornell notes - decision trees</a>
+          </div>
+        </div>
+        <div class="footer"><div>Nice teaching question: why is “photos posted” allowed to appear twice on the same root-to-leaf path?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
 
@@ -672,5 +740,113 @@
   buildToc();
   showSlide(0);
 </script>
+
+<script>
+(() => {
+  const svg = document.getElementById('sbTreeSvg');
+  const nextBtn = document.getElementById('sbTreeNextBtn');
+  const resetBtn = document.getElementById('sbTreeResetBtn');
+  const stepLabel = document.getElementById('sbTreeStepLabel');
+  const explain = document.getElementById('sbTreeExplain');
+  if (!svg || !nextBtn || !resetBtn || !stepLabel || !explain) return;
+
+  let step = 0;
+  const maxStep = 5;
+  const explanations = [
+    'Start with the root question. We first ask whether the number of beach/ocean photos posted is at least 1.',
+    'First split added: if photos posted = 0, we already predict “did not go to a beach.”',
+    'Second split added on the yes-branch: ask again about the same feature, now with a larger threshold: photos posted at least 3?',
+    'Third split added: if photos posted is not at least 3, ask whether the person got sunburned.',
+    'Fourth split added: if not sunburned, ask whether there was sand in the bag or shoes.',
+    'Full tree complete. The same numeric feature was reused twice with thresholds 1 and 3.'
+  ];
+
+  function edge(x1, y1, x2, y2, label='') {
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="url(#sbGrad)" stroke-width="4" />
+      ${label ? `<text x="${mx}" y="${my - 8}" fill="#d7e1ff" font-size="16" font-family="system-ui" text-anchor="middle">${label}</text>` : ''}
+    `;
+  }
+
+  function box(x, y, w, h, lines, fill, stroke='rgba(255,255,255,.18)', txt='#eef3ff') {
+    const lineEls = lines.map((line, i) =>
+      `<text x="${x + w / 2}" y="${y + 26 + i * 19}" fill="${txt}" font-size="16" font-family="system-ui" text-anchor="middle">${line}</text>`
+    ).join('');
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="${fill}" stroke="${stroke}"/>${lineEls}`;
+  }
+
+  function render() {
+    stepLabel.textContent = `Step ${step} of ${maxStep}`;
+    explain.textContent = explanations[step];
+
+    const parts = [];
+    parts.push(`
+      <defs>
+        <linearGradient id="sbGrad" x1="0" x2="1">
+          <stop offset="0%" stop-color="#7da8ff"/><stop offset="100%" stop-color="#98ffd6"/>
+        </linearGradient>
+      </defs>
+      <rect width="620" height="500" rx="20" fill="#0c1328"/>
+    `);
+
+    const root = {x:205, y:26, w:210, h:64, lines:['Beach photos', 'posted ≥ 1?']};
+    const leftLeaf1 = {x:58, y:136, w:150, h:58, lines:['Did not go']};
+    const photos2 = {x:330, y:136, w:210, h:64, lines:['Beach photos', 'posted ≥ 3?']};
+    const yesLeaf2 = {x:400, y:245, w:150, h:58, lines:['Went to beach']};
+    const sunburn = {x:230, y:245, w:175, h:64, lines:['Got', 'sunburned?']};
+    const yesLeaf3 = {x:125, y:344, w:150, h:58, lines:['Went to beach']};
+    const sand = {x:330, y:344, w:180, h:64, lines:['Sand in bag', 'or shoes?']};
+    const yesLeaf4 = {x:270, y:430, w:150, h:58, lines:['Went to beach']};
+    const noLeaf4 = {x:455, y:430, w:150, h:58, lines:['Did not go']};
+
+    parts.push(box(root.x, root.y, root.w, root.h, root.lines, '#141e3f'));
+    if (step >= 1) {
+      parts.push(edge(root.x + 40, root.y + root.h, leftLeaf1.x + 75, leftLeaf1.y, 'no'));
+      parts.push(edge(root.x + root.w - 40, root.y + root.h, photos2.x + 105, photos2.y, 'yes'));
+      parts.push(box(leftLeaf1.x, leftLeaf1.y, leftLeaf1.w, leftLeaf1.h, leftLeaf1.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
+      parts.push(box(photos2.x, photos2.y, photos2.w, photos2.h, photos2.lines, '#141e3f'));
+    }
+    if (step >= 2) {
+      parts.push(edge(photos2.x + 40, photos2.y + photos2.h, sunburn.x + 88, sunburn.y, 'no'));
+      parts.push(edge(photos2.x + photos2.w - 40, photos2.y + photos2.h, yesLeaf2.x + 75, yesLeaf2.y, 'yes'));
+      parts.push(box(yesLeaf2.x, yesLeaf2.y, yesLeaf2.w, yesLeaf2.h, yesLeaf2.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
+      parts.push(box(sunburn.x, sunburn.y, sunburn.w, sunburn.h, sunburn.lines, '#141e3f'));
+    }
+    if (step >= 3) {
+      parts.push(edge(sunburn.x + 35, sunburn.y + sunburn.h, yesLeaf3.x + 75, yesLeaf3.y, 'yes'));
+      parts.push(edge(sunburn.x + sunburn.w - 35, sunburn.y + sunburn.h, sand.x + 90, sand.y, 'no'));
+      parts.push(box(yesLeaf3.x, yesLeaf3.y, yesLeaf3.w, yesLeaf3.h, yesLeaf3.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
+      parts.push(box(sand.x, sand.y, sand.w, sand.h, sand.lines, '#141e3f'));
+    }
+    if (step >= 4) {
+      parts.push(edge(sand.x + 40, sand.y + sand.h, yesLeaf4.x + 75, yesLeaf4.y, 'yes'));
+      parts.push(edge(sand.x + sand.w - 40, sand.y + sand.h, noLeaf4.x + 75, noLeaf4.y, 'no'));
+      parts.push(box(yesLeaf4.x, yesLeaf4.y, yesLeaf4.w, yesLeaf4.h, yesLeaf4.lines, 'rgba(77,127,255,.20)', 'rgba(77,127,255,.55)'));
+      parts.push(box(noLeaf4.x, noLeaf4.y, noLeaf4.w, noLeaf4.h, noLeaf4.lines, 'rgba(217,92,92,.23)', 'rgba(217,92,92,.55)'));
+    }
+
+    parts.push(`<text x="22" y="408" fill="#b9c5e8" font-size="17" font-family="system-ui">Repeated feature: “Beach photos posted” is used at the root and again deeper in the tree.</text>`);
+    svg.innerHTML = parts.join('');
+    nextBtn.textContent = step >= maxStep ? 'Built' : 'Build next split';
+    nextBtn.disabled = step >= maxStep;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (step < maxStep) step += 1;
+    render();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    step = 0;
+    nextBtn.disabled = false;
+    render();
+  });
+
+  render();
+})();
+</script>
 </body>
+
 </html>
