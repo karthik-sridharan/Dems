@@ -375,13 +375,7 @@
            <div class="codebox">
 <pre>ID3(S):
 
-  Input:
-    S = training set of labeled examples
-
-  If all examples in S have the same label:
-      return a leaf with that label
-
-  If no valid split is available:
+  If I(S) is small or can't split anymore:
       return a leaf with the majority label in S
 
   For each candidate split (f, t):
