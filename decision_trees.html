@@ -240,7 +240,7 @@
               </ul>
           </div>
             <div class="card">
-              <h2>Consistency question</h2>
+              <h2>Consistency question: Can we always find a perfectly separating Decision tree?</h2>
               <p class="body">A consistent tree exists exactly when there are no duplicate feature vectors carrying conflicting labels. If identical inputs have different labels, no deterministic tree can classify them both correctly.</p>
             </div>
 
@@ -256,6 +256,54 @@
 
 
 
+
+    <section class="slide" data-title="Impurity functions" data-section="What is it?">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">How do we measure “purity”?</h1>
+          <p class="subtitle">For a subset \(S\), let \(p_k\) be the fraction of examples in class \(k\). Two common choices are Gini impurity and entropy.</p>
+          <div class="twoeq">
+            <div class="card">
+              <h2>Gini impurity</h2>
+              <div class="formula">\[
+                G(S)=\sum_{k=1}^{c} p_k(1-p_k)
+              \]</div>
+              <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
+            </div>
+            <div class="card">
+              <h2>Entropy</h2>
+              <div class="formula">\[
+                H(S)=-\sum_{k=1}^{c} p_k\log p_k
+              \]</div>
+              <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
+            </div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div class="card">
+              <h2>Split objective</h2>
+              <div class="formula">\[
+                I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
+              \]</div>
+              <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
+            </div>
+            <div class="card">
+              <h2>Teaching takeaway</h2>
+              <ul class="bullets">
+                <li>Impurity is local: it only sees the child leaves produced by the next split.</li>
+                <li>That makes training efficient, but also explains why trees can be myopic.</li>
+                <li>Gini and entropy often lead to similar trees in practice.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Definitions of Gini impurity, entropy, and tree impurity.">Cornell notes - impurity functions</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Practical reference on decision-tree criteria.">scikit-learn tree guide</a>
+          </div>
+        </div>
+        <div class="footer"><div>Tree learning is driven by local impurity reduction.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
 
     <section class="slide" data-title="Impurity functions" data-section="Gini and entropy">
       <div class="shell">
