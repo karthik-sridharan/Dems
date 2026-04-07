@@ -381,15 +381,11 @@
   For each candidate split (f, t):
       S_L = { (x, y) in S : x_f ≤ t }
       S_R = { (x, y) in S : x_f > t }
+      Compute I_T(S; f, t) = (|S_L| / |S|) I(S_L) + (|S_R| / |S|) I(S_R)
 
-      Compute
-        I_T(S; f, t) = (|S_L| / |S|) I(S_L) + (|S_R| / |S|) I(S_R)
+  Choose the split (f*, t*) with the smallest I_T(S; f*, t*)
 
-  Choose the split (f*, t*) with the smallest weighted impurity
-
-  Create an internal node with test:
-      x_f* ≤ t* ?
-
+  Create an internal node with test:   x_f* ≤ t* ?
   Left child  = ID3(S_L)
   Right child = ID3(S_R)
 
