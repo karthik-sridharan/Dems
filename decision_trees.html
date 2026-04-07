@@ -365,50 +365,22 @@
     </section>
 
 
-    <section class="slide" data-title="XOR and myopia" data-section="Failure mode">
+    <section class="slide" data-title="Interactive demo: ID3 decision boundary" data-section="Demo 2">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">XOR exposes the tree’s myopia</h1>
-          <p class="subtitle">A depth-2 tree can represent XOR perfectly, but the first split does not necessarily reduce impurity. Greedy local optimization can therefore struggle.</p>
-          <div class="grid2">
-            <div class="card">
-              <svg class="xor-svg" viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg">
-                <rect width="520" height="420" rx="22" fill="#0c1328"/>
-                <text x="40" y="36" fill="#eef3ff" font-size="24" font-family="system-ui">XOR data</text>
-                <rect x="42" y="54" width="436" height="308" rx="16" fill="#111a39" stroke="rgba(255,255,255,.16)"/>
-                <line x1="260" y1="54" x2="260" y2="362" stroke="#6f7c9c" stroke-width="2"/>
-                <line x1="42" y1="208" x2="478" y2="208" stroke="#6f7c9c" stroke-width="2"/>
-                <circle cx="120" cy="130" r="13" fill="#d95c5c"/><circle cx="392" cy="286" r="13" fill="#d95c5c"/>
-                <circle cx="390" cy="128" r="13" fill="#4d7fff"/><circle cx="128" cy="286" r="13" fill="#4d7fff"/>
-                <line x1="260" y1="64" x2="260" y2="352" stroke="#ffd36e" stroke-width="4" stroke-dasharray="10 9"/>
-                <text x="278" y="105" fill="#ffd36e" font-size="18" font-family="system-ui">1st split:</text>
-                <text x="278" y="129" fill="#ffd36e" font-size="18" font-family="system-ui">still mixed</text>
-                <line x1="52" y1="208" x2="250" y2="208" stroke="#98ffd6" stroke-width="4" stroke-dasharray="8 7"/>
-                <line x1="270" y1="208" x2="468" y2="208" stroke="#98ffd6" stroke-width="4" stroke-dasharray="8 7"/>
-                <text x="62" y="388" fill="#b9c5e8" font-size="20" font-family="system-ui">Needs a coordinated second split in each branch.</text>
-              </svg>
-            </div>
-            <div class="card">
-              <h2>Teaching interpretation</h2>
-              <ul class="bullets">
-                <li>Greedy split selection only looks one step ahead.</li>
-                <li>XOR needs a combination of two splits before purity appears.</li>
-                <li>So “no immediate gain” does not imply “no useful future subtree.”</li>
-              </ul>
-              <div class="callout body" style="margin-top:16px">
-                Trees are powerful, but their standard training rule is myopic. Ensembles often help overcome this weakness.
-              </div>
-              <div class="formula" style="margin-top:18px">XOR = “different quadrants, different labels”<br/>Depth 1: still mixed<br/>Depth 2: separable</div>
-            </div>
-          </div>
+          <h1 class="title">Interactive demo: run ID3 automatically</h1>
+          <p class="subtitle">Choose an impurity criterion, then click a button to run the greedy ID3-style procedure and display its decision boundary on the dataset.</p>
+          <iframe class="demo-frame" src="id3_boundary_demo.html" title="ID3 decision boundary demo"></iframe>
           <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="XOR example and myopia remark.">Cornell notes - XOR example</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="General decision-tree reference, including split criteria and tree structure.">ID3 reference</a>
           </div>
         </div>
-        <div class="footer"><div>Local impurity reduction is efficient, but not globally farsighted.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div>Good live question: how does switching Gini to entropy change the first split?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
+
+
 
 
     <section class="slide" data-title="CART for regression" data-section="Regression trees">
@@ -471,24 +443,31 @@
     </section>
 
     
-
-
-  
-
-    <section class="slide" data-title="Interactive demo: ID3 decision boundary" data-section="Demo 2">
+<section class="slide" data-title="Overfitting" data-section="Takeaways">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">Interactive demo: run ID3 automatically</h1>
-          <p class="subtitle">Choose an impurity criterion, then click a button to run the greedy ID3-style procedure and display its decision boundary on the dataset.</p>
-          <iframe class="demo-frame" src="id3_boundary_demo.html" title="ID3 decision boundary demo"></iframe>
+          <h1 class="title">Overfitting With Decision Trees</h1>
+            <div class="card">
+              <ul class="bullets">
+                <li><p style="font-size: 20px;"> A decision tree is a recursive partition of feature space. </p></li>
+                <li><p style="font-size: 20px;"> Training is greedy local impurity reduction.</p></li>
+                <li><p style="font-size: 20px;"> XOR shows why greediness can be shortsighted.</p></li>
+                <li><p style="font-size: 20px;">CART extends the same template to regression with squared loss.</p></li>
+              </ul>
+          </div>
           <div class="slide-references">
-            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="General decision-tree reference, including split criteria and tree structure.">ID3 reference</a>
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Main lecture-note reference.">Cornell notes - full lecture</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Tree implementation details and practical usage notes.">scikit-learn trees</a>
           </div>
         </div>
-        <div class="footer"><div>Good live question: how does switching Gini to entropy change the first split?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div>Optional reading stays hidden unless students open References.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
+    </div>
+
+
+  
 
 
 
