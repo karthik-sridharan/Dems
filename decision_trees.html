@@ -201,9 +201,6 @@
                   <tr><td>4</td><td>yes</td><td>yes</td><td>yes</td></tr>
                 </tbody>
               </table>
-              <div class="callout body" style="margin-top:16px">
-                Notice that the numeric feature <strong>beach/ocean photos posted</strong> is not binary. The tree can threshold it at one value near the root and again at a different value deeper down.
-              </div>
             </div>
             <div class="card tree-demo-wrap">
               <div>
@@ -706,11 +703,11 @@
   let step = 0;
   const maxStep = 4;
   const explanations = [
-    'The root node is visible right away, together with its yes/no branches. On the first click, the child nodes attached to those branches appear.',
-    'First click: the root children appear. The left branch is already a leaf, while the right branch leads to a second question about the same numeric feature. Its outgoing yes/no branches are shown immediately.',
-    'Second click: the children of “Beach photos posted ≥ 3?” appear. One branch is already a beach leaf; the other opens the sunburn question, with its own yes/no branches shown.',
-    'Third click: the children of “Got sunburned?” appear. One branch is a beach leaf, and the other opens the final sand question with its yes/no branches.',
-    'Fourth click: the final two leaves appear. The full tree is now complete.'
+    '',
+    '',
+    '',
+    '',
+    ''
   ];
 
   function edge(x1, y1, x2, y2, label = '') {
