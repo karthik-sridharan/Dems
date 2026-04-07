@@ -260,7 +260,7 @@
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">How do we measure “purity”?</h1>
+          <h1 class="title">Impurity Function of a Dataset</h1>
             <div class="card">
               
               <h2>Impurity Function</h2>
@@ -294,27 +294,34 @@
           <p class="subtitle">For a subset \(S\), let \(p_k\) be the fraction of examples in class \(k\). That is, \(p_k = \frac{\left|\left\{(x,y) \in S: y = k\right\}\right|}{|S|} \)</p>
           <div class="twoeq">
             <div class="card">
-              <h2>Gini impurity</h2>
+              <h2>Max impurity</h2>
               <div class="formula">\[
-                G(S)=\sum_{k=1}^{c} p_k(1-p_k)
+                I_M(S)= 1 - \max_{k} p_k
               \]</div>
               <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
             </div>
             <div class="card">
               <h2>Entropy</h2>
               <div class="formula">\[
-                H(S)=-\sum_{k=1}^{c} p_k\log p_k
+                I_H(S)=-\sum_{k=1}^{c} p_k\log p_k
               \]</div>
               <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
             </div>
           </div>
-          <div class="grid2" style="margin-top:18px">
+          <div class="twoeq">
             <div class="card">
-              <h2>Split objective</h2>
+              <h2>Gini impurity</h2>
               <div class="formula">\[
-                I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
+                I_G(S)=\sum_{k=1}^{c} p_k(1-p_k)
               \]</div>
-              <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
+              <p class="body">Binary case intuition: maximum impurity occurs around a 50/50 class mix, and impurity drops to \(0\) at a pure leaf.</p>
+            </div>
+            <div class="card">
+              <h2>Variance</h2>
+              <div class="formula">\[
+                I_V(S)= \mathrm{Var}(y_1,\ldots, y_{|S|})
+              \]</div>
+              <p class="body">Entropy is another way to penalize uncertainty. Pure leaves have zero entropy; balanced leaves have larger entropy.</p>
             </div>
           </div>
           <div class="slide-references">
