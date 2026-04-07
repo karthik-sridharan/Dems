@@ -226,54 +226,36 @@
       </div>
     </section>
 
-
-    <section class="slide" data-title="What the tree is optimizing" data-section="Greedy induction">
+        <section class="slide" data-title="Recap" data-section="Takeaways">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
-          <h1 class="title">The ideal tree is compact and pure</h1>
-          <p class="subtitle">The notes ask for a tree that is maximally compact and whose leaves are pure. Finding the minimum-size consistent tree is NP-hard, so practical learning uses a greedy impurity-reduction strategy instead.</p>
-          <div class="grid3">
+          <h1 class="title">Decision Tree: What we want</h1>
             <div class="card">
-              <h2>Goal 1: compact</h2>
-              <p class="body">Use as few nodes as possible while still separating the labels well.</p>
-              <div class="formula">Smaller tree \(\Rightarrow\) lower storage, simpler test-time path, easier to inspect.</div>
-            </div>
-            <div class="card">
-              <h2>Goal 2: pure leaves</h2>
-              <p class="body">Each leaf should contain mostly one label, ideally exactly one.</p>
-              <div class="formula">Leaf impurity near \(0\) means the leaf prediction is reliable.</div>
-            </div>
-            <div class="card">
-              <h2>Reality: greedy search</h2>
-              <p class="body">Try many candidate feature-threshold splits and choose the one that most reduces impurity right now.</p>
-              <div class="formula">best split = arg min weighted child impurity</div>
-            </div>
+              <ul class="bullets">
+                <li><p style="font-size: 20px;"> Goal 1: Compact, use as few nodes as possible while still separating classes </p></li>
+                <li><p style="font-size: 20px;"> Goal 2: Pure Leaves, leaf inpurity near 0 means predictions are more reliable</p></li>
+                <li><p style="font-size: 20px;"> Unfortunately finding smallest tree that classifies best is NP hard!</p></li>
+                <li><p style="font-size: 20px;">Use greedy approach: On each iteration pick feature and split that that most reduces impurity</p></li>
+              </ul>
           </div>
-          <div class="grid2" style="margin-top:18px">
-            <div class="card">
-              <h2>Greedy template</h2>
-              <ol class="bullets">
-                <li>At a node, enumerate candidate splits \((f,t)\).</li>
-                <li>Send points left if \(x_f \le t\), right if \(x_f > t\).</li>
-                <li>Compute the weighted impurity of the two children.</li>
-                <li>Pick the split with the smallest weighted impurity.</li>
-                <li>Recurse until leaves are pure or no useful split remains.</li>
-              </ol>
-            </div>
             <div class="card">
               <h2>Consistency question</h2>
               <p class="body">A consistent tree exists exactly when there are no duplicate feature vectors carrying conflicting labels. If identical inputs have different labels, no deterministic tree can classify them both correctly.</p>
               <div class="callout body" style="margin-top:16px">This is one reason real pipelines often regularize depth or prune rather than forcing a full-depth exact fit.</div>
             </div>
-          </div>
+
           <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Compactness, pure leaves, consistency, NP-hardness, and greedy impurity minimization.">Cornell notes - greedy tree learning</a>
+            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Main lecture-note reference.">Cornell notes - full lecture</a>
+            <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Tree implementation details and practical usage notes.">scikit-learn trees</a>
           </div>
         </div>
-        <div class="footer"><div>Exact optimization is hard; greedy impurity reduction is the practical compromise.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+        <div class="footer"><div>Optional reading stays hidden unless students open References.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
       </div>
     </section>
+
+
+
 
 
     <section class="slide" data-title="Impurity functions" data-section="Gini and entropy">
