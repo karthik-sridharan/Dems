@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -111,6 +112,22 @@
       position:absolute;top:18px;bottom:18px;width:min(420px, calc(100vw - 30px));display:none;
       z-index:25;overflow:auto;background:#ffffff;border:1px solid rgba(23,32,51,.10);
       border-radius:18px;box-shadow:var(--shadow);padding:16px
+    }
+    .codebox {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+      padding: 28px 32px;
+      overflow: auto;
+    }
+    pre {
+      margin: 0;
+      font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+      color: #111827;
     }
     .refs{right:18px} .toc{left:18px}
     .refs.open,.toc.open{display:block}
@@ -355,29 +372,36 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">ID3 Algorithm</h1>
-          <p class="subtitle">The notes present ID3 as a recursive algorithm with simple base cases and a greedy split rule.</p>
-          <div class="grid2">
-            <div class="card">
-              <h2>Base cases</h2>
-              <ul class="bullets">
-                <li>If all examples in \(S\) have the same label, return a leaf with that label.</li>
-                <li>If no distinct attribute values remain to separate the examples, return a leaf with the mode label (or mean for regression).</li>
-              </ul>
-              <div class="callout body" style="margin-top:16px">Notice what is <em>not</em> a base case in the notes: we do not stop just because the next split fails to improve impurity.</div>
-            </div>
-            <div class="card">
-              <h2>Recursive step</h2>
-              <div class="formula">\[
-                S_L=\{(x,y)\in S:x_f\le t\}, \qquad
-                S_R=\{(x,y)\in S:x_f>t\}
-              \]</div>
-              <ol class="bullets">
-                <li>Try candidate features \(f\) and thresholds \(t\).</li>
-                <li>Pick the split minimizing weighted child impurity.</li>
-                <li>Apply ID3 recursively to \(S_L\) and \(S_R\).</li>
-              </ol>
-            </div>
-          </div>
+           <div class="codebox">
+<pre>ID3(S):
+
+  Input:
+    S = training set of labeled examples
+
+  If all examples in S have the same label:
+      return a leaf with that label
+
+  If no valid split is available:
+      return a leaf with the majority label in S
+
+  For each candidate split (f, t):
+      S_L = { (x, y) in S : x_f ≤ t }
+      S_R = { (x, y) in S : x_f > t }
+
+      Compute
+        I_T(S; f, t) = (|S_L| / |S|) I(S_L) + (|S_R| / |S|) I(S_R)
+
+  Choose the split (f*, t*) with the smallest weighted impurity
+
+  Create an internal node with test:
+      x_f* ≤ t* ?
+
+  Left child  = ID3(S_L)
+  Right child = ID3(S_R)
+
+  return the resulting tree</pre>
+    </div>
+
           <div class="card" style="margin-top:18px">
             <h2>Why not stop when no immediate impurity improvement happens?</h2>
             <p class="body">Because some useful structures only emerge after multiple coordinated splits. The XOR pattern is the canonical example: no single first split solves it, but a depth-2 tree does.</p>
