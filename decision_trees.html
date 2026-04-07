@@ -325,6 +325,23 @@
     </section>
 
 
+      <section class="slide" data-title="Interactive demo: manual split builder" data-section="Demo 1">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: build the tree by hand</h1>
+          <p class="subtitle">Propose a split by clicking inside the active region, inspect the weighted average impurity, and then fix the split. Each region displays its current majority-vote class label.</p>
+          <iframe class="demo-frame" src="manual_split_builder_demo.html" title="Manual split builder demo"></iframe>
+          <div class="slide-references">
+            <a href="https://en.wikipedia.org/wiki/Decision_tree_learning" data-desc="General background reading on decision-tree learning.">Decision tree learning reference</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: does the locally best first split look globally sensible?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+
+
     <section class="slide" data-title="ID3" data-section="Algorithm">
       <div class="shell">
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
@@ -471,63 +488,10 @@
       </div>
     </section>
 
-    <section class="slide" data-title="Overfitting and model class" data-section="Generalization">
-      <div class="shell">
-        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">Depth helps fit the training set - and can overfit it</h1>
-          <p class="subtitle">The notes point out that deeper ID3 trees tend to overfit. They also place decision trees on the parametric/non-parametric spectrum depending on whether depth is fixed.</p>
-          <div class="grid2">
-            <div class="card">
-              <h2>Overfitting intuition</h2>
-              <ul class="bullets">
-                <li>As depth increases, leaves become smaller and can memorize idiosyncratic noise.</li>
-                <li>Training error usually falls monotonically.</li>
-                <li>Test error may first fall and then rise.</li>
-              </ul>
-              <div class="callout body" style="margin-top:16px">This motivates validation, pruning, minimum-leaf-size constraints, and ensembles.</div>
-            </div>
-            <div class="card">
-              <h2>Parametric vs non-parametric</h2>
-              <div class="tableish">
-                <div class="row">
-                  <div class="cell"><strong>Model family</strong></div>
-                  <div class="cell"><strong>If depth fixed</strong></div>
-                  <div class="cell"><strong>If grown with data</strong></div>
-                </div>
-                <div class="row">
-                  <div class="cell">Decision tree</div>
-                  <div class="cell">Acts parametric-ish<br/><span class="note">size has a known upper bound</span></div>
-                  <div class="cell">Non-parametric<br/><span class="note">size can grow with dataset complexity</span></div>
-                </div>
-              </div>
-              <p class="body" style="margin-top:14px">This framing connects trees to the broader model-capacity story from earlier parts of the course.</p>
-            </div>
-          </div>
-          <div class="slide-references">
-            <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Overfitting with depth and parametric/non-parametric discussion.">Cornell notes - depth and model class</a>
-          </div>
-        </div>
-        <div class="footer"><div>Controlling depth is one of the main levers for tree generalization.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
-      </div>
-    </section>
+    
 
 
-    <section class="slide" data-title="Interactive demo: manual split builder" data-section="Demo 1">
-      <div class="shell">
-        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
-        <div class="content">
-          <h1 class="title">Interactive demo: build the tree by hand</h1>
-          <p class="subtitle">Use this demo live: choose the impurity, propose a split by clicking inside the active region, inspect the weighted average impurity, and then fix the split. Each region displays its current majority-vote class label.</p>
-          <iframe class="demo-frame" src="manual_split_builder_demo.html" title="Manual split builder demo"></iframe>
-          <div class="slide-references">
-            <a href="https://en.wikipedia.org/wiki/Decision_tree_learning" data-desc="General background reading on decision-tree learning.">Decision tree learning reference</a>
-          </div>
-        </div>
-        <div class="footer"><div>Good live question: does the locally best first split look globally sensible?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
-      </div>
-    </section>
-
+  
 
     <section class="slide" data-title="Interactive demo: ID3 decision boundary" data-section="Demo 2">
       <div class="shell">
