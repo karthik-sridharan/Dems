@@ -267,18 +267,16 @@
               <div class="formula">\[
                 S = \{ (x_1,y_1),\ldots,(x_n,y_n)\}, ~~ \forall i, y_i \in \{1,\ldots,c\}
               \]</div>
-              <p class="body">Impurity function \[I(S)\] measures how much points in \[S\] have different labels. </p>
+              <p class="body">Impurity function \(I(S)\) measures how much points in \(S\) have different labels. </p>
             </div>
             
       
-          <div class="grid2" style="margin-top:18px">
             <div class="card">
               <h2>Each part of a split can have different Imputities: Impurity of a split</h2>
               <div class="formula">\[
                 I_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)
               \]</div>
               <p class="body">Choose the split that minimizes the weighted average impurity of the left and right children.</p>
-            </div>
           <div class="slide-references">
             <a href="https://www.cs.cornell.edu/courses/cs4780/2024sp/lectures/pdfs/lecturenote15.pdf" data-desc="Definitions of Gini impurity, entropy, and tree impurity.">Cornell notes - impurity functions</a>
             <a href="https://scikit-learn.org/stable/modules/tree.html" data-desc="Practical reference on decision-tree criteria.">scikit-learn tree guide</a>
