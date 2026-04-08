@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bagging Regression Demo</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#fff; --ink:#162033; --muted:#647089; --border:#d7deea;
+    --accent:#4d7fff; --green:#1f9d74; --gold:#d6a400; --shadow:0 10px 28px rgba(24,39,75,.08)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:18px;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  .page{display:grid;gap:16px}
+  .top{display:grid;grid-template-columns:350px 1fr;gap:16px;align-items:start}
+  .card{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px}
+  h1,h2,p{margin:0}
+  .control{display:grid;gap:6px}
+  label{font-weight:700;font-size:.95rem}
+  select,input[type=range],button{font:inherit}
+  select,button{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink)}
+  input[type=range]{width:100%}
+  canvas{display:block;border:1px solid var(--border);border-radius:16px;background:#fff;width:100%;height:auto}
+  .chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3fb;border:1px solid #dbe4f5;font-size:.88rem;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{padding:12px;border-radius:14px;background:#f8faff;border:1px solid #e4eaf5}
+  .stat strong{display:block;font-size:1.05rem}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
+  .sw{display:inline-block;width:16px;height:4px;vertical-align:middle;margin-right:6px;border-radius:999px}
+  .note{color:var(--muted);font-size:.94rem;line-height:1.4}
+  @media (max-width: 900px){ .top{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <section class="card">
+      <h2>Bagging for regression</h2>
+      <p class="note">Each bag trains a full-depth regression tree on a bootstrap sample. The final prediction is the average over all bagged trees.</p>
+
+      <div class="control">
+        <label for="preset">Function preset</label>
+        <select id="preset">
+          <option value="sine">Noisy sine</option>
+          <option value="piecewise">Piecewise jumps</option>
+          <option value="curve">Quadratic-ish curve</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="bags">Number of bags</label>
+        <input id="bags" type="range" min="1" max="50" step="1" value="20"/>
+        <span id="bagsVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="bagSamples">Samples per bag</label>
+        <input id="bagSamples" type="range" min="10" max="120" step="1" value="40"/>
+        <span id="bagSamplesVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="noise">Noise level</label>
+        <input id="noise" type="range" min="0" max="0.45" step="0.01" value="0.12"/>
+        <span id="noiseVal" class="chip"></span>
+      </div>
+      <div class="control">
+        <label for="n">Number of points</label>
+        <input id="n" type="range" min="20" max="100" step="2" value="48"/>
+        <span id="nVal" class="chip"></span>
+      </div>
+      <button id="regen">Regenerate data</button>
+
+      <div class="legend">
+        <span><span class="sw" style="background:#4d7fff"></span>true / reference trend</span>
+        <span><span class="sw" style="background:#1f9d74"></span>bagged fit</span>
+        <span><span class="sw" style="background:#d6a400"></span>split locations from one bag</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <canvas id="canvas" width="760" height="470"></canvas>
+      <div class="stats">
+        <div class="stat"><strong id="mse">0</strong><span class="note">training MSE</span></div>
+        <div class="stat"><strong id="oobMse">—</strong><span class="note">OOB MSE</span></div>
+        <div class="stat"><strong id="avgUnique">—</strong><span class="note">avg unique points per bag</span></div>
+        <div class="stat"><strong id="bagsShown">0</strong><span class="note">bags used</span></div>
+      </div>
+      <p class="note">The gold split markers are shown for one representative bag to make the tree structure visible.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+const controls = {
+  preset: $('preset'),
+  bags: $('bags'),
+  bagSamples: $('bagSamples'),
+  noise: $('noise'),
+  n: $('n'),
+  regen: $('regen')
+};
+const vals = {
+  bags: $('bagsVal'),
+  bagSamples: $('bagSamplesVal'),
+  noise: $('noiseVal'),
+  n: $('nVal')
+};
+const outs = {
+  mse: $('mse'),
+  oobMse: $('oobMse'),
+  avgUnique: $('avgUnique'),
+  bagsShown: $('bagsShown')
+};
+let state = { pts: [], bags: [], seed: 20202 };
+
+function mulberry32(a){ return function(){ a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function randn(rng){ let u=0,v=0; while(!u)u=rng(); while(!v)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function mean(arr){ return arr.reduce((s,v)=>s+v,0)/Math.max(1,arr.length); }
+function msePoints(points){
+  if (!points.length) return 0;
+  const m = mean(points.map(p=>p.y));
+  let s = 0; for (const p of points) s += (p.y - m)*(p.y - m);
+  return s / points.length;
+}
+function candidateThresholds(points){
+  const xs = [...new Set(points.map(p=>p.x).sort((a,b)=>a-b))];
+  const out = [];
+  for (let i=0;i<xs.length-1;i++) out.push((xs[i] + xs[i+1]) / 2);
+  return out;
+}
+function split(points, thr){
+  const left = [], right = [];
+  for (const p of points) (p.x <= thr ? left : right).push(p);
+  return { left, right };
+}
+function build(points){
+  const node = { points, yhat: mean(points.map(p=>p.y)), splitValue:null, left:null, right:null };
+  if (points.length < 2) return node;
+  let best = null;
+  for (const thr of candidateThresholds(points)){
+    const { left, right } = split(points, thr);
+    if (!left.length || !right.length) continue;
+    const score = (left.length / points.length) * msePoints(left) + (right.length / points.length) * msePoints(right);
+    if (!best || score < best.score) best = { thr, left, right, score };
+  }
+  if (!best) return node;
+  node.splitValue = best.thr;
+  node.left = build(best.left);
+  node.right = build(best.right);
+  return node;
+}
+function predictTree(node, x){
+  let cur = node;
+  while (cur.left && cur.right) cur = x <= cur.splitValue ? cur.left : cur.right;
+  return cur.yhat;
+}
+function collectSplits(node, out=[]){
+  if (!node || !node.left || !node.right) return out;
+  out.push(node.splitValue);
+  collectSplits(node.left, out);
+  collectSplits(node.right, out);
+  return out;
+}
+function bootstrapSample(points, size, rng){
+  const bag = [], used = new Set();
+  for (let i=0;i<size;i++){
+    const idx = Math.floor(rng() * points.length);
+    bag.push(points[idx]);
+    used.add(idx);
+  }
+  return { bag, used };
+}
+function trueFn(x){
+  const p = controls.preset.value;
+  if (p === 'sine') return 0.62 * Math.sin(2.2 * Math.PI * x);
+  if (p === 'piecewise') return x < -0.35 ? -0.65 : (x < 0.15 ? 0.05 : 0.68);
+  return 0.9 * x * x - 0.4 + 0.18 * Math.sin(3.2 * Math.PI * x);
+}
+function generateData(){
+  state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
+  const rng = mulberry32(state.seed || 2);
+  const n = +controls.n.value;
+  const noise = +controls.noise.value;
+  const pts = [];
+  for (let i=0;i<n;i++){
+    const x = -0.96 + (i/(n-1))*1.92;
+    const y = trueFn(x) + noise * randn(rng);
+    pts.push({ x, y });
+  }
+  state.pts = pts;
+}
+function fitBagging(){
+  vals.bags.textContent = controls.bags.value;
+  vals.bagSamples.textContent = controls.bagSamples.value;
+  vals.noise.textContent = (+controls.noise.value).toFixed(2);
+  vals.n.textContent = controls.n.value;
+
+  const rng = mulberry32((state.seed ^ 0xDEF456) >>> 0);
+  const m = +controls.bags.value;
+  const bagSamples = +controls.bagSamples.value;
+  state.bags = [];
+  let uniqueTotal = 0;
+  for (let b=0;b<m;b++){
+    const { bag, used } = bootstrapSample(state.pts, bagSamples, rng);
+    uniqueTotal += used.size;
+    state.bags.push({ tree: build(bag), used });
+  }
+  outs.avgUnique.textContent = (uniqueTotal / Math.max(1, m)).toFixed(1);
+  outs.bagsShown.textContent = String(m);
+}
+function ensemblePredict(x){
+  let s = 0;
+  for (const bag of state.bags) s += predictTree(bag.tree, x);
+  return s / Math.max(1, state.bags.length);
+}
+function oobPredict(i){
+  let s = 0, c = 0;
+  for (const bag of state.bags){
+    if (!bag.used.has(i)){
+      s += predictTree(bag.tree, state.pts[i].x);
+      c++;
+    }
+  }
+  return c ? s / c : null;
+}
+function xToPx(x){ return (x + 1) * 0.5 * canvas.width; }
+function yToPy(y){ return canvas.height - ((y + 1.25) / 2.5) * canvas.height; }
+function drawAxes(clear=true){
+  if (clear) ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = '#edf1f8';
+  ctx.lineWidth = 1;
+  for (let g=1; g<5; g++){
+    const x = g/5 * canvas.width, y = g/5 * canvas.height;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  ctx.strokeStyle = '#aeb8cc'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(xToPx(-1), yToPy(0)); ctx.lineTo(xToPx(1), yToPy(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xToPx(0), yToPy(-1.25)); ctx.lineTo(xToPx(0), yToPy(1.25)); ctx.stroke();
+}
+function drawTrueFn(){
+  ctx.strokeStyle = '#4d7fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i=0;i<=260;i++){
+    const x = -1 + 2*i/260, px = xToPx(x), py = yToPy(trueFn(x));
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+function drawFit(){
+  ctx.strokeStyle = '#1f9d74';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  for (let i=0;i<=320;i++){
+    const x = -1 + 2*i/320, px = xToPx(x), py = yToPy(ensemblePredict(x));
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  if (state.bags.length){
+    ctx.strokeStyle = '#d6a400';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8,6]);
+    for (const s of collectSplits(state.bags[0].tree, [])){
+      const x = xToPx(s);
+      ctx.beginPath(); ctx.moveTo(x, 18); ctx.lineTo(x, canvas.height - 18); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+}
+function drawPoints(){
+  for (const p of state.pts){
+    ctx.beginPath(); ctx.arc(xToPx(p.x), yToPy(p.y), 4.6, 0, Math.PI * 2);
+    ctx.fillStyle = '#13253f'; ctx.fill();
+  }
+}
+function renderStats(){
+  let mse = 0;
+  for (const p of state.pts){
+    const e = p.y - ensemblePredict(p.x);
+    mse += e * e;
+  }
+  mse /= Math.max(1, state.pts.length);
+  outs.mse.textContent = mse.toFixed(4);
+
+  let oobCount = 0, oobMse = 0;
+  for (let i=0;i<state.pts.length;i++){
+    const pred = oobPredict(i);
+    if (pred === null) continue;
+    const e = state.pts[i].y - pred;
+    oobMse += e * e;
+    oobCount++;
+  }
+  outs.oobMse.textContent = oobCount ? (oobMse / oobCount).toFixed(4) : '—';
+}
+function render(){
+  fitBagging();
+  drawAxes(true);
+  drawTrueFn();
+  drawFit();
+  drawPoints();
+  renderStats();
+}
+for (const el of [controls.preset, controls.bags, controls.bagSamples, controls.noise, controls.n]){
+  el.addEventListener('input', ()=>{ if (el===controls.preset || el===controls.noise || el===controls.n) generateData(); render(); });
+  el.addEventListener('change', ()=>{ if (el===controls.preset || el===controls.noise || el===controls.n) generateData(); render(); });
+}
+controls.regen.addEventListener('click', ()=>{ generateData(); render(); });
+
+generateData();
+render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bagging and Random Forests</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$','$']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root{
+      --bg:#eef2f7; --panel:#ffffff; --ink:#172033; --muted:#5f6b7a;
+      --accent:#2f5edf; --accent2:#2f5edf; --border:rgba(23,32,51,.12);
+      --red:#d95c5c; --blue:#4d7fff; --gold:#d9a400; --shadow:0 8px 24px rgba(24,39,75,.08);
+      --maxw:1320px; --h1:clamp(2.2rem, 4vw, 3.9rem); --h2:clamp(1.3rem, 2vw, 2rem);
+      --body:clamp(1rem, 1.2vw, 1.22rem); --r:22px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+    body{overflow:hidden}
+    a{color:#2f5edf}
+    code{background:#f5f7fb; padding:.08em .32em; border-radius:.4em}
+    .app{position:relative;height:100vh;width:100vw;background:#eef2f7;}
+    .slides{height:100%;width:100%;position:relative}
+    .slide{position:absolute;inset:0;display:none;padding:22px}
+    .slide.active{display:block}
+    .shell{
+      width:min(var(--maxw), calc(100vw - 44px));
+      height:calc(100vh - 44px);
+      margin:0 auto;
+      background:#ffffff;
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+    }
+    .topbar,.footer{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:14px 20px;background:#ffffff
+    }
+    .topbar{border-bottom:1px solid rgba(23,32,51,.08);justify-content:flex-end;}
+    .footer{border-top:1px solid rgba(23,32,51,.08);color:var(--muted);font-size:.95rem;background:#ffffff;}
+    .tools,.progresswrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    button{
+      border:1px solid rgba(23,32,51,.12);background:#ffffff;color:var(--ink);
+      border-radius:10px;padding:9px 13px;font:inherit;cursor:pointer
+    }
+    button:hover{background:#f6f8fb}
+    .content{padding:34px;overflow:auto;position:relative;background:#ffffff}
+    .title{margin:0 0 10px 0;font-size:var(--h1);line-height:1.01;letter-spacing:-.03em;color:var(--ink)}
+    .subtitle{margin:0 0 22px 0;color:var(--muted);font-size:1.12rem;max-width:78ch}
+    .grid2{display:grid;grid-template-columns:1.08fr .92fr;gap:28px;align-items:start}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{background:#ffffff;border:1px solid rgba(23,32,51,.10);border-radius:18px;padding:22px;min-width:0}
+    .card h2,.card h3{margin:.1rem 0 .6rem 0}
+    .body{font-size:var(--body);line-height:1.48;color:var(--ink)}
+    .bullets{margin:0;padding-left:1.2em;display:grid;gap:11px;font-size:var(--body);line-height:1.45;color:var(--ink)}
+    .formula{margin:14px 0;padding:16px 18px;border-radius:16px;border:1px solid rgba(23,32,51,.08);background:#f8fafc;font-size:1.08rem;overflow:auto;color:var(--ink)}
+    .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:stretch}
+    .tagline{
+      display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;
+      background:#eef3ff;border:1px solid rgba(47,94,223,.16);color:#27429a;font-weight:700
+    }
+    .tree-svg, .hero-svg{width:100%;height:auto;display:block}
+    .statband{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+    .stat{background:#ffffff;border:1px solid rgba(23,32,51,.10);padding:14px;border-radius:16px}
+    .stat strong{display:block;font-size:1.15rem;color:#111827}
+    .callout{
+      border-left:4px solid var(--gold);
+      background:rgba(217,164,0,.08);
+      padding:14px 16px;border-radius:14px;color:var(--ink)
+    }
+    .demo-frame{width:100%;height:min(67vh,700px);border:1px solid var(--border);border-radius:18px;background:white}
+    .note{font-size:.95rem;color:var(--muted)}
+    .refs,.toc{
+      position:absolute;top:18px;bottom:18px;width:min(420px, calc(100vw - 30px));display:none;
+      z-index:25;overflow:auto;background:#ffffff;border:1px solid rgba(23,32,51,.10);
+      border-radius:18px;box-shadow:var(--shadow);padding:16px
+    }
+    .refs{right:18px} .toc{left:18px}
+    .refs.open,.toc.open{display:block}
+    .drawer-head{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:#ffffff;padding-bottom:10px}
+    .drawer-list{display:grid;gap:10px}
+    .drawer-item{border:1px solid rgba(23,32,51,.10);padding:12px 14px;border-radius:14px;background:#ffffff}
+    .drawer-desc{margin-top:6px;color:var(--muted);font-size:.95rem;line-height:1.35}
+    .kbd{display:inline-block;border:1px solid var(--border);border-bottom-width:2px;padding:3px 8px;border-radius:8px;background:#f8fafc}
+    .progress{height:8px;min-width:180px;flex:1;background:rgba(23,32,51,.08);border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .help{position:absolute;left:18px;bottom:18px;padding:11px 14px;border-radius:14px;background:rgba(255,255,255,.94);border:1px solid rgba(23,32,51,.10);color:var(--muted);font-size:.9rem}
+    .twoeq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .minidiagram{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .tableish{display:grid;gap:8px}
+    .row{display:grid;grid-template-columns:1.15fr .85fr .85fr;gap:8px}
+    .cell{background:#ffffff;border:1px solid rgba(23,32,51,.10);padding:12px;border-radius:12px}
+    .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#f5f7fb;border:1px solid rgba(23,32,51,.10);font-size:.9rem;color:var(--ink)}
+    .slide-references{display:none}
+    @media (max-width: 980px){
+      .grid2,.grid3,.hero,.statband,.twoeq,.minidiagram,.row{grid-template-columns:1fr}
+      .slide{padding:10px}
+      .shell{width:calc(100vw - 20px);height:calc(100vh - 20px)}
+      .content{padding:22px}
+      .demo-frame{height:56vh}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="slides">
+
+    <section class="slide active" data-title="Bagging and Random Forests" data-section="Title">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content" style="display:grid;place-items:center;height:100%;padding:0 34px;background:#ffffff;">
+          <h1 class="title" style="margin:0;text-align:center;font-size:clamp(3rem,6vw,5.2rem);">Bagging and random forests</h1>
+        </div>
+        <div class="footer"><div></div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Why bagging?" data-section="Variance">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Bagging targets variance</h1>
+          <p class="subtitle">The core message from the Cornell note is simple: if we can average many unstable predictors, we can drive the predictor toward its mean and reduce variance.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Bias–variance reminder</h2>
+              <div class="formula">\[
+                \underbrace{\mathbb{E}[(h_D(x)-y)^2]}_{\mathrm{Error}}
+                =
+                \underbrace{\mathbb{E}[(h_D(x)-\bar h(x))^2]}_{\mathrm{Variance}}
+                +
+                \underbrace{\mathbb{E}[(\bar h(x)-\bar y(x))^2]}_{\mathrm{Bias}}
+                +
+                \underbrace{\mathbb{E}[(\bar y(x)-y(x))^2]}_{\mathrm{Noise}}
+              \]</div>
+              <p class="body">Bagging is designed to reduce the variance term without having to redesign the base learner. It is especially useful for high-variance learners such as full decision trees.</p>
+            </div>
+            <div class="card">
+              <h2>Ensemble intuition</h2>
+              <div class="formula">\[
+                \hat h(x)=\frac{1}{m}\sum_{i=1}^{m} h_{D_i}(x)
+              \]</div>
+              <ul class="bullets">
+                <li>If the component predictors wobble around a mean prediction, averaging smooths out the wobble.</li>
+                <li>The effect is strongest when the base learners are unstable and when the different bags do not all make exactly the same error.</li>
+                <li>Decision trees are a natural fit because tiny data changes can produce very different trees.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Bias–variance motivation and bagging setup.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Bagging = bootstrap aggregating.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="From many datasets to one ensemble" data-section="WLLN intuition">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">If we had many datasets, averaging would be easy</h1>
+          <p class="subtitle">The note uses the weak law of large numbers as the conceptual starting point: average many predictors trained on many datasets and the ensemble approaches the mean predictor.</p>
+          <div class="twoeq">
+            <div class="card">
+              <h2>Weak law reminder</h2>
+              <div class="formula">\[
+                \frac{1}{m}\sum_{i=1}^{m}x_i \to \bar x \qquad \text{as } m\to\infty
+              \]</div>
+              <p class="body">For i.i.d. random variables, averages converge toward their mean.</p>
+            </div>
+            <div class="card">
+              <h2>Apply the same idea to predictors</h2>
+              <div class="formula">\[
+                \hat h = \frac{1}{m}\sum_{i=1}^m h_{D_i} \to \bar h
+              \]</div>
+              <p class="body">If the \(D_i\) were independently drawn datasets from \(P^n\), averaging the resulting predictors would move us toward the mean predictor \(\bar h\).</p>
+            </div>
+          </div>
+          <div class="callout body" style="margin-top:18px">
+            The practical problem is that we only have one dataset \(D\), not infinitely many independent draws from the data-generating distribution.
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Weak law of large numbers motivation for ensembling.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Bagging approximates “many datasets” using bootstrap resampling.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Bootstrap idea" data-section="Bagging construction">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">The bootstrap trick</h1>
+          <p class="subtitle">Bagging replaces fresh draws from \(P\) with resamples from the observed training set \(D\), sampled uniformly with replacement.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Sampling distribution over the dataset</h2>
+              <div class="formula">\[
+                Q((x_i,y_i)\mid D)=\frac{1}{n}
+                \qquad \forall (x_i,y_i)\in D,\quad n=|D|
+              \]</div>
+              <p class="body">A bootstrap bag \(D_j\) is sampled from \(Q^n\): we draw \(n\) times with replacement from the empirical dataset.</p>
+              <div class="formula">\[
+                \hat h_D(x)=\frac{1}{m}\sum_{j=1}^{m} h_{D_j}(x)
+              \]</div>
+            </div>
+            <div class="card">
+              <h2>Important subtlety</h2>
+              <ul class="bullets">
+                <li>The bags are not independent in the strict sense required by the weak law argument.</li>
+                <li>So the note does <em>not</em> claim a formal WLLN proof for bagging.</li>
+                <li>Instead, it argues that in practice bagging still reduces variance very effectively.</li>
+              </ul>
+              <div class="callout body" style="margin-top:16px">The component trees are trained on slightly different bootstrap views of the same data, which is often enough to decorrelate their errors.</div>
+            </div>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Definition of the bootstrap distribution and bagged classifier.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Same dataset, many resampled bags.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Why the bootstrap still matches P" data-section="Analysis">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Why is resampling from the data still reasonable?</h1>
+          <p class="subtitle">The Cornell note shows that although the bags are not independent, the bootstrap sampling distribution \(Q\) still matches the original distribution \(P\) marginally.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Key takeaway from the analysis</h2>
+              <div class="formula">\[
+                Q(X=x_i)=P(X=x_i)
+              \]</div>
+              <p class="body">The lecture note derives this using a binomial-count argument over how many copies of \(x_i\) appear in the sampled dataset \(D\), and then how likely a bootstrap draw is to pick one of those copies.</p>
+            </div>
+            <div class="card">
+              <h2>Intuition</h2>
+              <ul class="bullets">
+                <li>Think of bootstrap sampling as first picking a slot in the dataset, then asking which example fills that slot.</li>
+                <li>The slot itself carries no preference for particular examples.</li>
+                <li>So marginally, drawing from the empirical dataset preserves the original data distribution even though the bags are dependent.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout body" style="margin-top:18px">
+            This is enough to make bagging intuitively trustworthy even though the clean i.i.d. argument no longer applies.
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Bootstrap analysis showing Q(X)=P(X).">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Bootstrap bags mimic the original distribution marginally.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Bagging algorithm" data-section="Algorithm">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Bagging summarized</h1>
+          <p class="subtitle">In the note, bagging is presented as a three-step recipe.</p>
+          <div class="grid3">
+            <div class="card">
+              <h2>Step 1</h2>
+              <div class="formula">\[
+                D_1,\dots,D_m \sim Q^n
+              \]</div>
+              <p class="body">Sample \(m\) bootstrap datasets from the training set \(D\), each with replacement.</p>
+            </div>
+            <div class="card">
+              <h2>Step 2</h2>
+              <div class="formula">\[
+                h_j = \mathrm{Train}(D_j)
+              \]</div>
+              <p class="body">Train one base learner on each bag. In our demos, the base learner is a full-depth decision tree.</p>
+            </div>
+            <div class="card">
+              <h2>Step 3</h2>
+              <div class="formula">\[
+                h(x)=\frac{1}{m}\sum_{j=1}^{m} h_j(x)
+              \]</div>
+              <p class="body">Average the predictions. For classification, that corresponds to voting; for regression, it is literal averaging.</p>
+            </div>
+          </div>
+          <div class="callout body" style="margin-top:18px">
+            Larger \(m\) usually helps, but after some point the returns diminish. Increasing the number of bags tends to cost computation more than it changes accuracy.
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Three-step summary of bagging.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Average many unstable learners to stabilize prediction.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interactive demo: bagging classification" data-section="Demo">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: bagging for classification</h1>
+          <p class="subtitle">This demo uses full-depth CART trees as the bags. Move the sliders for the number of bags and the number of samples per bag to see how the ensemble boundary changes.</p>
+          <iframe class="demo-frame" src="bagging_classification_demo.html" title="Bagging classification demo"></iframe>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Bagging algorithm and variance intuition.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: why does using more bags usually smooth the boundary?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interactive demo: bagging regression" data-section="Demo">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: bagging for regression</h1>
+          <p class="subtitle">This demo uses full-depth regression trees inside the bags. Compare how the average fit changes as you vary the number of bags and the samples per bag.</p>
+          <iframe class="demo-frame" src="bagging_regression_demo.html" title="Bagging regression demo"></iframe>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Bagging applies to regression just as naturally as classification, since the ensemble can average predictions.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: why is averaging especially natural for regression?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Out-of-bag error" data-section="Evaluation">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Out-of-bag error comes almost for free</h1>
+          <p class="subtitle">A major practical advantage of bagging is that every training point is left out of many bags. That gives us a built-in test-like estimate.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Leave-one-point-out ensemble</h2>
+              <div class="formula">\[
+                S_i=\{k \mid (x_i,y_i)\notin D_k\}, \qquad
+                \tilde h_i(x)=\frac{1}{|S_i|}\sum_{k\in S_i} h_k(x)
+              \]</div>
+              <p class="body">For each training example, average only the bags that never saw that example.</p>
+            </div>
+            <div class="card">
+              <h2>OOB error estimate</h2>
+              <div class="formula">\[
+                \epsilon_{\mathrm{OOB}}
+                =
+                \frac{1}{n}\sum_{(x_i,y_i)\in D}
+                \ell(\tilde h_i(x_i), y_i)
+              \]</div>
+              <p class="body">This behaves like a validation estimate without having to carve off a separate validation split from the dataset.</p>
+            </div>
+          </div>
+          <div class="callout body" style="margin-top:18px">
+            In the demos, the OOB estimate changes as we vary the number of bags and the bag size — a nice way to show that bagging can evaluate itself while training.
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Definition and motivation for out-of-bag error.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>OOB error is one of bagging’s nicest practical features.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Random forest idea" data-section="Random forests">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Random forest = bagged trees + random feature subsampling</h1>
+          <p class="subtitle">The Cornell note defines a random forest as bagged full-depth decision trees with one extra ingredient: before every split, randomly restrict the candidate features.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Algorithm sketch</h2>
+              <ol class="bullets">
+                <li>Sample bootstrap datasets \(D_1,\dots,D_m\) from \(D\).</li>
+                <li>For each \(D_j\), grow a full decision tree.</li>
+                <li>Before each split, randomly choose only \(k\le d\) features and search for the best split using only those features.</li>
+                <li>Average / vote the predictions across trees.</li>
+              </ol>
+            </div>
+            <div class="card">
+              <h2>Why the extra randomness helps</h2>
+              <ul class="bullets">
+                <li>Bagging reduces variance when the trees are not perfectly correlated.</li>
+                <li>If one feature is extremely strong, plain bagging tends to split on it in many trees, making the trees too similar.</li>
+                <li>Randomly limiting the features at each split forces the trees to differ more, which further reduces ensemble variance.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout body" style="margin-top:18px">
+            The note recommends \(k=\sqrt d\) as a very good default for classification, and large \(m\) as long as computation allows.
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Random forest algorithm and practical defaults.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Random forests decorrelate trees to make bagging work even better.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interactive demo: random forest" data-section="Demo">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Interactive demo: random forest</h1>
+          <p class="subtitle">This demo adds a feature-per-split slider \(k\). With \(d=2\), using \(k=1\) forces each split to consider only one coordinate at a time; \(k=2\) reduces back toward plain bagging of trees.</p>
+          <iframe class="demo-frame" src="random_forest_demo.html" title="Random forest demo"></iframe>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Random forest algorithm and the role of k.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Good live question: how does lowering k change tree diversity?</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Why random forests work so well" data-section="Takeaways">
+      <div class="shell">
+        <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
+        <div class="content">
+          <h1 class="title">Why random forests are so popular</h1>
+          <p class="subtitle">The Cornell note emphasizes two reasons random forests are such a strong default learner.</p>
+          <div class="grid2">
+            <div class="card">
+              <h2>Reason 1: few sensitive hyperparameters</h2>
+              <ul class="bullets">
+                <li>The main knobs are the number of trees \(m\) and the number of features per split \(k\).</li>
+                <li>Performance is often fairly insensitive to the exact value of either one.</li>
+                <li>A good classification default is \(k=\sqrt d\).</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h2>Reason 2: decision trees need little preprocessing</h2>
+              <ul class="bullets">
+                <li>Features can have different scales and units.</li>
+                <li>Trees can mix heterogeneous feature types naturally.</li>
+                <li>This makes forests especially convenient in practical pipelines.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card" style="margin-top:18px">
+            <h2>Bridge to the next lecture</h2>
+            <p class="body">Once students understand bagging and random forests, the natural next step is boosting: instead of averaging independent-ish trees, we build trees sequentially to correct previous mistakes.</p>
+          </div>
+          <div class="slide-references">
+            <a href="https://www.cs.cornell.edu/courses/cs3780/2025sp/lectures/lecturenote18.html" data-desc="Practical reasons random forests are strong out-of-the-box methods.">Cornell bagging lecture note</a>
+          </div>
+        </div>
+        <div class="footer"><div>Bagging stabilizes; feature subsampling decorrelates; random forests do both.</div><div class="progresswrap"><div class="progress"><div class="bar"></div></div><div class="counter"></div></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <aside class="refs" id="refs">
+    <div class="drawer-head"><h3>References</h3><button id="closeRefs">Close</button></div>
+    <div class="drawer-list" id="refList"></div>
+  </aside>
+
+  <aside class="toc" id="toc">
+    <div class="drawer-head"><h3>Slide list</h3><button id="closeToc">Close</button></div>
+    <div class="drawer-list" id="tocList"></div>
+  </aside>
+
+  <div class="help">Navigation: <span class="kbd">→</span>/<span class="kbd">Space</span> next, <span class="kbd">←</span> previous, <span class="kbd">T</span> list, <span class="kbd">R</span> references, <span class="kbd">F</span> fullscreen.</div>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const refs = document.getElementById('refs');
+  const refList = document.getElementById('refList');
+  const toc = document.getElementById('toc');
+  const tocList = document.getElementById('tocList');
+  let current = 0;
+
+  function showSlide(i){
+    current = Math.max(0, Math.min(i, slides.length-1));
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===current));
+    document.title = (slides[current].dataset.title || 'Lecture') + ' - HTML deck';
+    updateUi();
+    closeToc();
+  }
+
+  function updateUi(){
+    slides.forEach((slide, idx)=>{
+      slide.querySelectorAll('.counter').forEach(el => el.textContent = `${idx+1} / ${slides.length}`);
+      slide.querySelectorAll('.bar').forEach(el => el.style.width = `${(idx+1)/slides.length*100}%`);
+    });
+    configureRefs(slides[current]);
+  }
+
+  function configureRefs(slide){
+    refList.innerHTML = '';
+    const links = [...slide.querySelectorAll('.slide-references a')];
+    if (!links.length){ closeRefs(); return; }
+    links.forEach((a,idx)=>{
+      const item = document.createElement('div');
+      item.className='drawer-item';
+      item.innerHTML = `<div><a href="${a.href}" target="_blank" rel="noopener noreferrer">${idx+1}. ${a.textContent}</a></div>${a.dataset.desc?`<div class="drawer-desc">${a.dataset.desc}</div>`:''}`;
+      refList.appendChild(item);
+    });
+  }
+
+  function buildToc(){
+    tocList.innerHTML = '';
+    slides.forEach((slide, idx)=>{
+      const item = document.createElement('div');
+      item.className='drawer-item';
+      item.innerHTML = `<a href="#" data-i="${idx}">${idx+1}. ${slide.dataset.title || ('Slide '+(idx+1))}</a><div class="drawer-desc">${slide.dataset.section || ''}</div>`;
+      item.querySelector('a').addEventListener('click', e=>{ e.preventDefault(); showSlide(idx); });
+      tocList.appendChild(item);
+    });
+    document.querySelectorAll('.open-toc').forEach(btn => btn.addEventListener('click', openToc));
+  }
+
+  function openRefs(){ refs.classList.add('open'); refs.setAttribute('aria-hidden','false'); }
+  function closeRefs(){ refs.classList.remove('open'); refs.setAttribute('aria-hidden','true'); }
+  function openToc(){ toc.classList.add('open'); toc.setAttribute('aria-hidden','false'); }
+  function closeToc(){ toc.classList.remove('open'); toc.setAttribute('aria-hidden','true'); }
+  document.getElementById('closeRefs').addEventListener('click', closeRefs);
+  document.getElementById('closeToc').addEventListener('click', closeToc);
+
+  document.addEventListener('keydown', evt=>{
+    const tag = (evt.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || evt.target.isContentEditable) return;
+    if (evt.key === 'ArrowRight' || evt.key === 'PageDown' || evt.key === ' ') { evt.preventDefault(); showSlide(current+1); }
+    else if (evt.key === 'ArrowLeft' || evt.key === 'PageUp') { evt.preventDefault(); showSlide(current-1); }
+    else if (evt.key === 'Home'){ evt.preventDefault(); showSlide(0); }
+    else if (evt.key === 'End'){ evt.preventDefault(); showSlide(slides.length-1); }
+    else if (evt.key === 'r' || evt.key === 'R'){ evt.preventDefault(); if ([...slides[current].querySelectorAll('.slide-references a')].length) refs.classList.contains('open') ? closeRefs() : openRefs(); }
+    else if (evt.key === 't' || evt.key === 'T'){ evt.preventDefault(); toc.classList.contains('open') ? closeToc() : openToc(); }
+    else if (evt.key === 'Escape'){ closeRefs(); closeToc(); }
+    else if (evt.key === 'f' || evt.key === 'F'){ evt.preventDefault(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+  });
+
+  buildToc();
+  showSlide(0);
+</script>
+</body>
+</html>
