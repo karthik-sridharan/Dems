@@ -128,7 +128,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">Bagging targets variance</h1>
-          <p class="subtitle">The core message from the Cornell note is simple: if we can average many unstable predictors, we can drive the predictor toward its mean and reduce variance.</p>
           <div class="grid2">
             <div class="card">
               <h2>Bias–variance reminder</h2>
@@ -139,7 +138,7 @@
                 +
                 \underbrace{\mathbb{E}[(\bar h(x)-\bar y(x))^2]}_{\mathrm{Bias}}
                 +
-                \underbrace{\mathbb{E}[(\bar y(x)-y(x))^2]}_{\mathrm{Noise}}
+                {\small \underbrace{\mathbb{E}[(\bar y(x)-y(x))^2]}_{\mathrm{Noise}}}
               \]</div>
               <p class="body">Bagging is designed to reduce the variance term without having to redesign the base learner. It is especially useful for high-variance learners such as full decision trees.</p>
             </div>
@@ -168,7 +167,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">If we had many datasets, averaging would be easy</h1>
-          <p class="subtitle">The note uses the weak law of large numbers as the conceptual starting point: average many predictors trained on many datasets and the ensemble approaches the mean predictor.</p>
           <div class="twoeq">
             <div class="card">
               <h2>Weak law reminder</h2>
@@ -237,7 +235,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">Why is resampling from the data still reasonable?</h1>
-          <p class="subtitle">The Cornell note shows that although the bags are not independent, the bootstrap sampling distribution \(Q\) still matches the original distribution \(P\) marginally.</p>
           <div class="grid2">
             <div class="card">
               <h2>Key takeaway from the analysis</h2>
@@ -271,7 +268,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">Bagging summarized</h1>
-          <p class="subtitle">In the note, bagging is presented as a three-step recipe.</p>
           <div class="grid3">
             <div class="card">
               <h2>Step 1</h2>
@@ -378,7 +374,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">Random forest = bagged trees + random feature subsampling</h1>
-          <p class="subtitle">The Cornell note defines a random forest as bagged full-depth decision trees with one extra ingredient: before every split, randomly restrict the candidate features.</p>
           <div class="grid2">
             <div class="card">
               <h2>Algorithm sketch</h2>
@@ -429,7 +424,6 @@
         <div class="topbar"><div class="tools"><button class="open-toc">Slides</button></div></div>
         <div class="content">
           <h1 class="title">Why random forests are so popular</h1>
-          <p class="subtitle">The Cornell note emphasizes two reasons random forests are such a strong default learner.</p>
           <div class="grid2">
             <div class="card">
               <h2>Reason 1: few sensitive hyperparameters</h2>
