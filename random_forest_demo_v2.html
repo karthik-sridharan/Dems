@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Random Forest Demo</title>
+<title>High-Dimensional Random Forest Demo</title>
 <style>
   :root{
     --bg:#f4f7fb; --card:#fff; --ink:#162033; --muted:#647089; --border:#d7deea;
-    --red:#d95c5c; --blue:#4d7fff; --shadow:0 10px 28px rgba(24,39,75,.08)
+    --red:#d95c5c; --blue:#4d7fff; --green:#1f9d74; --gold:#d6a400;
+    --shadow:0 10px 28px rgba(24,39,75,.08)
   }
   *{box-sizing:border-box}
   body{margin:0;padding:18px;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
@@ -22,35 +23,71 @@
   input[type=range]{width:100%}
   .chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef3fb;border:1px solid #dbe4f5;font-size:.88rem;font-weight:700}
   canvas{display:block;border:1px solid var(--border);border-radius:16px;background:#fff;width:100%;max-width:100%;height:auto}
+  .right{display:grid;gap:16px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
   .stat{padding:12px;border-radius:14px;background:#f8faff;border:1px solid #e4eaf5}
   .stat strong{display:block;font-size:1.05rem}
   .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
   .dot{width:12px;height:12px;border-radius:999px;display:inline-block;vertical-align:middle;margin-right:6px}
+  .sw{display:inline-block;width:16px;height:4px;vertical-align:middle;margin-right:6px;border-radius:999px}
   .note{color:var(--muted);font-size:.94rem;line-height:1.4}
-  @media (max-width: 920px){ .top{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} }
+  @media (max-width: 1100px){ .top{grid-template-columns:1fr} .row2{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="top">
     <section class="card">
-      <h2>Random forest demo</h2>
-      <p class="note">A random forest is bagging with a twist: before each split, each tree only considers a random subset of the features. Here d = 2, so k is 1 or 2.</p>
+      <h2>High-dimensional random forest demo</h2>
+      <p class="note">A strong random-forest example is a <strong>sparse signal in a higher-dimensional space</strong>: only features 1 and 2 carry the true class structure, while features 3 through <em>d</em> are pure nuisance variables. Random forests often beat a single deep tree here because feature subsampling reduces the chance of repeatedly splitting on spurious noise coordinates.</p>
 
       <div class="control">
-        <label for="preset">Dataset</label>
-        <select id="preset">
-          <option value="gaussian">Two Gaussian blobs</option>
-          <option value="xor">XOR</option>
-          <option value="stripes">Vertical stripes</option>
-          <option value="moons">Noisy moons</option>
-          <option value="circles">Concentric circles</option>
+        <label for="signalType">Signal hidden in features 1 and 2</label>
+        <select id="signalType">
+          <option value="circles">Embedded concentric circles</option>
+          <option value="xor">Embedded XOR</option>
         </select>
       </div>
 
       <div class="control">
-        <label for="criterion">Criterion</label>
+        <label for="dims">Total number of features (d)</label>
+        <input id="dims" type="range" min="2" max="20" step="1" value="10"/>
+        <span id="dimsVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="nTrain">Training points per class</label>
+        <input id="nTrain" type="range" min="20" max="120" step="2" value="50"/>
+        <span id="nTrainVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="nVal">Validation points per class</label>
+        <input id="nVal" type="range" min="20" max="120" step="2" value="50"/>
+        <span id="nValVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="bags">Number of trees</label>
+        <input id="bags" type="range" min="1" max="60" step="1" value="30"/>
+        <span id="bagsVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="bagSamples">Samples per bag</label>
+        <input id="bagSamples" type="range" min="10" max="240" step="1" value="80"/>
+        <span id="bagSamplesVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="kFeat">Features considered at each split (k)</label>
+        <input id="kFeat" type="range" min="1" max="10" step="1" value="3"/>
+        <span id="kFeatVal" class="chip"></span>
+      </div>
+
+      <div class="control">
+        <label for="criterion">Split criterion</label>
         <select id="criterion">
           <option value="gini">Gini impurity</option>
           <option value="entropy">Entropy</option>
@@ -58,332 +95,532 @@
       </div>
 
       <div class="control">
-        <label for="bags">Number of bags</label>
-        <input id="bags" type="range" min="1" max="60" step="1" value="25"/>
-        <span id="bagsVal" class="chip"></span>
+        <label for="boundaryModel">Boundary shown in the left plot</label>
+        <select id="boundaryModel">
+          <option value="single">Single deep tree</option>
+          <option value="bagging">Bagging</option>
+          <option value="rf" selected>Random forest</option>
+        </select>
       </div>
 
-      <div class="control">
-        <label for="bagSamples">Samples per bag</label>
-        <input id="bagSamples" type="range" min="10" max="160" step="1" value="60"/>
-        <span id="bagSamplesVal" class="chip"></span>
-      </div>
-
-      <div class="control">
-        <label for="kFeat">Features considered at each split (k)</label>
-        <input id="kFeat" type="range" min="1" max="2" step="1" value="1"/>
-        <span id="kFeatVal" class="chip"></span>
-      </div>
-
-      <div class="control">
-        <label for="n">Points per class / pattern</label>
-        <input id="n" type="range" min="16" max="80" step="2" value="34"/>
-        <span id="nVal" class="chip"></span>
-      </div>
-
-      <button id="regen">Regenerate data</button>
+      <button id="regen">Regenerate data and rerun</button>
 
       <div class="legend">
-        <span><span class="dot" style="background:#d95c5c"></span> red class</span>
-        <span><span class="dot" style="background:#4d7fff"></span> blue class</span>
-        <span>background shading = random-forest prediction</span>
+        <span><span class="dot" style="background:#d95c5c"></span>class -1</span>
+        <span><span class="dot" style="background:#4d7fff"></span>class +1</span>
+        <span>circles = training, squares = validation</span>
       </div>
     </section>
 
-    <section class="card">
-      <canvas id="canvas" width="760" height="520"></canvas>
-      <div class="stats">
-        <div class="stat"><strong id="trainAcc">0%</strong><span class="note">training accuracy</span></div>
-        <div class="stat"><strong id="oobErr">—</strong><span class="note">OOB error</span></div>
-        <div class="stat"><strong id="avgUnique">—</strong><span class="note">avg unique points per bag</span></div>
-        <div class="stat"><strong id="bagsShown">0</strong><span class="note">bags used</span></div>
-        <div class="stat"><strong id="kShown">1</strong><span class="note">features per split</span></div>
+    <div class="right">
+      <section class="card">
+        <canvas id="boundaryCanvas" width="980" height="430"></canvas>
+        <div class="stats">
+          <div class="stat"><strong id="singleAcc">—</strong><span class="note">single-tree val acc</span></div>
+          <div class="stat"><strong id="bagAcc">—</strong><span class="note">bagging val acc</span></div>
+          <div class="stat"><strong id="rfAcc">—</strong><span class="note">RF val acc</span></div>
+          <div class="stat"><strong id="rfOob">—</strong><span class="note">RF OOB error</span></div>
+          <div class="stat"><strong id="bestMethod">—</strong><span class="note">best current method</span></div>
+        </div>
+      </section>
+
+      <div class="row2">
+        <section class="card">
+          <canvas id="curveCanvas" width="470" height="340"></canvas>
+          <p class="note">Validation error versus number of trees. The dashed gray line is the single deep tree baseline.</p>
+        </section>
+        <section class="card">
+          <canvas id="importanceCanvas" width="470" height="340"></canvas>
+          <p class="note">Random-forest feature importance. Ideally features 1 and 2 dominate, because they are the only informative coordinates.</p>
+        </section>
       </div>
-      <p class="note">All trees are grown to full depth. Smaller k decorrelates the trees by forcing different split choices across bags.</p>
-    </section>
+    </div>
   </div>
 </div>
 
 <script>
 (() => {
-const $ = id => document.getElementById(id);
-const canvas = $('canvas');
-const ctx = canvas.getContext('2d');
-const controls = {
-  preset: $('preset'),
-  criterion: $('criterion'),
-  bags: $('bags'),
-  bagSamples: $('bagSamples'),
-  kFeat: $('kFeat'),
-  n: $('n'),
-  regen: $('regen')
-};
-const vals = {
-  bags: $('bagsVal'),
-  bagSamples: $('bagSamplesVal'),
-  kFeat: $('kFeatVal'),
-  n: $('nVal')
-};
-const outs = {
-  trainAcc: $('trainAcc'),
-  oobErr: $('oobErr'),
-  avgUnique: $('avgUnique'),
-  bagsShown: $('bagsShown'),
-  kShown: $('kShown')
-};
-let state = { points: [], bags: [], seed: 30303 };
+  const $ = id => document.getElementById(id);
 
-function mulberry32(a){ return function(){ a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function randn(rng){ let u=0,v=0; while(!u)u=rng(); while(!v)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
-function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-function pointToCanvas(p){ return { x:(p.x+1)*0.5*canvas.width, y:(1-(p.y+1)*0.5)*canvas.height }; }
-function canvasToPoint(px, py){ return { x:px/canvas.width*2-1, y:(1-py/canvas.height)*2-1 }; }
+  const controls = {
+    signalType: $('signalType'),
+    dims: $('dims'),
+    nTrain: $('nTrain'),
+    nVal: $('nVal'),
+    bags: $('bags'),
+    bagSamples: $('bagSamples'),
+    kFeat: $('kFeat'),
+    criterion: $('criterion'),
+    boundaryModel: $('boundaryModel'),
+    regen: $('regen')
+  };
 
-function classCounts(points){
-  let red = 0, blue = 0;
-  for (const p of points) p.label === 1 ? blue++ : red++;
-  return { red, blue };
-}
-function majorityLabel(points){
-  const { red, blue } = classCounts(points);
-  return blue >= red ? 1 : -1;
-}
-function impurity(points){
-  if (!points.length) return 0;
-  const { red, blue } = classCounts(points);
-  const p1 = blue / points.length, p0 = red / points.length;
-  if (controls.criterion.value === 'entropy'){
-    let h = 0;
-    if (p1 > 0) h -= p1 * Math.log2(p1);
-    if (p0 > 0) h -= p0 * Math.log2(p0);
-    return h;
+  const vals = {
+    dims: $('dimsVal'),
+    nTrain: $('nTrainVal'),
+    nVal: $('nValVal'),
+    bags: $('bagsVal'),
+    bagSamples: $('bagSamplesVal'),
+    kFeat: $('kFeatVal')
+  };
+
+  const outs = {
+    singleAcc: $('singleAcc'),
+    bagAcc: $('bagAcc'),
+    rfAcc: $('rfAcc'),
+    rfOob: $('rfOob'),
+    bestMethod: $('bestMethod')
+  };
+
+  const boundaryCanvas = $('boundaryCanvas');
+  const bctx = boundaryCanvas.getContext('2d');
+  const curveCanvas = $('curveCanvas');
+  const cctx = curveCanvas.getContext('2d');
+  const importanceCanvas = $('importanceCanvas');
+  const ictx = importanceCanvas.getContext('2d');
+
+  const state = {
+    train: [],
+    val: [],
+    singleTree: null,
+    baggingTrees: [],
+    rfTrees: [],
+    rfImportance: [],
+    bagCurve: [],
+    rfCurve: [],
+    seed: 424242
+  };
+
+  function mulberry32(a){
+    return function(){
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
   }
-  return p1 * (1 - p1) + p0 * (1 - p0);
-}
-function allSame(points){
-  if (!points.length) return true;
-  const y = points[0].label;
-  return points.every(p => p.label === y);
-}
-function candidateThresholds(points, axis){
-  const vals = [...new Set(points.map(p => axis === 0 ? p.x : p.y).sort((a,b)=>a-b))];
-  const out = [];
-  for (let i=0;i<vals.length-1;i++) out.push((vals[i] + vals[i+1]) / 2);
-  return out;
-}
-function shuffle(arr, rng){
-  for (let i=arr.length-1;i>0;i--){
-    const j = Math.floor(rng() * (i+1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+
+  function randn(rng){
+    let u = 0, v = 0;
+    while (!u) u = rng();
+    while (!v) v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
-}
-function split(points, axis, thr){
-  const left = [], right = [];
-  for (const p of points) ((axis === 0 ? p.x : p.y) <= thr ? left : right).push(p);
-  return { left, right };
-}
-function buildTree(points, rng){
-  const node = { points, prediction: majorityLabel(points), splitAxis:null, splitValue:null, left:null, right:null };
-  if (points.length < 2 || allSame(points)) return node;
 
-  const parentImp = impurity(points);
-  let best = null;
-  const features = [0,1];
-  shuffle(features, rng);
-  const k = Math.max(1, Math.min(2, +controls.kFeat.value));
-  const chosen = features.slice(0, k);
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
 
-  for (const axis of chosen){
-    for (const thr of candidateThresholds(points, axis)){
-      const { left, right } = split(points, axis, thr);
-      if (!left.length || !right.length) continue;
-      const weighted = (left.length / points.length) * impurity(left) + (right.length / points.length) * impurity(right);
-      const gain = parentImp - weighted;
-      if (!best || weighted < best.weighted || (Math.abs(weighted - best.weighted) < 1e-9 && gain > best.gain)) {
-        best = { axis, thr, left, right, weighted, gain };
+  function syncControls(){
+    const d = +controls.dims.value;
+    controls.kFeat.max = String(d);
+    if (+controls.kFeat.value > d) controls.kFeat.value = String(d);
+    if (+controls.kFeat.value < 1) controls.kFeat.value = '1';
+
+    vals.dims.textContent = controls.dims.value;
+    vals.nTrain.textContent = controls.nTrain.value;
+    vals.nVal.textContent = controls.nVal.value;
+    vals.bags.textContent = controls.bags.value;
+    vals.bagSamples.textContent = controls.bagSamples.value;
+    vals.kFeat.textContent = controls.kFeat.value;
+  }
+
+  function generateOnePoint(signalType, label, d, rng){
+    const x = new Array(d).fill(0);
+
+    if (signalType === 'circles'){
+      if (label === -1){
+        const a = 2 * Math.PI * rng();
+        const r = 0.28 + 0.06 * randn(rng);
+        x[0] = clamp(r * Math.cos(a), -1, 1);
+        x[1] = clamp(r * Math.sin(a), -1, 1);
+      } else {
+        const a = 2 * Math.PI * rng();
+        const r = 0.72 + 0.08 * randn(rng);
+        x[0] = clamp(r * Math.cos(a), -1, 1);
+        x[1] = clamp(r * Math.sin(a), -1, 1);
+      }
+    } else {
+      const centersNeg = [[-0.65,-0.65],[0.65,0.65]];
+      const centersPos = [[-0.65,0.65],[0.65,-0.65]];
+      const centers = label === -1 ? centersNeg : centersPos;
+      const c = centers[Math.floor(rng() * centers.length)];
+      x[0] = clamp(c[0] + 0.18 * randn(rng), -1, 1);
+      x[1] = clamp(c[1] + 0.18 * randn(rng), -1, 1);
+    }
+
+    for (let j = 2; j < d; j++) x[j] = clamp(0.75 * randn(rng), -1, 1);
+    return { x, label };
+  }
+
+  function generateData(){
+    state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
+    const rng = mulberry32(state.seed || 1);
+    const d = +controls.dims.value;
+    const nTrain = +controls.nTrain.value;
+    const nVal = +controls.nVal.value;
+    const signalType = controls.signalType.value;
+
+    const train = [], val = [];
+    for (let i = 0; i < nTrain; i++){
+      train.push(generateOnePoint(signalType, -1, d, rng));
+      train.push(generateOnePoint(signalType,  1, d, rng));
+    }
+    for (let i = 0; i < nVal; i++){
+      val.push(generateOnePoint(signalType, -1, d, rng));
+      val.push(generateOnePoint(signalType,  1, d, rng));
+    }
+    state.train = train;
+    state.val = val;
+  }
+
+  function classCounts(points){
+    let neg = 0, pos = 0;
+    for (const p of points) p.label === 1 ? pos++ : neg++;
+    return { neg, pos };
+  }
+
+  function majorityLabel(points){
+    const { neg, pos } = classCounts(points);
+    return pos >= neg ? 1 : -1;
+  }
+
+  function impurity(points){
+    if (!points.length) return 0;
+    const { neg, pos } = classCounts(points);
+    const p1 = pos / points.length, p0 = neg / points.length;
+    if (controls.criterion.value === 'entropy'){
+      let h = 0;
+      if (p1 > 0) h -= p1 * Math.log2(p1);
+      if (p0 > 0) h -= p0 * Math.log2(p0);
+      return h;
+    }
+    return p1 * (1 - p1) + p0 * (1 - p0);
+  }
+
+  function allSame(points){
+    if (!points.length) return true;
+    const y = points[0].label;
+    return points.every(p => p.label === y);
+  }
+
+  function candidateThresholds(points, axis){
+    const vals = [...new Set(points.map(p => p.x[axis]).sort((a,b) => a - b))];
+    if (vals.length <= 1) return [];
+    const mids = [];
+    for (let i = 0; i < vals.length - 1; i++) mids.push((vals[i] + vals[i + 1]) / 2);
+    const maxCands = 12;
+    if (mids.length <= maxCands) return mids;
+    const out = [];
+    for (let k = 0; k < maxCands; k++){
+      const idx = Math.floor((k + 0.5) * mids.length / maxCands);
+      out.push(mids[Math.min(mids.length - 1, idx)]);
+    }
+    return [...new Set(out)];
+  }
+
+  function split(points, axis, thr){
+    const left = [], right = [];
+    for (const p of points) ((p.x[axis] <= thr) ? left : right).push(p);
+    return { left, right };
+  }
+
+  function shuffledRange(d, rng){
+    const arr = [...Array(d).keys()];
+    for (let i = d - 1; i > 0; i--){
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildTree(points, featSubsetSize, rng, importance){
+    const node = { prediction: majorityLabel(points), splitAxis: null, splitValue: null, left: null, right: null };
+    if (points.length < 4 || allSame(points)) return node;
+
+    const d = points[0].x.length;
+    const parentImp = impurity(points);
+    let best = null;
+    const features = shuffledRange(d, rng).slice(0, Math.max(1, Math.min(d, featSubsetSize)));
+
+    for (const axis of features){
+      for (const thr of candidateThresholds(points, axis)){
+        const { left, right } = split(points, axis, thr);
+        if (left.length < 2 || right.length < 2) continue;
+        const weighted = (left.length / points.length) * impurity(left) + (right.length / points.length) * impurity(right);
+        const gain = parentImp - weighted;
+        if (!best || weighted < best.weighted || (Math.abs(weighted - best.weighted) < 1e-9 && gain > best.gain)) {
+          best = { axis, thr, left, right, weighted, gain };
+        }
       }
     }
+
+    if (!best) return node;
+    if (importance) importance[best.axis] += best.gain * points.length;
+    node.splitAxis = best.axis;
+    node.splitValue = best.thr;
+    node.left = buildTree(best.left, featSubsetSize, rng, importance);
+    node.right = buildTree(best.right, featSubsetSize, rng, importance);
+    return node;
   }
-  if (!best) return node;
-  node.splitAxis = best.axis;
-  node.splitValue = best.thr;
-  node.left = buildTree(best.left, rng);
-  node.right = buildTree(best.right, rng);
-  return node;
-}
-function predictTree(node, p){
-  let cur = node;
-  while (cur.left && cur.right){
-    cur = ((cur.splitAxis === 0 ? p.x : p.y) <= cur.splitValue) ? cur.left : cur.right;
+
+  function predictTree(node, x){
+    let cur = node;
+    while (cur.left && cur.right) cur = (x[cur.splitAxis] <= cur.splitValue) ? cur.left : cur.right;
+    return cur.prediction;
   }
-  return cur.prediction;
-}
-function bootstrapSample(points, size, rng){
-  const bag = [], used = new Set();
-  for (let i=0;i<size;i++){
-    const idx = Math.floor(rng() * points.length);
-    bag.push(points[idx]);
-    used.add(idx);
+
+  function bootstrapSample(points, size, rng){
+    const bag = [], used = new Set();
+    for (let i = 0; i < size; i++){
+      const idx = Math.floor(rng() * points.length);
+      bag.push(points[idx]);
+      used.add(idx);
+    }
+    return { bag, used };
   }
-  return { bag, used };
-}
-function generateData(){
-  state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
-  const rng = mulberry32(state.seed || 1);
-  const pts = [];
-  const n = +controls.n.value;
-  const preset = controls.preset.value;
-  if (preset === 'gaussian'){
-    for (let i=0;i<n;i++){
-      pts.push({x: clamp(-0.45 + 0.22*randn(rng), -1, 1), y: clamp(-0.05 + 0.26*randn(rng), -1, 1), label: -1});
-      pts.push({x: clamp( 0.43 + 0.22*randn(rng), -1, 1), y: clamp( 0.08 + 0.26*randn(rng), -1, 1), label:  1});
+
+  function accuracyTree(tree, points){
+    let correct = 0;
+    for (const p of points) if (predictTree(tree, p.x) === p.label) correct++;
+    return correct / Math.max(1, points.length);
+  }
+
+  function fitModels(){
+    const d = +controls.dims.value;
+    const m = +controls.bags.value;
+    const bagSamples = Math.min(+controls.bagSamples.value, state.train.length);
+    const kFeat = Math.max(1, Math.min(d, +controls.kFeat.value));
+    const bootstrapRng = mulberry32((state.seed ^ 0xC0FFEE) >>> 0);
+
+    state.singleTree = buildTree(state.train, d, mulberry32((state.seed ^ 0xAAAA) >>> 0), null);
+    state.baggingTrees = [];
+    state.rfTrees = [];
+    state.rfImportance = new Array(d).fill(0);
+    state.bagCurve = [];
+    state.rfCurve = [];
+
+    const bagValVotes = new Array(state.val.length).fill(0);
+    const rfValVotes = new Array(state.val.length).fill(0);
+
+    for (let t = 0; t < m; t++){
+      const { bag: bagData, used: bagUsed } = bootstrapSample(state.train, bagSamples, bootstrapRng);
+      const bagTree = buildTree(bagData, d, mulberry32(((state.seed + 31*t) ^ 0x1234) >>> 0), null);
+      state.baggingTrees.push({ tree: bagTree, used: bagUsed });
+
+      const { bag: rfData, used: rfUsed } = bootstrapSample(state.train, bagSamples, bootstrapRng);
+      const rfTree = buildTree(rfData, kFeat, mulberry32(((state.seed + 97*t) ^ 0x5678) >>> 0), state.rfImportance);
+      state.rfTrees.push({ tree: rfTree, used: rfUsed });
+
+      for (let i = 0; i < state.val.length; i++){
+        bagValVotes[i] += predictTree(bagTree, state.val[i].x);
+        rfValVotes[i] += predictTree(rfTree, state.val[i].x);
+      }
+
+      let bagErr = 0, rfErr = 0;
+      for (let i = 0; i < state.val.length; i++){
+        const bagPred = bagValVotes[i] >= 0 ? 1 : -1;
+        const rfPred = rfValVotes[i] >= 0 ? 1 : -1;
+        if (bagPred !== state.val[i].label) bagErr++;
+        if (rfPred !== state.val[i].label) rfErr++;
+      }
+      state.bagCurve.push({ trees: t + 1, err: bagErr / Math.max(1, state.val.length) });
+      state.rfCurve.push({ trees: t + 1, err: rfErr / Math.max(1, state.val.length) });
     }
-  } else if (preset === 'xor'){
-    const cs = [[-0.55,-0.55,-1],[0.55,0.55,-1],[-0.55,0.55,1],[0.55,-0.55,1]];
-    for (const [cx,cy,lab] of cs) for (let i=0;i<n/2;i++) pts.push({x: clamp(cx + 0.16*randn(rng), -1,1), y: clamp(cy + 0.16*randn(rng), -1,1), label: lab});
-  } else if (preset === 'stripes'){
-    for (let i=0;i<2*n;i++){
-      const x = -0.95 + 1.9 * rng();
-      const y = -0.92 + 1.84 * rng();
-      const band = Math.floor((x + 1) / 0.50);
-      pts.push({x, y, label: band % 2 === 0 ? -1 : 1});
+
+    const totalImp = state.rfImportance.reduce((a,b) => a + b, 0);
+    if (totalImp > 0) state.rfImportance = state.rfImportance.map(v => v / totalImp);
+
+    const singleAcc = accuracyTree(state.singleTree, state.val);
+    const bagAcc = 1 - state.bagCurve[state.bagCurve.length - 1].err;
+    const rfAcc = 1 - state.rfCurve[state.rfCurve.length - 1].err;
+
+    let oobCount = 0, oobMistakes = 0;
+    for (let i = 0; i < state.train.length; i++){
+      let s = 0, c = 0;
+      for (const bag of state.rfTrees){
+        if (!bag.used.has(i)){
+          s += predictTree(bag.tree, state.train[i].x);
+          c++;
+        }
+      }
+      if (!c) continue;
+      const pred = s >= 0 ? 1 : -1;
+      oobCount++;
+      if (pred !== state.train[i].label) oobMistakes++;
     }
-  } else if (preset === 'moons'){
-    for (let i=0;i<n;i++){
-      const t = Math.PI * rng();
-      pts.push({x: clamp(0.55*Math.cos(t) + 0.14*randn(rng), -1, 1), y: clamp(0.55*Math.sin(t) - 0.15 + 0.14*randn(rng), -1, 1), label: 1});
-      const x2 = 1 - Math.cos(t), y2 = 0.45 - Math.sin(t);
-      pts.push({x: clamp(0.55*(x2 - 0.9) + 0.14*randn(rng), -1, 1), y: clamp(0.55*y2 - 0.15 + 0.14*randn(rng), -1, 1), label: -1});
+    const rfOob = oobCount ? (oobMistakes / oobCount) : null;
+
+    outs.singleAcc.textContent = (100 * singleAcc).toFixed(1) + '%';
+    outs.bagAcc.textContent = (100 * bagAcc).toFixed(1) + '%';
+    outs.rfAcc.textContent = (100 * rfAcc).toFixed(1) + '%';
+    outs.rfOob.textContent = rfOob === null ? '—' : rfOob.toFixed(3);
+
+    const best = [['Single tree', singleAcc], ['Bagging', bagAcc], ['Random forest', rfAcc]].sort((a,b) => b[1] - a[1])[0];
+    outs.bestMethod.textContent = best[0];
+  }
+
+  function getBoundaryPredictor(){
+    const mode = controls.boundaryModel.value;
+    if (mode === 'single') return x => predictTree(state.singleTree, x);
+    if (mode === 'bagging') return x => {
+      let s = 0;
+      for (const bag of state.baggingTrees) s += predictTree(bag.tree, x);
+      return s >= 0 ? 1 : -1;
+    };
+    return x => {
+      let s = 0;
+      for (const bag of state.rfTrees) s += predictTree(bag.tree, x);
+      return s >= 0 ? 1 : -1;
+    };
+  }
+
+  function x1ToPx(x, w){ return 50 + (x + 1) * 0.5 * (w - 90); }
+  function x2ToPy(y, h){ return h - 40 - (y + 1) * 0.5 * (h - 80); }
+
+  function drawBoundary(){
+    const ctx = bctx, w = boundaryCanvas.width, h = boundaryCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const predictor = getBoundaryPredictor();
+    const plotX0 = 50, plotY0 = 25, plotW = w - 90, plotH = h - 80;
+    const gs = 60;
+    const cellW = plotW / gs, cellH = plotH / gs;
+    const d = +controls.dims.value;
+    for (let gy = 0; gy < gs; gy++){
+      for (let gx = 0; gx < gs; gx++){
+        const x1 = -1 + 2 * (gx + 0.5) / gs;
+        const x2 = -1 + 2 * (gy + 0.5) / gs;
+        const x = new Array(d).fill(0);
+        x[0] = x1; x[1] = x2;
+        const pred = predictor(x);
+        ctx.fillStyle = pred === 1 ? 'rgba(132,165,255,.22)' : 'rgba(255,164,164,.24)';
+        ctx.fillRect(plotX0 + gx * cellW, plotY0 + (gs - 1 - gy) * cellH, cellW + 1, cellH + 1);
+      }
     }
-  } else {
-    // concentric circles: inner circle = red (-1), outer circle = blue (+1)
-    for (let i=0;i<n;i++){
-      const a1 = 2 * Math.PI * rng();
-      const r1 = 0.28 + 0.06 * randn(rng);
-      pts.push({
-        x: clamp(r1 * Math.cos(a1), -1, 1),
-        y: clamp(r1 * Math.sin(a1), -1, 1),
-        label: -1
+
+    ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+    for (let g = 1; g < 4; g++){
+      const x = plotX0 + g/4 * plotW, y = plotY0 + g/4 * plotH;
+      ctx.beginPath(); ctx.moveTo(x, plotY0); ctx.lineTo(x, plotY0 + plotH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(plotX0, y); ctx.lineTo(plotX0 + plotW, y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#aeb8cc'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x1ToPx(0,w), plotY0); ctx.lineTo(x1ToPx(0,w), plotY0 + plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(plotX0, x2ToPy(0,h)); ctx.lineTo(plotX0 + plotW, x2ToPy(0,h)); ctx.stroke();
+
+    for (const p of state.train){
+      const px = x1ToPx(p.x[0], w), py = x2ToPy(p.x[1], h);
+      ctx.beginPath(); ctx.arc(px, py, 7.0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 5.3, 0, Math.PI * 2); ctx.fillStyle = p.label === 1 ? '#4d7fff' : '#d95c5c'; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.24)'; ctx.stroke();
+    }
+    for (const p of state.val){
+      const px = x1ToPx(p.x[0], w), py = x2ToPy(p.x[1], h);
+      ctx.beginPath(); ctx.rect(px - 5.1, py - 5.1, 10.2, 10.2); ctx.fillStyle = p.label === 1 ? '#173d93' : '#8b1e1e'; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.stroke();
+    }
+
+    ctx.fillStyle = '#162033';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText('Slice of the decision rule in informative coordinates (x₁, x₂)', 18, 20);
+    ctx.font = '13px system-ui, sans-serif';
+    ctx.fillStyle = '#647089';
+    ctx.fillText(`All nuisance coordinates x₃,…,x_d are fixed at 0 in this plot. Boundary shown: ${controls.boundaryModel.options[controls.boundaryModel.selectedIndex].text}`, 18, h - 12);
+  }
+
+  function drawCurves(){
+    const ctx = cctx, w = curveCanvas.width, h = curveCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    const m = {l:54, r:20, t:20, b:42};
+    const x0 = m.l, x1 = w - m.r, y0 = h - m.b, y1 = m.t;
+    const maxTrees = Math.max(1, +controls.bags.value);
+    const singleErr = 1 - parseFloat(outs.singleAcc.textContent) / 100;
+    const maxErr = Math.max(0.05, ...state.bagCurve.map(r => r.err), ...state.rfCurve.map(r => r.err), singleErr);
+    ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+    for (let g = 0; g <= 5; g++){
+      const y = y0 - g / 5 * (y0 - y1);
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#aeb8cc'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.stroke();
+    function X(t){ return x0 + (t / Math.max(1, maxTrees)) * (x1 - x0); }
+    function Y(e){ return y0 - (e / maxErr) * (y0 - y1); }
+
+    ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 2; ctx.setLineDash([7, 6]);
+    ctx.beginPath(); ctx.moveTo(x0, Y(singleErr)); ctx.lineTo(x1, Y(singleErr)); ctx.stroke(); ctx.setLineDash([]);
+
+    function drawSeries(series, color){
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+      ctx.beginPath();
+      series.forEach((r, i) => {
+        const x = X(r.trees), y = Y(r.err);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
-
-      const a2 = 2 * Math.PI * rng();
-      const r2 = 0.72 + 0.08 * randn(rng);
-      pts.push({
-        x: clamp(r2 * Math.cos(a2), -1, 1),
-        y: clamp(r2 * Math.sin(a2), -1, 1),
-        label: 1
-      });
+      ctx.stroke();
+      series.forEach(r => { const x = X(r.trees), y = Y(r.err); ctx.beginPath(); ctx.arc(x, y, 3.8, 0, Math.PI*2); ctx.fill(); });
     }
-  }
-  state.points = pts;
-}
-function fitForest(){
-  vals.bags.textContent = controls.bags.value;
-  vals.bagSamples.textContent = controls.bagSamples.value;
-  vals.kFeat.textContent = controls.kFeat.value;
-  vals.n.textContent = controls.n.value;
-  const rng = mulberry32((state.seed ^ 0xFA1234) >>> 0);
-  const m = +controls.bags.value;
-  const bagSamples = +controls.bagSamples.value;
-  state.bags = [];
-  let uniqueTotal = 0;
-  for (let b=0;b<m;b++){
-    const { bag, used } = bootstrapSample(state.points, bagSamples, rng);
-    const treeRng = mulberry32(((state.seed + 17*b) ^ 0x9E3779B9) >>> 0);
-    const tree = buildTree(bag, treeRng);
-    uniqueTotal += used.size;
-    state.bags.push({ tree, used });
-  }
-  outs.avgUnique.textContent = (uniqueTotal / Math.max(1, m)).toFixed(1);
-  outs.bagsShown.textContent = String(m);
-  outs.kShown.textContent = String(controls.kFeat.value);
-}
-function ensembleScore(p){
-  let s = 0;
-  for (const bag of state.bags) s += predictTree(bag.tree, p);
-  return s;
-}
-function oobPrediction(i){
-  let s = 0, c = 0;
-  for (const bag of state.bags){
-    if (!bag.used.has(i)){
-      s += predictTree(bag.tree, state.points[i]);
-      c++;
-    }
-  }
-  if (!c) return null;
-  return s >= 0 ? 1 : -1;
-}
-function drawAxes(clear=true){
-  if (clear) ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = '#edf1f8';
-  ctx.lineWidth = 1;
-  for (let g=1; g<4; g++){
-    const x = g/4 * canvas.width, y = g/4 * canvas.height;
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
-  }
-  ctx.strokeStyle = '#aeb8cc';
-  ctx.lineWidth = 1.3;
-  ctx.beginPath(); ctx.moveTo(canvas.width/2,0); ctx.lineTo(canvas.width/2,canvas.height); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,canvas.height/2); ctx.lineTo(canvas.width,canvas.height/2); ctx.stroke();
-}
-function drawBackground(){
-  const gs = 48, cellW = canvas.width / gs, cellH = canvas.height / gs;
-  for (let gy=0; gy<gs; gy++){
-    for (let gx=0; gx<gs; gx++){
-      const p = canvasToPoint((gx+.5)*cellW, (gy+.5)*cellH);
-      const pred = ensembleScore(p) >= 0 ? 1 : -1;
-      ctx.fillStyle = pred === 1 ? 'rgba(132,165,255,.22)' : 'rgba(255,164,164,.24)';
-      ctx.fillRect(gx*cellW, gy*cellH, cellW+1, cellH+1);
-    }
-  }
-}
-function drawPoints(){
-  for (const p of state.points){
-    const q = pointToCanvas(p);
-    ctx.beginPath();
-    ctx.arc(q.x,q.y,7.2,0,Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,.96)';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(q.x,q.y,5.5,0,Math.PI*2);
-    ctx.fillStyle = p.label === 1 ? '#4d7fff' : '#d95c5c';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.24)';
-    ctx.stroke();
-  }
-}
-function renderStats(){
-  let correct = 0;
-  for (const p of state.points) if ((ensembleScore(p) >= 0 ? 1 : -1) === p.label) correct++;
-  outs.trainAcc.textContent = (100 * correct / Math.max(1, state.points.length)).toFixed(1) + '%';
+    drawSeries(state.bagCurve, '#d95c5c');
+    drawSeries(state.rfCurve, '#1f9d74');
 
-  let oobCount = 0, oobMistakes = 0;
-  for (let i=0;i<state.points.length;i++){
-    const pred = oobPrediction(i);
-    if (pred === null) continue;
-    oobCount++;
-    if (pred !== state.points[i].label) oobMistakes++;
+    ctx.fillStyle = '#5e6b7a'; ctx.font = '13px system-ui, sans-serif';
+    ctx.fillText('number of trees', (x0 + x1)/2 - 40, h - 10);
+    ctx.save(); ctx.translate(14, (y0 + y1)/2 + 16); ctx.rotate(-Math.PI/2); ctx.fillText('validation error', 0, 0); ctx.restore();
+    ctx.fillStyle = '#162033'; ctx.font = 'bold 16px system-ui, sans-serif'; ctx.fillText('Validation error curve', 16, 18);
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = '#6b7280'; ctx.fillText('Single tree', w - 236, 20);
+    ctx.fillStyle = '#d95c5c'; ctx.fillText('Bagging', w - 148, 20);
+    ctx.fillStyle = '#1f9d74'; ctx.fillText('Random forest', w - 92, 20);
   }
-  outs.oobErr.textContent = oobCount ? (oobMistakes / oobCount).toFixed(3) : '—';
-}
-function render(){
-  fitForest();
-  drawAxes(true);
-  drawBackground();
-  drawAxes(false);
-  drawPoints();
-  renderStats();
-}
-for (const el of [controls.preset, controls.criterion, controls.bags, controls.bagSamples, controls.kFeat, controls.n]){
-  el.addEventListener('input', ()=>{ if (el===controls.preset || el===controls.n) generateData(); render(); });
-  el.addEventListener('change', ()=>{ if (el===controls.preset || el===controls.n) generateData(); render(); });
-}
-controls.regen.addEventListener('click', ()=>{ generateData(); render(); });
 
-generateData();
-render();
+  function drawImportance(){
+    const ctx = ictx, w = importanceCanvas.width, h = importanceCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    const m = {l:50, r:14, t:24, b:40};
+    const x0 = m.l, x1 = w - m.r, y0 = h - m.b, y1 = m.t;
+    const d = state.rfImportance.length;
+    const maxImp = Math.max(0.001, ...state.rfImportance);
+    ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+    for (let g = 0; g <= 4; g++){
+      const y = y0 - g / 4 * (y0 - y1);
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#aeb8cc'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.stroke();
+    const slot = (x1 - x0) / d, barW = Math.max(8, slot * 0.7);
+    for (let j = 0; j < d; j++){
+      const imp = state.rfImportance[j];
+      const bh = (imp / maxImp) * (y0 - y1);
+      const x = x0 + j * slot + 0.15 * slot;
+      const y = y0 - bh;
+      ctx.fillStyle = j < 2 ? '#1f9d74' : '#4d7fff';
+      ctx.fillRect(x, y, barW, bh);
+      ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.strokeRect(x, y, barW, bh);
+    }
+    ctx.fillStyle = '#162033'; ctx.font = 'bold 16px system-ui, sans-serif'; ctx.fillText('Random-forest feature importance', 16, 18);
+    ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = '#5e6b7a';
+    for (let j = 0; j < d; j++){
+      const x = x0 + j * slot + 0.25 * slot;
+      ctx.fillText(String(j + 1), x, h - 14);
+    }
+    ctx.fillText('feature index', (x0 + x1)/2 - 30, h - 4);
+  }
+
+  function render(){
+    syncControls();
+    generateData();
+    fitModels();
+    drawBoundary();
+    drawCurves();
+    drawImportance();
+  }
+
+  for (const el of [controls.signalType, controls.dims, controls.nTrain, controls.nVal, controls.bags, controls.bagSamples, controls.kFeat, controls.criterion, controls.boundaryModel]){
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  controls.regen.addEventListener('click', render);
+  render();
 })();
 </script>
 </body>
