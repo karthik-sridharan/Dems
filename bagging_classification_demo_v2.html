@@ -238,7 +238,7 @@ function generateData(){
     // concentric circles: inner circle = red (-1), outer circle = blue (+1)
     for (let i=0;i<n;i++){
       const a1 = 2 * Math.PI * rng();
-      const r1 = 0.28 + 0.16 * randn(rng);
+      const r1 = 0.28 + 0.3 * randn(rng);
       pts.push({
         x: clamp(r1 * Math.cos(a1), -1, 1),
         y: clamp(r1 * Math.sin(a1), -1, 1),
