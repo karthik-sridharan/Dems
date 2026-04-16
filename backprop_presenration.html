@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Backpropagation — Single Page Click Animation</title>
+  <style>
+    :root {
+      --bg1: #09111f;
+      --bg2: #111c34;
+      --panel: rgba(15, 23, 43, 0.82);
+      --line: rgba(255,255,255,0.12);
+      --text: #eef4ff;
+      --muted: #a9b7d6;
+      --blue: #67b9ff;
+      --red: #ff6f82;
+      --green: #6fe3a2;
+      --gold: #ffd86d;
+      --shadow: 0 18px 48px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #1b2d5b 0%, var(--bg2) 32%, var(--bg1) 72%),
+        linear-gradient(180deg, #0b1222, #070c17);
+      overflow: hidden;
+    }
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 0.9rem;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+    }
+    .title-wrap { min-width: 0; }
+    .kicker {
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-weight: 800;
+      font-size: .74rem;
+      margin-bottom: 0.2rem;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.15rem, 3.8vw, 1.7rem);
+      line-height: 1.05;
+    }
+    .stage-pill {
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      border-radius: 999px;
+      padding: 0.55rem 0.8rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .content {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(280px, 1.2fr) minmax(260px, 0.9fr);
+      gap: 0.9rem;
+    }
+    .panel {
+      position: relative;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .viz {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      cursor: pointer;
+    }
+    .viz svg {
+      width: 100%;
+      max-width: 820px;
+      height: auto;
+      user-select: none;
+    }
+    .tap-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 0.9rem;
+      transform: translateX(-50%);
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(10,14,24,0.72);
+      border: 1px solid rgba(255,255,255,0.13);
+      color: var(--muted);
+      font-size: 0.92rem;
+      pointer-events: none;
+      opacity: 0.95;
+    }
+    .info {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+    .card {
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      padding: 0.9rem 1rem;
+    }
+    .stage-title {
+      font-size: clamp(1.1rem, 3.2vw, 1.45rem);
+      margin: 0 0 0.45rem;
+      line-height: 1.1;
+    }
+    .lede, .speaker, .legend, .small {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.98rem;
+    }
+    .eq {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      color: var(--text);
+      font-size: 0.98rem;
+      line-height: 1.45;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 0.85rem 0.95rem;
+      min-height: 124px;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+    .chip {
+      border-radius: 999px;
+      padding: 0.5rem 0.7rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
+      padding: 0.15rem 0;
+    }
+    button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      background: rgba(12,18,32,0.86);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 0.95rem 1.15rem;
+      min-width: 88px;
+      box-shadow: var(--shadow);
+    }
+    button.primary {
+      background: linear-gradient(180deg, rgba(103,185,255,0.24), rgba(103,185,255,0.11));
+      border-color: rgba(103,185,255,0.4);
+    }
+    button:active {
+      transform: translateY(1px) scale(0.995);
+    }
+    .progress-wrap {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      overflow: hidden;
+    }
+    .progress {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), #90d4ff 55%, var(--gold));
+      transition: width 0.35s ease;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-right: 0.8rem;
+      margin-top: 0.3rem;
+    }
+    .dot {
+      width: 11px; height: 11px; border-radius: 50%; display: inline-block;
+    }
+    .dot.blue { background: var(--blue); }
+    .dot.red { background: var(--red); }
+    .dot.green { background: var(--green); }
+    .dot.gray { background: #92a0c2; }
+
+    .node {
+      fill: rgba(255,255,255,0.05);
+      stroke: rgba(255,255,255,0.15);
+      stroke-width: 2.2;
+      transition: fill 0.3s ease, stroke 0.3s ease, filter 0.3s ease, r 0.3s ease;
+    }
+    .node.blue { fill: rgba(103,185,255,0.18); stroke: rgba(103,185,255,0.92); filter: drop-shadow(0 0 12px rgba(103,185,255,0.32)); }
+    .node.red { fill: rgba(255,111,130,0.18); stroke: rgba(255,111,130,0.95); filter: drop-shadow(0 0 12px rgba(255,111,130,0.34)); }
+    .node.green { fill: rgba(111,227,162,0.18); stroke: rgba(111,227,162,0.95); filter: drop-shadow(0 0 12px rgba(111,227,162,0.34)); }
+    .label { fill: var(--text); font-weight: 800; font-size: 26px; }
+    .tiny { fill: var(--muted); font-size: 18px; }
+    .edge {
+      stroke: rgba(255,255,255,0.18);
+      stroke-width: 5;
+      stroke-linecap: round;
+      transition: stroke 0.28s ease, stroke-width 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
+      opacity: 0.85;
+    }
+    .edge.blue { stroke: rgba(103,185,255,0.98); filter: drop-shadow(0 0 9px rgba(103,185,255,0.35)); }
+    .edge.red { stroke: rgba(255,111,130,0.98); filter: drop-shadow(0 0 9px rgba(255,111,130,0.35)); }
+    .edge.green { stroke: rgba(111,227,162,0.98); filter: drop-shadow(0 0 9px rgba(111,227,162,0.35)); }
+    .edge.thick { stroke-width: 10; }
+    .edge.medium { stroke-width: 7; }
+    .edge.dim { opacity: 0.22; }
+    .formula-box {
+      fill: rgba(255,255,255,0.04);
+      stroke: rgba(255,255,255,0.12);
+      stroke-width: 2;
+      transition: opacity 0.28s ease;
+    }
+    .formula-text { fill: var(--text); font-size: 22px; font-weight: 700; }
+    .formula-sub { fill: var(--muted); font-size: 16px; }
+    .hidden-ui {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      pointer-events: none;
+    }
+    .hidden-ui.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 940px) {
+      html, body { overflow: auto; }
+      .content {
+        grid-template-columns: 1fr;
+      }
+      .viz {
+        min-height: 45svh;
+      }
+      .info {
+        grid-template-rows: auto auto auto auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title-wrap">
+        <div class="kicker">Single-page teaching animation</div>
+        <h1>Backpropagation, one click at a time</h1>
+      </div>
+      <div class="stage-pill" id="stagePill">Stage 1 / 10</div>
+    </div>
+
+    <div class="content">
+      <div class="panel viz" id="vizTapArea" aria-label="Interactive backpropagation animation. Tap or click to advance.">
+        <svg viewBox="0 0 900 620" role="img" aria-label="A 2-2-1 neural network for backpropagation">
+          <defs>
+            <marker id="arrowBlue" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto">
+              <path d="M0,0 L14,7 L0,14 z" fill="rgba(103,185,255,0.98)"></path>
+            </marker>
+            <marker id="arrowRed" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto">
+              <path d="M0,0 L14,7 L0,14 z" fill="rgba(255,111,130,0.98)"></path>
+            </marker>
+            <marker id="arrowGreen" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto">
+              <path d="M0,0 L14,7 L0,14 z" fill="rgba(111,227,162,0.98)"></path>
+            </marker>
+          </defs>
+
+          <text x="85" y="85" class="tiny">inputs</text>
+          <text x="373" y="85" class="tiny">hidden layer</text>
+          <text x="683" y="85" class="tiny">output</text>
+
+          <line id="e_x1_h1" class="edge" x1="168" y1="190" x2="398" y2="170"></line>
+          <line id="e_x1_h2" class="edge" x1="168" y1="190" x2="398" y2="390"></line>
+          <line id="e_x2_h1" class="edge" x1="168" y1="410" x2="398" y2="170"></line>
+          <line id="e_x2_h2" class="edge" x1="168" y1="410" x2="398" y2="390"></line>
+
+          <line id="e_h1_y" class="edge" x1="462" y1="170" x2="690" y2="290"></line>
+          <line id="e_h2_y" class="edge" x1="462" y1="390" x2="690" y2="290"></line>
+
+          <circle id="n_x1" class="node" cx="130" cy="190" r="42"></circle>
+          <circle id="n_x2" class="node" cx="130" cy="410" r="42"></circle>
+          <circle id="n_h1" class="node" cx="430" cy="170" r="46"></circle>
+          <circle id="n_h2" class="node" cx="430" cy="390" r="46"></circle>
+          <circle id="n_y" class="node" cx="730" cy="290" r="52"></circle>
+
+          <text x="111" y="199" class="label">x₁</text>
+          <text x="111" y="419" class="label">x₂</text>
+          <text x="407" y="180" class="label">h₁</text>
+          <text x="407" y="400" class="label">h₂</text>
+          <text x="705" y="300" class="label">ŷ</text>
+
+          <g id="lossGroup" class="hidden-ui">
+            <rect class="formula-box" x="625" y="455" rx="20" ry="20" width="215" height="92"></rect>
+            <text x="657" y="496" class="formula-text">L = ½(ŷ − y)²</text>
+            <text x="665" y="525" class="formula-sub">final scalar loss</text>
+          </g>
+
+          <g id="gOutputDelta" class="hidden-ui">
+            <path d="M808,290 C855,290 855,220 790,220" fill="none" stroke="rgba(255,111,130,0.98)" stroke-width="7" marker-end="url(#arrowRed)"></path>
+            <text x="760" y="200" class="formula-text" style="font-size:20px; fill: var(--red);">∂L/∂ŷ</text>
+          </g>
+
+          <g id="gLocalSlope" class="hidden-ui">
+            <rect class="formula-box" x="603" y="114" rx="18" ry="18" width="218" height="78"></rect>
+            <text x="635" y="149" class="formula-text" style="font-size:19px;">× σ′(z²)</text>
+            <text x="618" y="176" class="formula-sub">local derivative at output</text>
+          </g>
+
+          <g id="gOutputWGrads" class="hidden-ui">
+            <text x="516" y="205" class="formula-text" style="font-size:19px; fill: var(--red);">∂L/∂w₂₁</text>
+            <text x="525" y="355" class="formula-text" style="font-size:19px; fill: var(--red);">∂L/∂w₂₂</text>
+          </g>
+
+          <g id="gHiddenDelta" class="hidden-ui">
+            <path d="M690,275 C625,250 560,210 470,180" fill="none" stroke="rgba(255,111,130,0.98)" stroke-width="7" marker-end="url(#arrowRed)"></path>
+            <path d="M690,305 C625,330 560,370 470,380" fill="none" stroke="rgba(255,111,130,0.98)" stroke-width="7" marker-end="url(#arrowRed)"></path>
+            <text x="548" y="124" class="formula-text" style="font-size:18px; fill: var(--red);">(W²)ᵀ δ²</text>
+          </g>
+
+          <g id="gInputWGrads" class="hidden-ui">
+            <text x="238" y="170" class="formula-text" style="font-size:18px; fill: var(--red);">∂L/∂w₁₁</text>
+            <text x="240" y="335" class="formula-text" style="font-size:18px; fill: var(--red);">∂L/∂w₁₂</text>
+            <text x="238" y="255" class="formula-text" style="font-size:18px; fill: var(--red);">∂L/∂w₁₃</text>
+            <text x="238" y="470" class="formula-text" style="font-size:18px; fill: var(--red);">∂L/∂w₁₄</text>
+          </g>
+
+          <g id="gUpdate" class="hidden-ui">
+            <path d="M136,112 C292,78 580,78 738,112" fill="none" stroke="rgba(111,227,162,0.96)" stroke-width="8" marker-end="url(#arrowGreen)"></path>
+            <text x="340" y="72" class="formula-text" style="font-size:20px; fill: var(--green);">w ← w − η∇L</text>
+          </g>
+        </svg>
+        <div class="tap-hint" id="tapHint">Tap anywhere on the diagram to advance</div>
+      </div>
+
+      <div class="panel info">
+        <div class="card">
+          <div class="stage-title" id="stageTitle">Build the network</div>
+          <div class="lede" id="stageText">Start with a tiny 2–2–1 network so every value and every gradient is visible. This keeps the explanation mechanical.</div>
+        </div>
+
+        <div class="card">
+          <div class="eq" id="equationBox">Forward values will appear first.</div>
+        </div>
+
+        <div class="mini-grid">
+          <div class="card">
+            <strong>What to say</strong>
+            <div class="speaker" id="speakerText" style="margin-top:0.45rem;">“We will use the smallest network that still has a hidden layer, so every derivative is visible.”</div>
+          </div>
+          <div class="card">
+            <strong>Visual key</strong>
+            <div class="legend" style="margin-top:0.45rem;">
+              <span><i class="dot blue"></i> forward activations</span>
+              <span><i class="dot red"></i> backward gradients</span>
+              <span><i class="dot green"></i> update step</span>
+              <span><i class="dot gray"></i> cached values</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chip-row" id="chipRow"></div>
+          <div class="progress-wrap" style="margin-top:0.9rem;"><div class="progress" id="progress"></div></div>
+          <div class="small" style="margin-top:0.7rem;">Tap the picture or use the buttons below. Swipe left for next, right for previous.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="prevBtn">Back</button>
+      <button class="primary" id="nextBtn">Next</button>
+      <button id="resetBtn">Restart</button>
+    </div>
+  </div>
+
+  <script>
+    const stages = [
+      {
+        title: "Build the network",
+        text: "Start with a tiny 2–2–1 network so every value and every gradient is visible. This keeps the explanation clean.",
+        eq: "Forward values will appear first.",
+        speaker: "\u201cWe will use the smallest network that still has a hidden layer, so every derivative is visible.\u201d",
+        chips: ["2 inputs", "2 hidden units", "1 output", "click to advance"]
+      },
+      {
+        title: "Forward pass to the hidden layer",
+        text: "The inputs flow forward to the hidden neurons. Each hidden neuron computes a weighted sum z¹ and then an activation a¹.",
+        eq: "z¹ = W¹x + b¹\na¹ = σ(z¹)",
+        speaker: "\u201cEach hidden neuron first computes a weighted sum, then applies a nonlinearity.\u201d",
+        chips: ["blue = forward", "cache z¹", "cache a¹"]
+      },
+      {
+        title: "Forward pass to the output",
+        text: "Now the hidden activations feed the output neuron and produce the prediction ŷ.",
+        eq: "z² = W²a¹ + b²\nŷ = a² = σ(z²)",
+        speaker: "\u201cThe hidden activations become the input to the output layer.\u201d",
+        chips: ["prediction ŷ", "store z²", "store ŷ"]
+      },
+      {
+        title: "Compute the loss",
+        text: "At the end of the forward pass, compare the prediction to the target y and collapse everything into one scalar loss.",
+        eq: "L = 1/2 (ŷ − y)²",
+        speaker: "\u201cThe loss is the single number we want to reduce.\u201d",
+        chips: ["target y", "scalar objective", "error signal starts here"]
+      },
+      {
+        title: "Start the backward pass",
+        text: "Backprop begins at the end. First ask how the loss changes if the prediction ŷ changes a little.",
+        eq: "∂L/∂ŷ",
+        speaker: "\u201cWe begin with the sensitivity of the loss to the prediction.\u201d",
+        chips: ["red = gradients", "seed gradient", "output sensitivity"]
+      },
+      {
+        title: "Apply the local derivative at the output",
+        text: "To move one step earlier, multiply the incoming gradient by the output neuron’s local slope.",
+        eq: "δ² = ∂L/∂z² = (∂L/∂ŷ) · (∂ŷ/∂z²)",
+        speaker: "\u201cIncoming gradient times local derivative gives the next gradient.\u201d",
+        chips: ["chain rule", "local slope", "δ² at output"]
+      },
+      {
+        title: "Get the output weight gradients",
+        text: "Each output weight gets a gradient equal to the output error signal times the activation that came through that edge.",
+        eq: "∂L/∂w²ⱼ = δ² · a¹ⱼ",
+        speaker: "\u201cWeight gradient means: error signal times incoming activation.\u201d",
+        chips: ["edge-wise credit", "bigger line = bigger gradient", "sign matters"]
+      },
+      {
+        title: "Send responsibility back to the hidden layer",
+        text: "The hidden layer inherits responsibility from downstream. Then each hidden unit multiplies by its own local derivative.",
+        eq: "∂L/∂a¹ = (W²)ᵀ δ²\nδ¹ = ∂L/∂z¹ = (∂L/∂a¹) ⊙ σ′(z¹)",
+        speaker: "\u201cEach hidden unit gets some share of the downstream error, then scales it by its own sensitivity.\u201d",
+        chips: ["transpose weights", "hidden error signal", "repeat the pattern"]
+      },
+      {
+        title: "Get the first-layer weight gradients",
+        text: "Now apply the exact same rule one layer earlier: local hidden error signal times the input passing through the weight.",
+        eq: "∂L/∂w¹ⱼₖ = δ¹ⱼ · xₖ",
+        speaker: "\u201cNothing new happens here. The same rule repeats one layer earlier.\u201d",
+        chips: ["recursive pattern", "local error × input", "all weights covered"]
+      },
+      {
+        title: "Update the weights",
+        text: "Once all gradients are available, gradient descent nudges the parameters in the direction that lowers the loss.",
+        eq: "w ← w − η ∇L",
+        speaker: "\u201cBackprop computes the gradients. Learning happens when we update the weights.\u201d",
+        chips: ["green = update", "lower loss next pass", "tap again to restart"]
+      }
+    ];
+
+    const stagePill = document.getElementById('stagePill');
+    const stageTitle = document.getElementById('stageTitle');
+    const stageText = document.getElementById('stageText');
+    const equationBox = document.getElementById('equationBox');
+    const speakerText = document.getElementById('speakerText');
+    const chipRow = document.getElementById('chipRow');
+    const progress = document.getElementById('progress');
+    const tapHint = document.getElementById('tapHint');
+
+    const nodes = {
+      x1: document.getElementById('n_x1'),
+      x2: document.getElementById('n_x2'),
+      h1: document.getElementById('n_h1'),
+      h2: document.getElementById('n_h2'),
+      y: document.getElementById('n_y')
+    };
+
+    const edges = {
+      x1h1: document.getElementById('e_x1_h1'),
+      x1h2: document.getElementById('e_x1_h2'),
+      x2h1: document.getElementById('e_x2_h1'),
+      x2h2: document.getElementById('e_x2_h2'),
+      h1y: document.getElementById('e_h1_y'),
+      h2y: document.getElementById('e_h2_y')
+    };
+
+    const groups = {
+      loss: document.getElementById('lossGroup'),
+      outputDelta: document.getElementById('gOutputDelta'),
+      localSlope: document.getElementById('gLocalSlope'),
+      outputW: document.getElementById('gOutputWGrads'),
+      hiddenDelta: document.getElementById('gHiddenDelta'),
+      inputW: document.getElementById('gInputWGrads'),
+      update: document.getElementById('gUpdate')
+    };
+
+    let stage = 0;
+
+    function resetVisuals() {
+      Object.values(nodes).forEach(n => n.setAttribute('class', 'node'));
+      Object.values(edges).forEach(e => e.setAttribute('class', 'edge'));
+      Object.values(groups).forEach(g => g.setAttribute('class', 'hidden-ui'));
+    }
+
+    function showGroup(name) {
+      groups[name].setAttribute('class', 'hidden-ui show');
+    }
+
+    function setNode(name, cls) {
+      nodes[name].setAttribute('class', 'node ' + cls);
+    }
+
+    function setEdge(name, cls) {
+      edges[name].setAttribute('class', 'edge ' + cls);
+    }
+
+    function applyStageVisuals(i) {
+      resetVisuals();
+
+      if (i >= 1) {
+        setNode('x1', 'blue'); setNode('x2', 'blue');
+        setNode('h1', 'blue'); setNode('h2', 'blue');
+        setEdge('x1h1', 'blue'); setEdge('x1h2', 'blue'); setEdge('x2h1', 'blue'); setEdge('x2h2', 'blue');
+      }
+      if (i >= 2) {
+        setNode('y', 'blue');
+        setEdge('h1y', 'blue medium'); setEdge('h2y', 'blue medium');
+      }
+      if (i >= 3) {
+        showGroup('loss');
+        setNode('y', 'red');
+      }
+      if (i >= 4) {
+        showGroup('outputDelta');
+        setNode('y', 'red');
+        setEdge('h1y', 'dim'); setEdge('h2y', 'dim');
+      }
+      if (i >= 5) {
+        showGroup('localSlope');
+        setNode('y', 'red');
+      }
+      if (i >= 6) {
+        showGroup('outputW');
+        setEdge('h1y', 'red thick');
+        setEdge('h2y', 'red medium');
+      }
+      if (i >= 7) {
+        showGroup('hiddenDelta');
+        setNode('h1', 'red'); setNode('h2', 'red');
+        setEdge('h1y', 'red thick'); setEdge('h2y', 'red medium');
+      }
+      if (i >= 8) {
+        showGroup('inputW');
+        setEdge('x1h1', 'red medium');
+        setEdge('x1h2', 'red');
+        setEdge('x2h1', 'red');
+        setEdge('x2h2', 'red thick');
+        setNode('x1', 'red'); setNode('x2', 'red');
+        setNode('h1', 'red'); setNode('h2', 'red');
+      }
+      if (i >= 9) {
+        showGroup('update');
+        Object.keys(edges).forEach(k => setEdge(k, 'green medium'));
+        Object.keys(nodes).forEach(k => setNode(k, 'green'));
+      }
+    }
+
+    function renderStage() {
+      const s = stages[stage];
+      stagePill.textContent = `Stage ${stage + 1} / ${stages.length}`;
+      stageTitle.textContent = s.title;
+      stageText.textContent = s.text;
+      equationBox.textContent = s.eq;
+      speakerText.textContent = s.speaker;
+      chipRow.innerHTML = s.chips.map(c => `<span class="chip">${c}</span>`).join('');
+      progress.style.width = `${((stage + 1) / stages.length) * 100}%`;
+      tapHint.textContent = stage === stages.length - 1 ? 'Tap again to restart' : 'Tap anywhere on the diagram to advance';
+      applyStageVisuals(stage);
+    }
+
+    function nextStage() {
+      stage = (stage + 1) % stages.length;
+      renderStage();
+    }
+
+    function prevStage() {
+      stage = (stage - 1 + stages.length) % stages.length;
+      renderStage();
+    }
+
+    function restart() {
+      stage = 0;
+      renderStage();
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', nextStage);
+    document.getElementById('prevBtn').addEventListener('click', prevStage);
+    document.getElementById('resetBtn').addEventListener('click', restart);
+    document.getElementById('vizTapArea').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      nextStage();
+    });
+
+    document.querySelector('.content').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      if (e.target.closest('#vizTapArea')) return;
+      nextStage();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') nextStage();
+      if (e.key === 'ArrowLeft') prevStage();
+      if (e.key.toLowerCase() === 'r') restart();
+    });
+
+    let touchStartX = null;
+    let touchStartY = null;
+    document.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (touchStartX === null || touchStartY === null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) nextStage(); else prevStage();
+      }
+      touchStartX = null;
+      touchStartY = null;
+    }, { passive: true });
+
+    renderStage();
+  </script>
+</body>
+</html>
