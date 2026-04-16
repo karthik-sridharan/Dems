@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Backpropagation, Stage by Stage</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121933;
+    --panel-2: #0f1630;
+    --text: #eef3ff;
+    --muted: #aab7d8;
+    --blue: #61b4ff;
+    --red: #ff6b7a;
+    --green: #6fda8f;
+    --gold: #ffd36b;
+    --line: rgba(255,255,255,0.10);
+    --shadow: 0 24px 60px rgba(0,0,0,0.28);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: radial-gradient(circle at top left, #17214a 0%, var(--bg) 45%, #070b17 100%); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+  body { overflow: hidden; }
+  .deck { height: 100%; width: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0; padding: 3.2rem 3.5rem 5rem;
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 2rem;
+    opacity: 0; transform: translateX(24px) scale(0.985); pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; }
+  .slide.single { grid-template-columns: 1fr; }
+  .kicker { color: var(--blue); font-size: .92rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: .9rem; }
+  h1, h2 { margin: 0 0 1rem; line-height: 1.05; }
+  h1 { font-size: 3.1rem; max-width: 11ch; }
+  h2 { font-size: 2.15rem; }
+  p, li { color: var(--muted); font-size: 1.12rem; line-height: 1.48; }
+  .lede { font-size: 1.24rem; max-width: 58ch; }
+  .col { min-width: 0; }
+  .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.35rem;
+  }
+  .panel.dark { background: linear-gradient(180deg, rgba(7,11,23,0.7), rgba(255,255,255,0.02)); }
+  .chips { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+  .chip {
+    border: 1px solid rgba(255,255,255,.11); border-radius: 999px; padding: .55rem .82rem;
+    color: var(--text); background: rgba(255,255,255,.04); font-size: .96rem;
+  }
+  .eq {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text); font-size: 1.05rem; line-height: 1.5;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+    border-radius: 16px; padding: .8rem .95rem; margin: .8rem 0;
+    white-space: pre-wrap;
+  }
+  .two-col-mini { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+  .bullet-card { padding: .95rem 1rem; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.03); }
+  .bullet-card b { color: var(--text); }
+  ul { margin: .6rem 0 0 1.1rem; padding: 0; }
+  li { margin: .45rem 0; }
+  .note {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 0; overflow: hidden;
+    background: rgba(8,12,24,0.96); border-top: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(16px);
+    transition: height .25s ease; z-index: 4;
+  }
+  body.show-notes .note { height: 22vh; }
+  .note-inner { padding: 1rem 3.4rem 1.1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; height: 100%; }
+  .note h3 { margin: 0 0 .45rem; font-size: 1rem; color: var(--text); }
+  .note p, .note li { font-size: .95rem; line-height: 1.42; }
+  .chrome {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.1rem .85rem; pointer-events: none;
+  }
+  .progress-wrap { width: min(420px, 46vw); height: 7px; border-radius: 999px; background: rgba(255,255,255,.10); overflow: hidden; pointer-events: auto; }
+  .progress { height: 100%; width: 0; background: linear-gradient(90deg, var(--blue), #8ed0ff); }
+  .footer-meta { display: flex; gap: .75rem; align-items: center; color: var(--muted); font-size: .92rem; pointer-events: auto; }
+  .key { border: 1px solid rgba(255,255,255,.16); padding: .22rem .42rem; border-radius: 8px; color: var(--text); background: rgba(255,255,255,.04); }
+  .page { color: var(--text); min-width: 60px; text-align: right; }
+  .diagram-wrap { display: flex; align-items: center; justify-content: center; height: 100%; }
+  svg.diagram { width: 100%; max-width: 720px; height: auto; }
+  .label { font-size: 18px; fill: var(--text); font-weight: 600; }
+  .sublabel { font-size: 15px; fill: var(--muted); }
+  .node { fill: #1b2447; stroke: rgba(255,255,255,.12); stroke-width: 2; }
+  .node.blue { fill: rgba(97,180,255,.18); stroke: rgba(97,180,255,.85); }
+  .node.red { fill: rgba(255,107,122,.16); stroke: rgba(255,107,122,.88); }
+  .node.green { fill: rgba(111,218,143,.18); stroke: rgba(111,218,143,.88); }
+  .edge { stroke: rgba(255,255,255,.22); stroke-width: 4; stroke-linecap: round; }
+  .edge.blue { stroke: rgba(97,180,255,.95); filter: drop-shadow(0 0 8px rgba(97,180,255,.55)); }
+  .edge.red { stroke: rgba(255,107,122,.95); filter: drop-shadow(0 0 8px rgba(255,107,122,.50)); }
+  .edge.green { stroke: rgba(111,218,143,.95); filter: drop-shadow(0 0 8px rgba(111,218,143,.50)); }
+  .edge.thick { stroke-width: 8; }
+  .legend { display: flex; gap: .9rem; flex-wrap: wrap; margin-top: .8rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .45rem; color: var(--muted); font-size: .95rem; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .dot.blue { background: var(--blue); }
+  .dot.red { background: var(--red); }
+  .dot.green { background: var(--green); }
+  .dot.gray { background: #95a2c6; }
+  .filmstrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem; margin-top: .8rem; }
+  .frame { border: 1px solid var(--line); background: rgba(255,255,255,.03); border-radius: 20px; padding: .95rem; min-height: 210px; }
+  .frame h4 { margin: .3rem 0 .4rem; font-size: 1.05rem; }
+  .frame p { font-size: .98rem; }
+  .matrix {
+    display: grid; grid-template-columns: 1.2fr 1.4fr 1.8fr; gap: .65rem;
+    margin-top: .8rem; align-items: stretch;
+  }
+  .matrix > div { border: 1px solid var(--line); border-radius: 16px; padding: .75rem .85rem; background: rgba(255,255,255,.03); }
+  .matrix b { display: block; margin-bottom: .35rem; }
+  table.plan { width: 100%; border-collapse: collapse; margin-top: .7rem; }
+  table.plan th, table.plan td { text-align: left; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,.10); padding: .72rem .5rem; }
+  table.plan th { color: var(--text); font-size: .95rem; }
+  table.plan td { color: var(--muted); font-size: .95rem; }
+  a { color: #9cd4ff; }
+  .sources li { margin-bottom: .6rem; }
+  .tagline { color: var(--gold); font-size: 1rem; font-weight: 700; margin-top: .7rem; }
+
+  .mobile-controls {
+    position: fixed; left: 0; right: 0; bottom: .9rem; z-index: 7;
+    display: none; justify-content: center; gap: .7rem; padding: 0 1rem;
+    pointer-events: none;
+  }
+  .mobile-controls .btn {
+    pointer-events: auto;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(10,15,30,.88);
+    color: var(--text);
+    border-radius: 999px;
+    padding: .85rem 1rem;
+    min-width: 4.1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .mobile-controls .btn.wide { min-width: 5.6rem; }
+  .mobile-hint {
+    display: none;
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: .98rem;
+  }
+  .tap-zones {
+    position: fixed; inset: 0; z-index: 3; display: none; pointer-events: none;
+  }
+  .tap-zone {
+    position: absolute; top: 0; bottom: 5.4rem; width: 22vw; pointer-events: auto;
+  }
+  .tap-zone.left { left: 0; }
+  .tap-zone.right { right: 0; }
+  @media (hover: none), (pointer: coarse) {
+    body { overflow: auto; }
+    .chrome { bottom: 4.8rem; }
+    .mobile-controls, .mobile-hint, .tap-zones { display: flex; }
+    .tap-zones { display: block; }
+    .footer-meta .key { display: none; }
+  }
+  @media (max-width: 1100px) {
+    .slide { grid-template-columns: 1fr; overflow-y: auto; padding-bottom: 6rem; }
+    h1 { font-size: 2.5rem; }
+    .filmstrip { grid-template-columns: 1fr 1fr; }
+    .matrix { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <section class="slide active" data-notes-title="Speaker notes" data-notes-body="Use this deck like a lecture slide deck: arrow keys to move, N to toggle notes. Open by motivating the question first: backprop is credit assignment. Mention that the deck intentionally uses a tiny 2–2–1 network so every derivative is visible.">
+    <div class="col">
+      <div class="kicker">Lecture deck • self-contained HTML</div>
+      <h1>Backpropagation,<br>stage by stage</h1>
+      <p class="lede">A lecture-ready visual explanation of how a neural network assigns credit or blame to each weight.</p>
+      <div class="chips">
+        <span class="chip">Tiny 2–2–1 network</span>
+        <span class="chip">Storyboard included</span>
+        <span class="chip">Slide-by-slide notes included</span>
+        <span class="chip">Touch nav + notes mode</span>
+      </div>
+      <div class="panel" style="margin-top:1.1rem;">
+        <p style="margin:0 0 .35rem;"><b style="color:var(--text)">Visual language</b></p>
+        <div class="legend">
+          <span><i class="dot blue"></i> forward activations</span>
+          <span><i class="dot red"></i> backward gradients</span>
+          <span><i class="dot gray"></i> cached intermediates</span>
+          <span><i class="dot green"></i> parameter update</span>
+        </div>
+      </div>
+      <p class="tagline">Goal: make backprop feel mechanical, not mysterious.</p>
+      <p class="mobile-hint">On a phone: use the buttons at the bottom, tap the left/right screen edges, or swipe.</p>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Tiny neural network diagram">
+        <defs>
+          <marker id="arrowBlue0" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(97,180,255,.95)"></path>
+          </marker>
+        </defs>
+        <line x1="145" y1="165" x2="355" y2="145" class="edge blue"/>
+        <line x1="145" y1="165" x2="355" y2="315" class="edge blue"/>
+        <line x1="145" y1="305" x2="355" y2="145" class="edge blue"/>
+        <line x1="145" y1="305" x2="355" y2="315" class="edge blue"/>
+        <line x1="405" y1="145" x2="615" y2="230" class="edge blue thick" marker-end="url(#arrowBlue0)"/>
+        <line x1="405" y1="315" x2="615" y2="230" class="edge blue thick" marker-end="url(#arrowBlue0)"/>
+
+        <circle cx="115" cy="165" r="34" class="node blue"/>
+        <circle cx="115" cy="305" r="34" class="node blue"/>
+        <circle cx="375" cy="145" r="38" class="node blue"/>
+        <circle cx="375" cy="315" r="38" class="node blue"/>
+        <circle cx="645" cy="230" r="42" class="node red"/>
+
+        <text x="100" y="171" class="label">x₁</text>
+        <text x="100" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text>
+        <text x="360" y="321" class="label">h₂</text>
+        <text x="626" y="236" class="label">ŷ</text>
+
+        <text x="72" y="95" class="sublabel">inputs</text>
+        <text x="332" y="95" class="sublabel">hidden layer</text>
+        <text x="615" y="95" class="sublabel">output</text>
+
+        <rect x="565" y="338" width="150" height="76" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="590" y="370" class="label" style="font-size:26px;">L = ½(ŷ−y)²</text>
+        <text x="592" y="398" class="sublabel">loss drives gradients back</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide single" data-notes-title="Storyboard" data-notes-body="This slide is your storyboard. Use it as the high-level movie trailer for the whole explanation: compute values, measure error, flow gradients backward, update parameters. Each frame corresponds to a later set of slides.">
+    <div class="col">
+      <div class="kicker">Storyboard</div>
+      <h2>The animation arc for the lecture</h2>
+      <p class="lede">Use this as the stage-by-stage filmstrip before diving into equations. It helps students keep the big picture while you zoom into local derivatives.</p>
+      <div class="filmstrip">
+        <div class="frame">
+          <div class="chip">Scene 1</div>
+          <h4>Build the tiny network</h4>
+          <p>Two inputs, two hidden neurons, one output. Introduce the question: <b style="color:var(--text)">which weights caused the final loss?</b></p>
+        </div>
+        <div class="frame">
+          <div class="chip">Scene 2</div>
+          <h4>Forward pass</h4>
+          <p>Blue pulses move left to right. Cache every intermediate value: z, a, ŷ.</p>
+        </div>
+        <div class="frame">
+          <div class="chip">Scene 3</div>
+          <h4>Seed the loss gradient</h4>
+          <p>The loss node produces the first red signal: ∂L/∂ŷ.</p>
+        </div>
+        <div class="frame">
+          <div class="chip">Scene 4</div>
+          <h4>Flow backward and update</h4>
+          <p>Each layer applies <b style="color:var(--text)">incoming gradient × local derivative</b>, then weights update in green.</p>
+        </div>
+      </div>
+      <div class="matrix">
+        <div><b>Forward</b><span>Compute activations and store intermediates.</span></div>
+        <div><b>Backward</b><span>Propagate sensitivities through the same graph in reverse.</span></div>
+        <div><b>Learn</b><span>Use gradients to nudge weights so the loss drops on the next pass.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) show the network only, (2) label x1, x2, h1, h2, y-hat, (3) add the target y and loss box. Voiceover: 'We choose the smallest network that still has a hidden layer, so every ingredient of backprop is visible.'">
+    <div class="col">
+      <div class="kicker">Step 0</div>
+      <h2>The tiny network we will study</h2>
+      <p class="lede">Start with the smallest network that still contains the full backprop story.</p>
+      <div class="two-col-mini">
+        <div class="bullet-card"><b>Inputs</b><p>x₁ and x₂ are the features that enter the network.</p></div>
+        <div class="bullet-card"><b>Hidden layer</b><p>h₁ and h₂ let us show how error is assigned to intermediate units.</p></div>
+        <div class="bullet-card"><b>Output</b><p>ŷ is the network prediction.</p></div>
+        <div class="bullet-card"><b>Target + loss</b><p>We compare ŷ to y using a scalar loss.</p></div>
+      </div>
+      <div class="eq">z^(1) = W^(1)x + b^(1)
+a^(1) = σ(z^(1))
+
+z^(2) = W^(2)a^(1) + b^(2)
+ŷ = a^(2)</div>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Network diagram with target and loss">
+        <line x1="145" y1="165" x2="355" y2="145" class="edge"/>
+        <line x1="145" y1="165" x2="355" y2="315" class="edge"/>
+        <line x1="145" y1="305" x2="355" y2="145" class="edge"/>
+        <line x1="145" y1="305" x2="355" y2="315" class="edge"/>
+        <line x1="405" y1="145" x2="615" y2="230" class="edge"/>
+        <line x1="405" y1="315" x2="615" y2="230" class="edge"/>
+        <circle cx="115" cy="165" r="34" class="node"/><circle cx="115" cy="305" r="34" class="node"/>
+        <circle cx="375" cy="145" r="38" class="node"/><circle cx="375" cy="315" r="38" class="node"/>
+        <circle cx="645" cy="230" r="42" class="node"/>
+        <text x="100" y="171" class="label">x₁</text><text x="100" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text><text x="360" y="321" class="label">h₂</text>
+        <text x="626" y="236" class="label">ŷ</text>
+        <rect x="565" y="65" width="120" height="62" rx="16" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="610" y="104" class="label" style="font-size:24px;">y</text>
+        <line x1="645" y1="272" x2="645" y2="338" class="edge"/>
+        <rect x="548" y="338" width="176" height="76" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="584" y="370" class="label" style="font-size:26px;">L = ½(ŷ−y)²</text>
+        <text x="584" y="397" class="sublabel">final scalar objective</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) blue arrows from inputs to hidden layer, (2) reveal z^(1), (3) reveal a^(1), (4) mention cached values in gray. Voiceover: 'The forward pass computes values; later, backprop will reuse them.'">
+    <div class="col">
+      <div class="kicker">Step 1</div>
+      <h2>Forward pass: compute hidden activations</h2>
+      <p class="lede">Blue means information moving forward through the network.</p>
+      <div class="eq">z^(1) = W^(1)x + b^(1)
+a^(1) = σ(z^(1))</div>
+      <ul>
+        <li>Each hidden neuron first computes a weighted sum <b style="color:var(--text)">z</b>.</li>
+        <li>Then it applies a nonlinearity to produce an activation <b style="color:var(--text)">a</b>.</li>
+        <li>These values are cached because the backward pass will reuse them.</li>
+      </ul>
+      <div class="chips" style="margin-top:1rem;">
+        <span class="chip">cache z^(1)</span>
+        <span class="chip">cache a^(1)</span>
+      </div>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Forward pass to hidden layer">
+        <line x1="145" y1="165" x2="355" y2="145" class="edge blue thick"/>
+        <line x1="145" y1="165" x2="355" y2="315" class="edge blue thick"/>
+        <line x1="145" y1="305" x2="355" y2="145" class="edge blue thick"/>
+        <line x1="145" y1="305" x2="355" y2="315" class="edge blue thick"/>
+        <line x1="405" y1="145" x2="615" y2="230" class="edge"/>
+        <line x1="405" y1="315" x2="615" y2="230" class="edge"/>
+        <circle cx="115" cy="165" r="34" class="node blue"/><circle cx="115" cy="305" r="34" class="node blue"/>
+        <circle cx="375" cy="145" r="38" class="node blue"/><circle cx="375" cy="315" r="38" class="node blue"/>
+        <circle cx="645" cy="230" r="42" class="node"/>
+        <text x="100" y="171" class="label">x₁</text><text x="100" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text><text x="360" y="321" class="label">h₂</text>
+        <text x="626" y="236" class="label">ŷ</text>
+        <rect x="505" y="62" width="180" height="90" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="524" y="96" class="label" style="font-size:22px;">cache:</text>
+        <text x="524" y="123" class="sublabel">z^(1), a^(1)</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) show hidden-to-output edges lighting up, (2) reveal z^(2), (3) reveal y-hat. Voiceover: 'The hidden activations become the inputs to the output layer.'">
+    <div class="col">
+      <div class="kicker">Step 2</div>
+      <h2>Forward pass: compute the prediction</h2>
+      <div class="eq">z^(2) = W^(2)a^(1) + b^(2)
+ŷ = a^(2)</div>
+      <ul>
+        <li>The hidden activations now act like the inputs to the output layer.</li>
+        <li>The network emits a prediction <b style="color:var(--text)">ŷ</b>.</li>
+        <li>We still have not learned anything yet — we have only evaluated the current parameters.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Forward pass to output layer">
+        <line x1="145" y1="165" x2="355" y2="145" class="edge blue"/>
+        <line x1="145" y1="165" x2="355" y2="315" class="edge blue"/>
+        <line x1="145" y1="305" x2="355" y2="145" class="edge blue"/>
+        <line x1="145" y1="305" x2="355" y2="315" class="edge blue"/>
+        <line x1="405" y1="145" x2="615" y2="230" class="edge blue thick"/>
+        <line x1="405" y1="315" x2="615" y2="230" class="edge blue thick"/>
+        <circle cx="115" cy="165" r="34" class="node blue"/><circle cx="115" cy="305" r="34" class="node blue"/>
+        <circle cx="375" cy="145" r="38" class="node blue"/><circle cx="375" cy="315" r="38" class="node blue"/>
+        <circle cx="645" cy="230" r="42" class="node blue"/>
+        <text x="100" y="171" class="label">x₁</text><text x="100" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text><text x="360" y="321" class="label">h₂</text>
+        <text x="626" y="236" class="label">ŷ</text>
+        <rect x="498" y="338" width="204" height="76" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="520" y="368" class="label" style="font-size:22px;">prediction ready</text>
+        <text x="520" y="396" class="sublabel">next: compare to target y</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) show target y, (2) animate prediction and target into the loss box, (3) say 'the forward pass ends in one scalar'. Voiceover: 'The loss is the only thing the optimizer ultimately cares about.'">
+    <div class="col">
+      <div class="kicker">Step 3</div>
+      <h2>Compare prediction to target</h2>
+      <div class="eq">L = ½(ŷ − y)²</div>
+      <ul>
+        <li>The forward pass ends in a single scalar: the loss.</li>
+        <li>If the prediction changes, the loss changes.</li>
+        <li>That sensitivity is what the backward pass will propagate.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Prediction and target feeding into the loss">
+        <circle cx="645" cy="200" r="42" class="node blue"/>
+        <text x="626" y="206" class="label">ŷ</text>
+        <rect x="560" y="62" width="120" height="62" rx="16" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="606" y="101" class="label" style="font-size:24px;">y</text>
+        <line x1="645" y1="242" x2="645" y2="320" class="edge blue thick"/>
+        <line x1="620" y1="124" x2="620" y2="320" class="edge blue thick"/>
+        <rect x="510" y="320" width="200" height="90" rx="18" fill="rgba(255,107,122,.12)" stroke="rgba(255,107,122,.5)"/>
+        <text x="538" y="357" class="label" style="font-size:30px;">L = ½(ŷ−y)²</text>
+        <text x="540" y="387" class="sublabel">one number summarizes error</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) dim everything except the loss and output, (2) reveal ∂L/∂ŷ, (3) say this is the seed of the backward pass. Voiceover: 'Backprop starts at the end.'">
+    <div class="col">
+      <div class="kicker">Backward pass</div>
+      <h2>Start at the loss</h2>
+      <p class="lede">The first backward question is simple: if the prediction moved a little, how would the loss move?</p>
+      <div class="eq">∂L/∂ŷ</div>
+      <ul>
+        <li>This quantity is the <b style="color:var(--text)">sensitivity of loss to the prediction</b>.</li>
+        <li>It is the seed that begins reverse accumulation through the graph.</li>
+        <li>From now on, red means gradient flow.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Backward pass starting at the loss">
+        <defs>
+          <marker id="arrowRed1" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,107,122,.95)"></path>
+          </marker>
+        </defs>
+        <circle cx="645" cy="200" r="42" class="node red"/>
+        <text x="626" y="206" class="label">ŷ</text>
+        <rect x="500" y="320" width="220" height="92" rx="18" fill="rgba(255,107,122,.12)" stroke="rgba(255,107,122,.5)"/>
+        <text x="536" y="357" class="label" style="font-size:30px;">L = ½(ŷ−y)²</text>
+        <line x1="610" y1="318" x2="610" y2="245" class="edge red thick" marker-end="url(#arrowRed1)"/>
+        <rect x="62" y="154" width="210" height="88" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="88" y="190" class="label" style="font-size:28px;">∂L/∂ŷ</text>
+        <text x="88" y="218" class="sublabel">seed gradient</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) zoom to output neuron, (2) show incoming red gradient, (3) show local slope dial, (4) reveal the product. Voiceover: 'Incoming gradient times local derivative equals outgoing gradient.' Repeat that sentence slowly; it is the template for the whole lecture.">
+    <div class="col">
+      <div class="kicker">Local chain rule</div>
+      <h2>Backprop through the output neuron</h2>
+      <div class="eq">∂L/∂z^(2) = (∂L/∂ŷ) · (∂ŷ/∂z^(2))</div>
+      <ul>
+        <li>The first factor is the incoming gradient from downstream.</li>
+        <li>The second factor is the neuron’s local slope.</li>
+        <li>This exact multiplication pattern repeats at every stage of backprop.</li>
+      </ul>
+      <div class="chips">
+        <span class="chip">incoming gradient</span>
+        <span class="chip">× local derivative</span>
+        <span class="chip">= new gradient</span>
+      </div>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Output neuron local derivative">
+        <defs>
+          <marker id="arrowRed2" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,107,122,.95)"></path>
+          </marker>
+        </defs>
+        <circle cx="380" cy="236" r="78" class="node red"/>
+        <text x="352" y="243" class="label" style="font-size:38px;">ŷ</text>
+        <line x1="148" y1="236" x2="300" y2="236" class="edge red thick" marker-end="url(#arrowRed2)"/>
+        <rect x="74" y="185" width="120" height="86" rx="16" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="99" y="220" class="label" style="font-size:26px;">∂L/∂ŷ</text>
+        <text x="98" y="247" class="sublabel">incoming</text>
+        <rect x="508" y="162" width="170" height="150" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="548" y="203" class="label" style="font-size:24px;">local slope</text>
+        <text x="552" y="240" class="label" style="font-size:30px;">∂ŷ/∂z^(2)</text>
+        <text x="548" y="275" class="sublabel">activation derivative</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) light each hidden-to-output edge separately, (2) show the formula once, (3) then point out the pattern 'error signal × incoming activation'. Mention that edge thickness can represent gradient magnitude.">
+    <div class="col">
+      <div class="kicker">Output layer gradients</div>
+      <h2>Assign credit to the output weights</h2>
+      <div class="eq">∂L/∂w_j^(2) = (∂L/∂z^(2)) · a_j^(1)</div>
+      <ul>
+        <li>A weight gets a large gradient when a strong error signal reaches it.</li>
+        <li>It also gets a large gradient when the activation flowing through that edge is large.</li>
+        <li>That is why the output weights are easy to interpret: <b style="color:var(--text)">error signal × incoming activation</b>.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Output weight gradients">
+        <defs>
+          <marker id="arrowRed3" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,107,122,.95)"></path>
+          </marker>
+        </defs>
+        <circle cx="185" cy="145" r="38" class="node blue"/>
+        <circle cx="185" cy="315" r="38" class="node blue"/>
+        <circle cx="525" cy="230" r="42" class="node red"/>
+        <line x1="223" y1="145" x2="483" y2="220" class="edge red thick" marker-end="url(#arrowRed3)"/>
+        <line x1="223" y1="315" x2="483" y2="240" class="edge red" marker-end="url(#arrowRed3)"/>
+        <text x="170" y="151" class="label">h₁</text>
+        <text x="170" y="321" class="label">h₂</text>
+        <text x="506" y="236" class="label">ŷ</text>
+        <rect x="72" y="58" width="176" height="58" rx="14" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="95" y="93" class="sublabel">a₁^(1) enters here</text>
+        <rect x="72" y="350" width="176" height="58" rx="14" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="95" y="385" class="sublabel">a₂^(1) enters here</text>
+        <rect x="470" y="52" width="208" height="76" rx="18" fill="rgba(255,107,122,.12)" stroke="rgba(255,107,122,.5)"/>
+        <text x="496" y="84" class="label" style="font-size:24px;">thicker edge =</text>
+        <text x="496" y="110" class="sublabel">larger |gradient|</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) split the red signal back to both hidden neurons, (2) show W^(2)^T * gradient, (3) multiply by each hidden unit's local slope. Voiceover: 'Each hidden unit inherits responsibility from downstream, then scales it by its own sensitivity.'">
+    <div class="col">
+      <div class="kicker">Hidden layer backprop</div>
+      <h2>Send responsibility back to the hidden layer</h2>
+      <div class="eq">∂L/∂a^(1) = (W^(2))ᵀ · (∂L/∂z^(2))
+
+∂L/∂z_j^(1) = (∂L/∂a_j^(1)) · σ'(z_j^(1))</div>
+      <ul>
+        <li>The output error signal splits across the hidden units.</li>
+        <li>Each hidden neuron receives a weighted share of downstream responsibility.</li>
+        <li>Then it multiplies by its own local derivative before passing anything farther back.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Gradient flowing from output to hidden layer">
+        <defs>
+          <marker id="arrowRed4" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,107,122,.95)"></path>
+          </marker>
+        </defs>
+        <circle cx="175" cy="145" r="38" class="node red"/>
+        <circle cx="175" cy="315" r="38" class="node red"/>
+        <circle cx="515" cy="230" r="42" class="node red"/>
+        <line x1="473" y1="218" x2="214" y2="155" class="edge red thick" marker-end="url(#arrowRed4)"/>
+        <line x1="473" y1="242" x2="214" y2="305" class="edge red" marker-end="url(#arrowRed4)"/>
+        <text x="160" y="151" class="label">h₁</text>
+        <text x="160" y="321" class="label">h₂</text>
+        <text x="496" y="236" class="label">ŷ</text>
+        <rect x="52" y="48" width="205" height="72" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="78" y="79" class="label" style="font-size:22px;">local slope at h₁</text>
+        <text x="79" y="103" class="sublabel">σ'(z₁^(1))</text>
+        <rect x="52" y="350" width="205" height="72" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="78" y="381" class="label" style="font-size:22px;">local slope at h₂</text>
+        <text x="79" y="405" class="sublabel">σ'(z₂^(1))</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) illuminate one input-to-hidden edge first, (2) write the formula for a single weight, (3) then generalize to all first-layer weights. Voiceover: 'Nothing conceptually new happens here. The same template repeats one layer earlier.'">
+    <div class="col">
+      <div class="kicker">First-layer gradients</div>
+      <h2>Now compute gradients for earlier weights</h2>
+      <div class="eq">∂L/∂w_jk^(1) = (∂L/∂z_j^(1)) · x_k</div>
+      <ul>
+        <li>The local error signal at hidden unit j is already known.</li>
+        <li>Multiply it by the input that crossed the edge, xₖ.</li>
+        <li>Backprop is recursive: the same local rule keeps reappearing.</li>
+      </ul>
+      <div class="chips">
+        <span class="chip">local error signal</span>
+        <span class="chip">× input activation</span>
+      </div>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="First layer weight gradients">
+        <circle cx="105" cy="165" r="34" class="node blue"/><circle cx="105" cy="305" r="34" class="node blue"/>
+        <circle cx="375" cy="145" r="38" class="node red"/><circle cx="375" cy="315" r="38" class="node red"/>
+        <line x1="139" y1="165" x2="337" y2="145" class="edge red thick"/>
+        <line x1="139" y1="165" x2="337" y2="315" class="edge red"/>
+        <line x1="139" y1="305" x2="337" y2="145" class="edge red"/>
+        <line x1="139" y1="305" x2="337" y2="315" class="edge red thick"/>
+        <text x="90" y="171" class="label">x₁</text><text x="90" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text><text x="360" y="321" class="label">h₂</text>
+        <rect x="478" y="92" width="190" height="84" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="503" y="127" class="label" style="font-size:26px;">∂L/∂z₁^(1)</text>
+        <text x="504" y="154" class="sublabel">hidden error signal</text>
+        <rect x="478" y="268" width="190" height="84" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="503" y="303" class="label" style="font-size:26px;">∂L/∂z₂^(1)</text>
+        <text x="504" y="330" class="sublabel">hidden error signal</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Voiceover + builds" data-notes-body="Builds: (1) flash all weights in green, (2) show w <- w - eta grad w, (3) rerun the forward pass quickly and say the loss should drop a bit. Voiceover: 'Gradients become learning only when we update parameters.'">
+    <div class="col">
+      <div class="kicker">Learning step</div>
+      <h2>Turn gradients into a parameter update</h2>
+      <div class="eq">w ← w − η ∇_w L</div>
+      <ul>
+        <li>Once all gradients are available, gradient descent adjusts the parameters.</li>
+        <li>The learning rate η sets how far we move.</li>
+        <li>Then we run another forward pass and hope the loss is lower.</li>
+      </ul>
+      <div class="two-col-mini">
+        <div class="bullet-card"><b>Before</b><p>current weights produce current loss</p></div>
+        <div class="bullet-card"><b>After</b><p>updated weights should reduce loss on the next pass</p></div>
+      </div>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Weights updating after gradients are computed">
+        <line x1="145" y1="165" x2="355" y2="145" class="edge green"/>
+        <line x1="145" y1="165" x2="355" y2="315" class="edge green"/>
+        <line x1="145" y1="305" x2="355" y2="145" class="edge green"/>
+        <line x1="145" y1="305" x2="355" y2="315" class="edge green"/>
+        <line x1="405" y1="145" x2="615" y2="230" class="edge green"/>
+        <line x1="405" y1="315" x2="615" y2="230" class="edge green"/>
+        <circle cx="115" cy="165" r="34" class="node blue"/><circle cx="115" cy="305" r="34" class="node blue"/>
+        <circle cx="375" cy="145" r="38" class="node green"/><circle cx="375" cy="315" r="38" class="node green"/>
+        <circle cx="645" cy="230" r="42" class="node green"/>
+        <text x="100" y="171" class="label">x₁</text><text x="100" y="311" class="label">x₂</text>
+        <text x="360" y="151" class="label">h₁</text><text x="360" y="321" class="label">h₂</text>
+        <text x="626" y="236" class="label">ŷ</text>
+        <rect x="482" y="58" width="210" height="84" rx="18" fill="rgba(111,218,143,.12)" stroke="rgba(111,218,143,.5)"/>
+        <text x="512" y="95" class="label" style="font-size:28px;">w ← w − η∇L</text>
+        <text x="513" y="121" class="sublabel">small green step</text>
+        <rect x="530" y="342" width="150" height="68" rx="18" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.12)"/>
+        <text x="561" y="370" class="label" style="font-size:24px;">loss ↓</text>
+        <text x="560" y="396" class="sublabel">ideally on next pass</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide single" data-notes-title="Recipe summary" data-notes-body="Use this slide as the wrap-up and recap. The three lines are the clean mental model: compute values, propagate sensitivities, update parameters. If time is short, this can be your final content slide before Q&A.">
+    <div class="col">
+      <div class="kicker">One-picture summary</div>
+      <h2>The backprop recipe to remember</h2>
+      <div class="matrix">
+        <div>
+          <b>1. Run forward</b>
+          <p>Compute z and a values through the network and cache them.</p>
+        </div>
+        <div>
+          <b>2. Run backward</b>
+          <p>Start at the loss, then repeatedly apply <span style="color:var(--text)">incoming gradient × local derivative</span>.</p>
+        </div>
+        <div>
+          <b>3. Update parameters</b>
+          <p>Use gradient descent or another optimizer to move weights in a better direction.</p>
+        </div>
+      </div>
+      <div class="eq">Forward:  x → z^(1) → a^(1) → z^(2) → ŷ → L
+Backward: ∂L/∂ŷ → ∂L/∂z^(2) → ∂L/∂a^(1) → ∂L/∂z^(1) → ∂L/∂W</div>
+      <p class="lede">Backpropagation is just the chain rule organized efficiently over the computation graph.</p>
+    </div>
+  </section>
+
+  <section class="slide" data-notes-title="Optional extension" data-notes-body="This is optional. Use it only if you want to motivate activation choices or deeper architectures. Explain that many small derivatives multiplied together can shrink the gradient before it reaches early layers.">
+    <div class="col">
+      <div class="kicker">Optional extension</div>
+      <h2>Why gradients can vanish in deep networks</h2>
+      <p class="lede">If many local derivatives are smaller than one, multiplying them repeatedly can make the backward signal shrink.</p>
+      <div class="eq">small × small × small × small → tiny gradient</div>
+      <ul>
+        <li>This is one reason saturated sigmoid layers can be hard to train when stacked deeply.</li>
+        <li>It motivates careful initialization, activation choices, and architectural tricks.</li>
+      </ul>
+    </div>
+    <div class="col panel dark diagram-wrap">
+      <svg class="diagram" viewBox="0 0 760 470" role="img" aria-label="Vanishing gradients illustration">
+        <circle cx="110" cy="235" r="32" class="node red"/>
+        <circle cx="250" cy="175" r="32" class="node red"/>
+        <circle cx="250" cy="295" r="32" class="node red"/>
+        <circle cx="390" cy="150" r="32" class="node red"/>
+        <circle cx="390" cy="235" r="32" class="node red"/>
+        <circle cx="390" cy="320" r="32" class="node red"/>
+        <circle cx="530" cy="235" r="32" class="node red"/>
+        <circle cx="670" cy="235" r="34" class="node red"/>
+        <line x1="142" y1="223" x2="218" y2="187" class="edge red thick"/>
+        <line x1="142" y1="247" x2="218" y2="283" class="edge red thick"/>
+        <line x1="282" y1="175" x2="358" y2="154" class="edge red"/>
+        <line x1="282" y1="175" x2="358" y2="229" class="edge red"/>
+        <line x1="282" y1="295" x2="358" y2="241" class="edge red"/>
+        <line x1="282" y1="295" x2="358" y2="308" class="edge red"/>
+        <line x1="422" y1="150" x2="498" y2="223" class="edge red" style="opacity:.65"/>
+        <line x1="422" y1="235" x2="498" y2="235" class="edge red" style="opacity:.45"/>
+        <line x1="422" y1="320" x2="498" y2="247" class="edge red" style="opacity:.25"/>
+        <line x1="562" y1="235" x2="636" y2="235" class="edge red" style="opacity:.18"/>
+        <text x="54" y="114" class="sublabel">early layers receive a weaker signal</text>
+        <text x="570" y="192" class="sublabel">strong</text>
+        <text x="58" y="272" class="sublabel">weak</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="slide single" data-notes-title="Presenter appendix" data-notes-body="This is the compact slide-by-slide presenter checklist. It gives you the build order and the matching narration pattern. You can keep it in the deck or copy it into separate speaker notes.">
+    <div class="col">
+      <div class="kicker">Appendix</div>
+      <h2>Compact slide-by-slide presenter plan</h2>
+      <table class="plan">
+        <thead>
+          <tr><th>Slide</th><th>Build</th><th>Narration cue</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Title</td><td>Introduce the tiny network and visual grammar</td><td>“Backprop is credit assignment.”</td></tr>
+          <tr><td>Storyboard</td><td>Preview forward → loss → backward → update</td><td>“Here is the whole movie before the details.”</td></tr>
+          <tr><td>Tiny network</td><td>Show x, h, ŷ, y, L</td><td>“Smallest network that still contains all the ideas.”</td></tr>
+          <tr><td>Forward hidden</td><td>Blue inputs to hidden layer</td><td>“Compute z, then a, and cache them.”</td></tr>
+          <tr><td>Forward output</td><td>Blue hidden to output</td><td>“The hidden activations become new inputs.”</td></tr>
+          <tr><td>Loss</td><td>Prediction and target enter the loss node</td><td>“The forward pass ends in one scalar.”</td></tr>
+          <tr><td>Backward begins</td><td>Reveal ∂L/∂ŷ</td><td>“Backprop starts at the end.”</td></tr>
+          <tr><td>Local chain rule</td><td>Incoming gradient × local derivative</td><td>“This multiplication pattern repeats everywhere.”</td></tr>
+          <tr><td>Output weights</td><td>Edge-by-edge gradients</td><td>“Error signal times incoming activation.”</td></tr>
+          <tr><td>Hidden layer</td><td>Split error back to hidden units</td><td>“Each hidden unit inherits downstream responsibility.”</td></tr>
+          <tr><td>First layer</td><td>Input-to-hidden edge gradients</td><td>“The same rule repeats one layer earlier.”</td></tr>
+          <tr><td>Update</td><td>Flash green weight update</td><td>“Gradients become learning only when parameters move.”</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide single" data-notes-title="Sources" data-notes-body="Mention that the deck structure follows the small-network-first, local-derivative-first pedagogy used in these references.">
+    <div class="col">
+      <div class="kicker">Sources</div>
+      <h2>References used for the teaching structure</h2>
+      <ul class="sources">
+        <li><a href="https://www.3blue1brown.com/lessons/backpropagation">3Blue1Brown — Backpropagation, calculus and neural networks</a><br><span style="color:var(--muted)">Used for the visual pedagogy: tiny network, local derivative intuition, and staged backward flow.</span></li>
+        <li><a href="https://cs231n.github.io/optimization-2/">CS231n — Backpropagation, Intuitions</a><br><span style="color:var(--muted)">Used for the computation-graph framing and the “upstream gradient × local gradient” explanation.</span></li>
+        <li><a href="https://cs231n.github.io/neural-networks-1/">CS231n — Neural Networks Part 1</a><br><span style="color:var(--muted)">Used for the optional vanishing-gradient extension and activation-function caveats.</span></li>
+      </ul>
+      <p class="lede">Controls: on phone use the bottom buttons, tap the left/right edges, or swipe. On desktop you can still use keyboard navigation and notes toggle.</p>
+    </div>
+  </section>
+
+  <div class="note" aria-live="polite">
+    <div class="note-inner">
+      <div>
+        <h3 id="notesTitle">Speaker notes</h3>
+        <p id="notesBody">Use N to toggle the note pane.</p>
+      </div>
+      <div>
+        <h3>Presenter tips</h3>
+        <ul>
+          <li>Repeat the phrase “incoming gradient × local derivative.”</li>
+          <li>Keep one idea per click or per slide.</li>
+          <li>Use the tiny network long enough that students can mentally simulate it.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="tap-zones" aria-hidden="true">
+    <button class="tap-zone left" id="tapPrev" aria-label="Previous slide"></button>
+    <button class="tap-zone right" id="tapNext" aria-label="Next slide"></button>
+  </div>
+
+  <div class="mobile-controls" aria-label="Slide controls">
+    <button class="btn" id="prevBtn" type="button">◀</button>
+    <button class="btn wide" id="notesBtn" type="button">Notes</button>
+    <button class="btn" id="nextBtn" type="button">▶</button>
+  </div>
+
+  <div class="chrome">
+    <div class="footer-meta">
+      <span>Backpropagation deck</span>
+      <span>Touch-friendly navigation</span>
+    </div>
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+    <div class="page" id="page">1 / 14</div>
+  </div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const progress = document.getElementById('progress');
+  const page = document.getElementById('page');
+  const notesTitle = document.getElementById('notesTitle');
+  const notesBody = document.getElementById('notesBody');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const notesBtn = document.getElementById('notesBtn');
+  const tapPrev = document.getElementById('tapPrev');
+  const tapNext = document.getElementById('tapNext');
+  let index = 0;
+  let touchStartX = null;
+  let touchStartY = null;
+
+  function render() {
+    slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+    const pct = ((index + 1) / slides.length) * 100;
+    progress.style.width = pct + '%';
+    page.textContent = `${index + 1} / ${slides.length}`;
+    const active = slides[index];
+    notesTitle.textContent = active.dataset.notesTitle || 'Speaker notes';
+    notesBody.textContent = active.dataset.notesBody || '—';
+  }
+
+  function go(delta) {
+    index = Math.max(0, Math.min(slides.length - 1, index + delta));
+    render();
+  }
+
+  function setSlide(newIndex) {
+    index = Math.max(0, Math.min(slides.length - 1, newIndex));
+    render();
+  }
+
+  function toggleNotes() {
+    document.body.classList.toggle('show-notes');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight','PageDown',' '].includes(e.key)) { e.preventDefault(); go(1); }
+    if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') { setSlide(0); }
+    if (e.key === 'End') { setSlide(slides.length - 1); }
+    if (e.key.toLowerCase() === 'n') { toggleNotes(); }
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target.closest('a, button, .note')) return;
+    go(1);
+  });
+
+  [prevBtn, tapPrev].forEach(el => el && el.addEventListener('click', (e) => { e.stopPropagation(); go(-1); }));
+  [nextBtn, tapNext].forEach(el => el && el.addEventListener('click', (e) => { e.stopPropagation(); go(1); }));
+  if (notesBtn) notesBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleNotes(); });
+
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (touchStartX === null || touchStartY === null || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX = null;
+    touchStartY = null;
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (dx < 0) go(1);
+    else go(-1);
+  }, { passive: true });
+
+  render();
+</script>
+</body>
+</html>
