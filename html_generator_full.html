@@ -971,7 +971,6 @@ window.addEventListener('load', ()=> {
 </html>`;
 }
 
-async 
 function mathJaxHelper(){
   return `<script>
 window.MathJax = {
@@ -987,7 +986,7 @@ async function copyMathJaxHelper(){
   showToast('Copied MathJax helper.');
 }
 
-function copyCurrentSnippet(){
+async function copyCurrentSnippet(){
   const ok = await copyText(snippetOutput.value);
   if(ok) showToast('Copied current slide snippet.');
 }
