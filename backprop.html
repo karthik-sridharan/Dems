@@ -11,18 +11,18 @@
         inlineMath: [['\\(','\\)'], ['$', '$']],
         displayMath: [['\\[','\\]']]
       },
-      svg: { fontCache: 'global' }
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'svg', 'text']
+      },
+      chtml: {
+        scale: 0.95
+      }
     };
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 
   <style>
     :root{
-      --bg:#ffffff;
-      --panel:#ffffff;
-      --border:#000000;
-      --text:#000000;
-      --muted:#444444;
       --edge:#777777;
       --forward:#2f6fed;
       --backward:#d97706;
@@ -112,6 +112,7 @@
       font-weight:700;
       text-anchor:middle;
       dominant-baseline:middle;
+      font-family: Arial, Helvetica, sans-serif;
     }
     .node.forward circle{
       stroke:var(--forward);
@@ -149,6 +150,7 @@
       fill:#000000;
       font-size:16px;
       text-anchor:middle;
+      font-family: Arial, Helvetica, sans-serif;
     }
     .grad{
       fill:#b45309;
@@ -157,6 +159,7 @@
       text-anchor:middle;
       opacity:0;
       transition:opacity .2s ease;
+      font-family: Arial, Helvetica, sans-serif;
     }
     .grad.show{opacity:1}
     .panelTitle{
@@ -179,6 +182,7 @@
       min-height:190px;
       color:#000000;
       overflow-x:auto;
+      font-size:18px;
     }
     .smallGrid{
       display:grid;
@@ -228,6 +232,13 @@
     }
     .muted{color:#444444}
     .tiny{font-size:13px;color:#000000}
+
+    mjx-container { font-size: 100% !important; }
+    .formula mjx-container[display="true"] { margin: 0.5em 0 !important; }
+    .explain mjx-container, .note mjx-container, td mjx-container, th mjx-container, .subtitle mjx-container {
+      font-size: 1em !important;
+    }
+
     @media (max-width:1100px){
       .layout{grid-template-columns:1fr}
       svg{height:760px}
@@ -278,26 +289,26 @@
         <line id="e_s_yhat" class="edge" x1="900" y1="250" x2="900" y2="390"></line>
         <line id="e_yhat_L" class="edge" x1="900" y1="450" x2="900" y2="590"></line>
 
-        <text class="label" x="240" y="118">\(w_{11}\)</text>
-        <text class="label" x="245" y="210">\(w_{12}\)</text>
-        <text class="label" x="245" y="304">\(w_{13}\)</text>
-        <text class="label" x="245" y="205">\(w_{21}\)</text>
-        <text class="label" x="245" y="330">\(w_{22}\)</text>
-        <text class="label" x="245" y="408">\(w_{23}\)</text>
+        <text class="label" x="240" y="118">w₁₁</text>
+        <text class="label" x="245" y="210">w₁₂</text>
+        <text class="label" x="245" y="304">w₁₃</text>
+        <text class="label" x="245" y="205">w₂₁</text>
+        <text class="label" x="245" y="330">w₂₂</text>
+        <text class="label" x="245" y="408">w₂₃</text>
 
-        <text class="label" x="505" y="105">\(\sigma\)</text>
-        <text class="label" x="505" y="265">\(\sigma\)</text>
-        <text class="label" x="505" y="425">\(\sigma\)</text>
+        <text class="label" x="505" y="105">σ</text>
+        <text class="label" x="505" y="265">σ</text>
+        <text class="label" x="505" y="425">σ</text>
 
-        <text class="label" x="745" y="148">\(v_1\)</text>
-        <text class="label" x="740" y="268">\(v_2\)</text>
-        <text class="label" x="745" y="420">\(v_3\)</text>
+        <text class="label" x="745" y="148">v₁</text>
+        <text class="label" x="740" y="268">v₂</text>
+        <text class="label" x="745" y="420">v₃</text>
 
-        <text class="label" x="390" y="65">\(+\,b_1\)</text>
-        <text class="label" x="390" y="225">\(+\,b_2\)</text>
-        <text class="label" x="390" y="385">\(+\,b_3\)</text>
-        <text class="label" x="955" y="245">\(+\,c\)</text>
-        <text class="label" x="965" y="522">\(y\)</text>
+        <text class="label" x="390" y="65">+ b₁</text>
+        <text class="label" x="390" y="225">+ b₂</text>
+        <text class="label" x="390" y="385">+ b₃</text>
+        <text class="label" x="955" y="245">+ c</text>
+        <text class="label" x="965" y="522">y</text>
 
         <text id="g_yhat_L" class="grad" x="980" y="520"></text>
         <text id="g_s_yhat" class="grad" x="980" y="335"></text>
@@ -316,47 +327,47 @@
 
         <g id="x1" class="node">
           <circle cx="80" cy="170" r="42"></circle>
-          <text class="title" x="80" y="170">\(x_1\)</text>
+          <text class="title" x="80" y="170">x₁</text>
         </g>
         <g id="x2" class="node">
           <circle cx="80" cy="340" r="42"></circle>
-          <text class="title" x="80" y="340">\(x_2\)</text>
+          <text class="title" x="80" y="340">x₂</text>
         </g>
         <g id="z1" class="node">
           <circle cx="390" cy="120" r="40"></circle>
-          <text class="title" x="390" y="120">\(z_1\)</text>
+          <text class="title" x="390" y="120">z₁</text>
         </g>
         <g id="z2" class="node">
           <circle cx="390" cy="280" r="40"></circle>
-          <text class="title" x="390" y="280">\(z_2\)</text>
+          <text class="title" x="390" y="280">z₂</text>
         </g>
         <g id="z3" class="node">
           <circle cx="390" cy="440" r="40"></circle>
-          <text class="title" x="390" y="440">\(z_3\)</text>
+          <text class="title" x="390" y="440">z₃</text>
         </g>
         <g id="a1" class="node">
           <circle cx="620" cy="120" r="40"></circle>
-          <text class="title" x="620" y="120">\(a_1\)</text>
+          <text class="title" x="620" y="120">a₁</text>
         </g>
         <g id="a2" class="node">
           <circle cx="620" cy="280" r="40"></circle>
-          <text class="title" x="620" y="280">\(a_2\)</text>
+          <text class="title" x="620" y="280">a₂</text>
         </g>
         <g id="a3" class="node">
           <circle cx="620" cy="440" r="40"></circle>
-          <text class="title" x="620" y="440">\(a_3\)</text>
+          <text class="title" x="620" y="440">a₃</text>
         </g>
         <g id="s" class="node">
           <circle cx="900" cy="250" r="48"></circle>
-          <text class="title" x="900" y="250">\(s\)</text>
+          <text class="title" x="900" y="250">s</text>
         </g>
         <g id="yhat" class="node">
           <circle cx="900" cy="420" r="48"></circle>
-          <text class="title" x="900" y="420">\(\hat y\)</text>
+          <text class="title" x="900" y="420">ŷ</text>
         </g>
         <g id="loss" class="node">
           <circle cx="900" cy="620" r="48"></circle>
-          <text class="title" x="900" y="620">\(L\)</text>
+          <text class="title" x="900" y="620">L</text>
         </g>
       </svg>
 
