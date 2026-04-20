@@ -1,0 +1,961 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HTML Presentation Generator</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#121933;
+    --panel-2:#0f1630;
+    --text:#eef3ff;
+    --muted:#aab7d8;
+    --line:rgba(255,255,255,.12);
+    --blue:#61b4ff;
+    --shadow:0 24px 60px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%,var(--bg) 45%,#070b17 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{padding:1rem}
+  .page{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:520px minmax(0,1fr);gap:1rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:1rem}
+  .stack{display:grid;gap:.9rem}
+  h1,h2,h3{margin:0;line-height:1.08}
+  h1{font-size:2rem}
+  h2{font-size:1.2rem}
+  p,label,small{color:var(--muted)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:.7rem}
+  .btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);border-radius:14px;padding:.8rem 1rem;font:inherit;font-weight:700;cursor:pointer}
+  .btn.primary{border-color:rgba(97,180,255,.45)}
+  .btn.mini{padding:.55rem .75rem;font-size:.9rem}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .field{display:grid;gap:.35rem}
+  .field.full{grid-column:1 / -1}
+  input,select,textarea{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--text);padding:.8rem .9rem;font:inherit}
+  textarea{resize:vertical;min-height:100px;line-height:1.45}
+  textarea.code{min-height:220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.93rem;white-space:pre}
+  .help{font-size:.86rem;line-height:1.45}
+  .smallcaps{letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--blue);font-weight:800}
+  .badge{display:inline-flex;align-items:center;padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);font-size:.82rem;color:var(--text)}
+  .deck-list{display:grid;gap:.55rem;max-height:360px;overflow:auto;padding-right:.2rem}
+  .deck-item{width:100%;text-align:left;padding:.8rem .85rem;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer}
+  .deck-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.10)}
+  .deck-item .meta{display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem}
+  .preview-wrap{display:grid;gap:.8rem}
+  .preview-header{display:flex;justify-content:space-between;gap:1rem;align-items:center}
+  .preview-viewport{overflow:auto;border-radius:24px;border:1px solid var(--line);background:rgba(0,0,0,.1);padding:1rem}
+  .slide{
+    position:relative;
+    min-height:720px;
+    border:1px dashed rgba(255,255,255,.09);
+    border-radius:28px;
+    padding:3rem 3.3rem 4.8rem;
+    background:#ffffff;
+    color:#111111;
+  }
+  .slide h1,.slide h2{margin:0;line-height:1.05}
+  .slide h1{font-size:3.4rem;max-width:15ch}
+  .slide h2{font-size:2.3rem}
+  .slide .kicker{margin-top:.6rem;color:rgba(17,17,17,.72);font-size:1rem;line-height:1.45;max-width:68ch}
+  .slide .lede{margin-top:1rem;color:rgba(17,17,17,.72);font-size:1.14rem;line-height:1.52;max-width:68ch}
+  .slide-body{margin-top:1.35rem}
+  .slide.single .slide-body{display:block}
+  .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
+  .slide .col{min-width:0}
+  .slide .rich p{margin:0 0 .9rem;color:rgba(17,17,17,.78);font-size:1.08rem;line-height:1.5}
+  .slide .rich ul{margin:.35rem 0 1rem 1.2rem;padding:0}
+  .slide .rich li{margin:.45rem 0;color:rgba(17,17,17,.78);font-size:1.06rem;line-height:1.48}
+  .slide .rich h3{margin:1rem 0 .5rem;font-size:1.15rem;color:inherit}
+  .display-math{margin:.9rem 0;font-size:1.07rem}
+  .title-center{
+    min-height:720px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    padding:3rem;
+  }
+  .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+  .title-center .kicker{max-width:24ch;margin-left:auto;margin-right:auto}
+  .snippet-box{min-height:260px}
+  .copy-toast{position:fixed;right:1rem;bottom:1rem;background:rgba(15,22,48,.96);border:1px solid rgba(255,255,255,.16);color:var(--text);padding:.8rem 1rem;border-radius:14px;opacity:0;transform:translateY(10px);transition:opacity .25s ease,transform .25s ease;pointer-events:none;z-index:40}
+  .copy-toast.show{opacity:1;transform:translateY(0)}
+  .row{display:flex;gap:.6rem;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  details summary{cursor:pointer;color:var(--text);font-weight:700}
+  .template-list{display:grid;gap:.55rem}
+  .template-list button{width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);padding:.85rem .95rem;cursor:pointer;font:inherit}
+  .template-list button small{display:block;color:var(--muted);margin-top:.2rem}
+  @media (max-width:1150px){
+    .page{grid-template-columns:1fr}
+  }
+  @media (max-width:900px){
+    .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
+    .slide.two-col .slide-body{grid-template-columns:1fr}
+    .slide h1{font-size:2.3rem}
+    .slide h2{font-size:1.9rem}
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    displayMath: [['$$','$$'], ['\\[','\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+  <div class="panel stack">
+    <div>
+      <div class="smallcaps">Presentation generator</div>
+      <h1>Build slides or a full deck</h1>
+      <p class="help">This version can manage multiple slides and export a full presentation with the same <b>Slides</b> button + slide-map overlay pattern as your decision-trees deck. It also still exports one-slide snippets.</p>
+    </div>
+
+    <div class="field-grid">
+      <div class="field full">
+        <label for="deckTitle">Presentation title</label>
+        <input id="deckTitle" value="My HTML Presentation" />
+      </div>
+      <div class="field">
+        <label for="slideType">Slide type</label>
+        <select id="slideType">
+          <option value="title-center">Centered title slide</option>
+          <option value="single" selected>Single-column content slide</option>
+          <option value="two-col">Two-column body, full-width title</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="headingLevel">Title size</label>
+        <select id="headingLevel">
+          <option value="h1">Large title</option>
+          <option value="h2" selected>Standard title</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bgColor">Slide background color</label>
+        <select id="bgColor">
+          <option value="#ffffff" selected>White</option>
+          <option value="#f7f1e3">Warm cream</option>
+          <option value="#121212">Charcoal</option>
+          <option value="#0f1630">Navy</option>
+          <option value="#1d3b2a">Forest</option>
+          <option value="#3a1028">Plum</option>
+          <option value="#102a43">Slate blue</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fontColor">Font color</label>
+        <select id="fontColor">
+          <option value="#111111" selected>Black</option>
+          <option value="#1f2937">Slate</option>
+          <option value="#ffffff">White</option>
+          <option value="#eef3ff">Soft white</option>
+          <option value="#ffe9a8">Warm gold</option>
+          <option value="#d6f5ff">Pale blue</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="title">Slide title</label>
+        <input id="title" placeholder="Backpropagation, stage by stage" />
+      </div>
+      <div class="field full">
+        <label for="kicker">Kicker / subtitle under title</label>
+        <input id="kicker" value="" placeholder="Optional short subtitle" />
+      </div>
+      <div class="field full">
+        <label for="lede">Intro line / lead paragraph under title area</label>
+        <textarea id="lede" placeholder="Optional short framing sentence"></textarea>
+      </div>
+      <div class="field full">
+        <label for="leftHtml">Main content</label>
+        <textarea id="leftHtml" placeholder="- Bullet one&#10;- Bullet two&#10;&#10;Inline math: $x^2$&#10;Displayed: \( \frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz} \)"></textarea>
+      </div>
+      <div class="field full" id="rightModeField">
+        <label for="rightMode">Right column style</label>
+        <select id="rightMode">
+          <option value="plain" selected>Plain text / rich content</option>
+          <option value="placeholder">Diagram placeholder box</option>
+        </select>
+      </div>
+      <div class="field full" id="rightHtmlField">
+        <label for="rightHtml">Right column content</label>
+        <textarea id="rightHtml" placeholder="Only used for two-column slides"></textarea>
+      </div>
+    </div>
+
+    <details>
+      <summary>Slide presets</summary>
+      <div class="template-list" style="margin-top:.65rem">
+        <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
+        <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
+        <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn primary" id="addSlideBtn">Add as new slide</button>
+      <button class="btn" id="updateSlideBtn">Update selected slide</button>
+      <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
+      <button class="btn" id="deleteSlideBtn">Delete selected</button>
+      <button class="btn" id="clearFormBtn">Clear form</button>
+    </div>
+
+    <div class="panel" style="padding:.9rem">
+      <div class="preview-header">
+        <h2>Deck slides</h2>
+        <span class="badge" id="deckCount">0 slides</span>
+      </div>
+      <div class="deck-list" id="deckList"></div>
+      <div class="row" style="margin-top:.75rem">
+        <button class="btn mini" id="moveUpBtn">Move up</button>
+        <button class="btn mini" id="moveDownBtn">Move down</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>How to write content</summary>
+      <div class="help" style="margin-top:.55rem">
+        <p>Use plain text with light structure:</p>
+        <p>- Start lines with <b>- </b> for bullets.</p>
+        <p>- Start lines with <b>### </b> for a small section heading.</p>
+        <p>- Leave blank lines between paragraphs.</p>
+        <p>- Inline math: <b>$x^2$</b></p>
+        <p>- Displayed math: put <b>\( ... \)</b> on its own line, or use <b>\[ ... \]</b>.</p>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
+      <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
+      <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
+    </div>
+  </div>
+
+  <div class="panel preview-wrap">
+    <div class="preview-header">
+      <div>
+        <div class="smallcaps">Live preview</div>
+        <h2 id="previewTitle">Current slide</h2>
+      </div>
+      <span class="badge">Preview and export use the same renderer</span>
+    </div>
+    <div class="preview-viewport">
+      <div id="preview"></div>
+    </div>
+    <div>
+      <div class="preview-header">
+        <h2>Current slide snippet</h2>
+        <span class="muted">For pasting into a larger deck</span>
+      </div>
+      <textarea class="code snippet-box" id="snippetOutput" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied</div>
+
+<script>
+const fields = {
+  deckTitle: document.getElementById('deckTitle'),
+  slideType: document.getElementById('slideType'),
+  headingLevel: document.getElementById('headingLevel'),
+  bgColor: document.getElementById('bgColor'),
+  fontColor: document.getElementById('fontColor'),
+  title: document.getElementById('title'),
+  kicker: document.getElementById('kicker'),
+  lede: document.getElementById('lede'),
+  leftHtml: document.getElementById('leftHtml'),
+  rightMode: document.getElementById('rightMode'),
+  rightHtml: document.getElementById('rightHtml')
+};
+const preview = document.getElementById('preview');
+const snippetOutput = document.getElementById('snippetOutput');
+const deckList = document.getElementById('deckList');
+const deckCount = document.getElementById('deckCount');
+const previewTitle = document.getElementById('previewTitle');
+const toast = document.getElementById('toast');
+let slides = [];
+let activeIndex = -1;
+
+function showToast(message){
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toast.classList.remove('show'), 1400);
+}
+
+function escapeHtml(str){
+  return String(str ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function escapeAttr(str){
+  return escapeHtml(str).replace(/\n/g,'&#10;');
+}
+
+function preserveMathTokens(str){
+  const tokens = [];
+  let out = String(str ?? '');
+  const patterns = [
+    /\$\$[\s\S]+?\$\$/g,
+    /\\\[[\s\S]+?\\\]/g,
+    /\\\([\s\S]+?\\\)/g,
+    /\$(?!\s)[^$\n]+?\$/g
+  ];
+  patterns.forEach((pattern)=>{
+    out = out.replace(pattern, (m)=>{
+      const key = `@@MATH${tokens.length}@@`;
+      tokens.push(m);
+      return key;
+    });
+  });
+  return { out, tokens };
+}
+
+function restoreMathTokens(str, tokens){
+  return String(str).replace(/@@MATH(\d+)@@/g, (_, i)=>tokens[Number(i)] ?? '');
+}
+
+function hexToRgb(hex){
+  const clean = String(hex || '').trim().replace('#','');
+  if(!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  const full = clean.length === 3 ? clean.split('').map(c=>c+c).join('') : clean;
+  const num = parseInt(full, 16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+
+function rgbaFromHex(hex, alpha){
+  const rgb = hexToRgb(hex);
+  if(!rgb) return `rgba(0,0,0,${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function buildSlideStyle(slide){
+  const bg = slide.bgColor || '#ffffff';
+  const font = slide.fontColor || '#111111';
+  const muted = rgbaFromHex(font, 0.72);
+  const line = rgbaFromHex(font, 0.14);
+  return `background:${bg};color:${font};--text:${font};--muted:${muted};--line:${line};`;
+}
+
+function parseStructuredText(raw){
+  const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
+  if(!text) return '';
+  const lines = text.split('\n');
+  const parts = [];
+  let paragraph = [];
+  let list = [];
+  function flushParagraph(){
+    if(!paragraph.length) return;
+    const joined = paragraph.join(' ').trim();
+    if(joined){
+      const { out, tokens } = preserveMathTokens(joined);
+      const safe = restoreMathTokens(escapeHtml(out), tokens);
+      parts.push(`<p>${safe}</p>`);
+    }
+    paragraph = [];
+  }
+  function flushList(){
+    if(!list.length) return;
+    parts.push(`<ul>${list.map(item=>{
+      const { out, tokens } = preserveMathTokens(item);
+      const safe = restoreMathTokens(escapeHtml(out), tokens);
+      return `<li>${safe}</li>`;
+    }).join('')}</ul>`);
+    list = [];
+  }
+  for(const rawLine of lines){
+    const line = rawLine.trim();
+    if(!line){
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    if(line.startsWith('### ')){
+      flushParagraph();
+      flushList();
+      const { out, tokens } = preserveMathTokens(line.slice(4).trim());
+      const safe = restoreMathTokens(escapeHtml(out), tokens);
+      parts.push(`<h3>${safe}</h3>`);
+      continue;
+    }
+    if(line.startsWith('- ')){
+      flushParagraph();
+      list.push(line.slice(2).trim());
+      continue;
+    }
+    if((/^\\\(.+\\\)$/s).test(line)){
+      flushParagraph();
+      flushList();
+      const body = line.replace(/^\\\(/, '').replace(/\\\)$/, '');
+      parts.push(`<div class="display-math">\\[${body}\\]</div>`);
+      continue;
+    }
+    if((/^\\\[.+\\\]$/s).test(line) || (/^\$\$.+\$\$$/s).test(line)){
+      flushParagraph();
+      flushList();
+      parts.push(`<div class="display-math">${line}</div>`);
+      continue;
+    }
+    paragraph.push(line);
+  }
+  flushParagraph();
+  flushList();
+  return parts.join('\n');
+}
+
+function getFormSlide(){
+  return {
+    slideType: fields.slideType.value,
+    headingLevel: fields.headingLevel.value,
+    bgColor: fields.bgColor.value,
+    fontColor: fields.fontColor.value,
+    title: fields.title.value.trim(),
+    kicker: fields.kicker.value.trim(),
+    lede: fields.lede.value.trim(),
+    leftHtml: fields.leftHtml.value,
+    rightMode: fields.rightMode.value,
+    rightHtml: fields.rightHtml.value
+  };
+}
+
+function applySlideToForm(slide){
+  fields.slideType.value = slide.slideType || 'single';
+  fields.headingLevel.value = slide.headingLevel || 'h2';
+  fields.bgColor.value = slide.bgColor || '#ffffff';
+  fields.fontColor.value = slide.fontColor || '#111111';
+  fields.title.value = slide.title || '';
+  fields.kicker.value = slide.kicker || '';
+  fields.lede.value = slide.lede || '';
+  fields.leftHtml.value = slide.leftHtml || '';
+  fields.rightMode.value = slide.rightMode || 'plain';
+  fields.rightHtml.value = slide.rightHtml || '';
+  syncFields();
+}
+
+function buildRightContent(slide){
+  if(slide.rightMode === 'placeholder'){
+    return `<div style="min-height:320px;border:1px dashed var(--line);border-radius:24px;display:grid;place-items:center;color:var(--muted);padding:1rem;text-align:center;">${escapeHtml(slide.rightHtml || 'Diagram / figure / demo area')}</div>`;
+  }
+  return `<div class="rich">${parseStructuredText(slide.rightHtml)}</div>`;
+}
+
+function buildSlideInner(slide){
+  const heading = slide.headingLevel || 'h2';
+  const titleHtml = `<${heading}>${escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>')}</${heading}>`;
+  const kickerHtml = slide.kicker ? `<div class="kicker">${escapeHtml(slide.kicker)}</div>` : '';
+  const ledeHtml = slide.lede ? `<div class="lede">${escapeHtml(slide.lede)}</div>` : '';
+  if(slide.slideType === 'title-center'){
+    return `<div class="title-center">${titleHtml}${kickerHtml}</div>`;
+  }
+  if(slide.slideType === 'two-col'){
+    return `
+      ${titleHtml}
+      ${kickerHtml}
+      ${ledeHtml}
+      <div class="slide-body">
+        <div class="col"><div class="rich">${parseStructuredText(slide.leftHtml)}</div></div>
+        <div class="col">${buildRightContent(slide)}</div>
+      </div>
+    `;
+  }
+  return `
+    ${titleHtml}
+    ${kickerHtml}
+    ${ledeHtml}
+    <div class="slide-body">
+      <div class="col"><div class="rich">${parseStructuredText(slide.leftHtml)}</div></div>
+    </div>
+  `;
+}
+
+function buildSlideSnippet(slide){
+  const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
+  return `<section class="${cls}" style="${escapeAttr(buildSlideStyle(slide))}">
+${buildSlideInner(slide).trim()}
+</section>`;
+}
+
+function typesetPreview(){
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    if(typeof window.MathJax.typesetClear === 'function'){
+      window.MathJax.typesetClear([preview]);
+    }
+    window.MathJax.typesetPromise([preview]).catch(()=>{});
+  }
+}
+
+function buildPreview(){
+  const slide = getFormSlide();
+  preview.innerHTML = buildSlideSnippet(slide);
+  snippetOutput.value = buildSlideSnippet(slide);
+  previewTitle.textContent = slide.title || 'Current slide';
+  typesetPreview();
+}
+
+function renderDeckList(){
+  deckList.innerHTML = '';
+  slides.forEach((slide, idx)=>{
+    const btn = document.createElement('button');
+    btn.className = 'deck-item' + (idx === activeIndex ? ' active' : '');
+    btn.innerHTML = `<b>${idx + 1}. ${escapeHtml(slide.title || 'Untitled slide')}</b><span class="meta">${escapeHtml(slide.slideType)}</span>`;
+    btn.addEventListener('click', ()=>{
+      activeIndex = idx;
+      applySlideToForm(slides[idx]);
+      renderDeckList();
+      buildPreview();
+    });
+    deckList.appendChild(btn);
+  });
+  deckCount.textContent = `${slides.length} ${slides.length === 1 ? 'slide' : 'slides'}`;
+}
+
+function addSlide(){
+  const slide = getFormSlide();
+  slides.push(structuredClone(slide));
+  activeIndex = slides.length - 1;
+  renderDeckList();
+  showToast('Added slide.');
+}
+
+function updateSlide(){
+  if(activeIndex < 0){
+    addSlide();
+    return;
+  }
+  slides[activeIndex] = structuredClone(getFormSlide());
+  renderDeckList();
+  showToast('Updated slide.');
+}
+
+function duplicateSlide(){
+  if(activeIndex < 0 || !slides[activeIndex]) return;
+  slides.splice(activeIndex + 1, 0, structuredClone(slides[activeIndex]));
+  activeIndex += 1;
+  renderDeckList();
+  showToast('Duplicated slide.');
+}
+
+function deleteSlide(){
+  if(activeIndex < 0) return;
+  slides.splice(activeIndex, 1);
+  if(!slides.length) activeIndex = -1;
+  else activeIndex = Math.min(activeIndex, slides.length - 1);
+  if(activeIndex >= 0) applySlideToForm(slides[activeIndex]);
+  renderDeckList();
+  buildPreview();
+  showToast('Deleted slide.');
+}
+
+function moveActive(delta){
+  if(activeIndex < 0) return;
+  const target = activeIndex + delta;
+  if(target < 0 || target >= slides.length) return;
+  const [item] = slides.splice(activeIndex, 1);
+  slides.splice(target, 0, item);
+  activeIndex = target;
+  renderDeckList();
+  showToast('Moved slide.');
+}
+
+function clearForm(){
+  applySlideToForm({
+    slideType:'single',
+    headingLevel:'h2',
+    bgColor:'#ffffff',
+    fontColor:'#111111',
+    title:'',
+    kicker:'',
+    lede:'',
+    leftHtml:'',
+    rightMode:'plain',
+    rightHtml:''
+  });
+  buildPreview();
+}
+
+function syncFields(){
+  const twoCol = fields.slideType.value === 'two-col';
+  document.getElementById('rightModeField').style.display = twoCol ? 'grid' : 'none';
+  document.getElementById('rightHtmlField').style.display = twoCol ? 'grid' : 'none';
+}
+
+async function copyText(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    return true;
+  }
+}
+
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+function buildStandaloneSlideHtml(slide){
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(slide.title || 'Slide')}</title>
+<style>
+  html,body{margin:0;min-height:100%;background:#0b1020;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{min-height:100svh;display:grid;place-items:center;padding:1rem}
+  ${document.querySelector('style').textContent}
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
+</head>
+<body>
+<div class="wrap">
+${buildSlideSnippet(slide)}
+</div>
+<script>
+window.addEventListener('load', ()=> {
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    window.MathJax.typesetPromise().catch(()=>{});
+  }
+});
+<\/script>
+</body>
+</html>`;
+}
+
+function buildDeckHtml(deckTitle, deckSlides){
+  const slideSections = deckSlides.map((slide, idx)=>{
+    const cls = slide.slideType === 'title-center' ? 'deck-slide title-center' : (slide.slideType === 'two-col' ? 'deck-slide two-col' : 'deck-slide single');
+    return `<section class="${cls}" data-index="${idx}" data-title="${escapeAttr(slide.title || `Slide ${idx+1}`)}" style="${escapeAttr(buildSlideStyle(slide))}">
+      <button class="slides-button" type="button">Slides</button>
+      <div class="slide-number">${idx + 1} / ${deckSlides.length}</div>
+      ${buildSlideInner(slide).trim()}
+    </section>`;
+  }).join('\n');
+
+  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(deckTitle || 'Presentation')}</title>
+<style>
+  :root{
+    --deck-bg:#060a16;
+    --deck-panel:rgba(10,16,32,.82);
+    --deck-line:rgba(255,255,255,.14);
+    --deck-text:#eef3ff;
+    --deck-muted:#b7c4e8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%, #0b1020 45%, #070b17 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{color:var(--deck-text);overflow:hidden}
+  .deck{position:relative;width:100vw;height:100svh}
+  .deck-slide{
+    display:none;
+    position:absolute;
+    inset:0;
+    overflow:auto;
+    padding:3.2rem 3.5rem 5rem;
+    background:#fff;
+    color:#111;
+  }
+  .deck-slide.active{display:block}
+  .deck-slide h1,.deck-slide h2{margin:0;line-height:1.05}
+  .deck-slide h1{font-size:3.5rem;max-width:15ch}
+  .deck-slide h2{font-size:2.3rem}
+  .deck-slide .kicker{margin-top:.6rem;color:var(--muted);font-size:1rem;line-height:1.45;max-width:68ch}
+  .deck-slide .lede{margin-top:1rem;color:var(--muted);font-size:1.14rem;line-height:1.52;max-width:68ch}
+  .deck-slide .slide-body{margin-top:1.35rem}
+  .deck-slide.single .slide-body{display:block}
+  .deck-slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
+  .deck-slide .col{min-width:0}
+  .deck-slide .rich p{margin:0 0 .9rem;color:var(--muted);font-size:1.08rem;line-height:1.5}
+  .deck-slide .rich ul{margin:.35rem 0 1rem 1.2rem;padding:0}
+  .deck-slide .rich li{margin:.45rem 0;color:var(--muted);font-size:1.06rem;line-height:1.48}
+  .deck-slide .rich h3{margin:1rem 0 .5rem;font-size:1.15rem;color:inherit}
+  .deck-slide .display-math{margin:.9rem 0;font-size:1.07rem}
+  .deck-slide.title-center{
+    display:none;
+    place-items:center;
+    text-align:center;
+    padding:3rem;
+  }
+  .deck-slide.title-center.active{display:grid}
+  .deck-slide.title-center h1,.deck-slide.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+  .deck-slide.title-center .kicker{max-width:24ch;margin-left:auto;margin-right:auto}
+  .slides-button,.nav-btn,.map-close{
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(9,15,31,.85);
+    color:var(--deck-text);
+    border-radius:999px;
+    padding:.72rem 1rem;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+    backdrop-filter:blur(12px);
+  }
+  .slides-button{position:fixed;left:1rem;top:1rem;z-index:12}
+  .slide-number{
+    position:fixed;right:1rem;top:1rem;z-index:12;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(9,15,31,.72);
+    color:var(--deck-text);
+    border-radius:999px;
+    padding:.62rem .85rem;
+    font-size:.92rem;
+    backdrop-filter:blur(12px);
+  }
+  .deck-controls{
+    position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);
+    z-index:12;display:flex;gap:.65rem
+  }
+  .slide-map{
+    position:fixed;inset:0;z-index:20;display:none;
+    background:rgba(4,8,18,.72);backdrop-filter:blur(12px);
+    padding:1rem;
+  }
+  .slide-map.open{display:block}
+  .slide-map-panel{
+    max-width:980px;
+    margin:0 auto;
+    height:calc(100svh - 2rem);
+    background:rgba(9,15,31,.92);
+    color:var(--deck-text);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:28px;
+    overflow:auto;
+    padding:1rem;
+  }
+  .slide-map-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:1rem}
+  .slide-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem}
+  .slide-map-item{
+    width:100%;text-align:left;padding:1rem;border-radius:18px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);
+    color:var(--deck-text);cursor:pointer;font:inherit;
+    display:grid;gap:.35rem
+  }
+  .slide-map-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.13)}
+  .slide-map-item span:first-child{font-size:.85rem;color:var(--deck-muted)}
+  .slide-map-help{margin-top:1rem;color:var(--deck-muted);font-size:.92rem}
+  @media (max-width:900px){
+    .deck-slide{padding:1.5rem 1.2rem 5rem}
+    .deck-slide.two-col .slide-body{grid-template-columns:1fr}
+    .deck-slide h1{font-size:2.4rem}
+    .deck-slide h2{font-size:1.95rem}
+    .deck-controls{bottom:.7rem}
+    .slides-button{left:.7rem;top:.7rem}
+    .slide-number{right:.7rem;top:.7rem}
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
+</head>
+<body>
+<div class="deck" id="deck">
+${slideSections}
+</div>
+
+<div class="deck-controls">
+  <button class="nav-btn" type="button" id="prevBtn">Previous</button>
+  <button class="nav-btn" type="button" id="nextBtn">Next</button>
+</div>
+
+<div class="slide-map" id="slideMap" aria-hidden="true">
+  <div class="slide-map-panel">
+    <div class="slide-map-head">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--deck-muted);font-weight:800">Slides</div>
+        <h2 style="margin:.2rem 0 0">${escapeHtml(deckTitle || 'Presentation')}</h2>
+      </div>
+      <button class="map-close" type="button" id="mapClose">Close</button>
+    </div>
+    <div class="slide-map-grid" id="slideMapGrid">
+${slideList}
+    </div>
+    <div class="slide-map-help">Navigation: → / Space next, ← previous, T open slide list, Esc close, F fullscreen. Swipe also works on phone.</div>
+  </div>
+</div>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.deck-slide'));
+const map = document.getElementById('slideMap');
+const mapItems = Array.from(document.querySelectorAll('.slide-map-item'));
+let index = 0;
+function render(){
+  slides.forEach((slide,i)=>slide.classList.toggle('active', i === index));
+  mapItems.forEach((item,i)=>item.classList.toggle('active', i === index));
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    window.MathJax.typesetPromise(slides[index]).catch(()=>{});
+  }
+}
+function go(i){
+  if(i < 0 || i >= slides.length) return;
+  index = i;
+  render();
+  closeMap();
+}
+function next(){ if(index < slides.length - 1) { index += 1; render(); } }
+function prev(){ if(index > 0) { index -= 1; render(); } }
+function openMap(){ map.classList.add('open'); map.setAttribute('aria-hidden','false'); }
+function closeMap(){ map.classList.remove('open'); map.setAttribute('aria-hidden','true'); }
+
+document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click', openMap));
+document.getElementById('mapClose').addEventListener('click', closeMap);
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('prevBtn').addEventListener('click', prev);
+mapItems.forEach(item=>item.addEventListener('click', ()=>go(Number(item.dataset.go))));
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); prev(); }
+  else if(e.key.toLowerCase() === 't'){ openMap(); }
+  else if(e.key === 'Escape'){ closeMap(); }
+  else if(e.key.toLowerCase() === 'f'){
+    if(document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.();
+  }
+});
+let touchStartX = null;
+document.addEventListener('touchstart', e=>{ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e=>{
+  if(touchStartX == null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+window.addEventListener('load', ()=> {
+  render();
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    window.MathJax.typesetPromise().catch(()=>{});
+  }
+});
+<\/script>
+</body>
+</html>`;
+}
+
+async function copyCurrentSnippet(){
+  const ok = await copyText(snippetOutput.value);
+  if(ok) showToast('Copied current slide snippet.');
+}
+
+function downloadStandalone(){
+  downloadText('slide-standalone.html', buildStandaloneSlideHtml(getFormSlide()));
+  showToast('Downloaded standalone slide.');
+}
+
+function downloadDeck(){
+  const deckSlides = slides.length ? slides : [getFormSlide()];
+  downloadText('presentation.html', buildDeckHtml(fields.deckTitle.value.trim(), deckSlides));
+  showToast('Downloaded full presentation.');
+}
+
+function applyPreset(name){
+  const presets = {
+    title: {
+      slideType:'title-center',
+      headingLevel:'h1',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'Lecture title',
+      kicker:'Optional subtitle',
+      lede:'',
+      leftHtml:'',
+      rightMode:'plain',
+      rightHtml:''
+    },
+    concept: {
+      slideType:'single',
+      headingLevel:'h2',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'Main concept',
+      kicker:'',
+      lede:'One sentence to frame the slide.',
+      leftHtml:'- First key point\n- Second key point\n- Third key point\n\n### Equation\n\\( \\nabla_w L = \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w} \\)',
+      rightMode:'plain',
+      rightHtml:''
+    },
+    twocol: {
+      slideType:'two-col',
+      headingLevel:'h2',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'Two-column lecture slide',
+      kicker:'Title spans the full width',
+      lede:'Use the left side for bullets and the right side for a figure, derivation, or demo.',
+      leftHtml:'- Left-column point one\n- Left-column point two\n\n### Key identity\n\\( I_T(S)=\\frac{|S_L|}{|S|}I(S_L)+\\frac{|S_R|}{|S|}I(S_R) \\)',
+      rightMode:'plain',
+      rightHtml:'### Right column\n- Figure description\n- Example\n- Mini derivation'
+    }
+  };
+  applySlideToForm(presets[name]);
+  buildPreview();
+}
+
+document.querySelectorAll('input,select,textarea').forEach(el=>{
+  el.addEventListener('input', ()=>{
+    syncFields();
+    buildPreview();
+  });
+  el.addEventListener('change', ()=>{
+    syncFields();
+    buildPreview();
+  });
+});
+document.getElementById('addSlideBtn').addEventListener('click', addSlide);
+document.getElementById('updateSlideBtn').addEventListener('click', updateSlide);
+document.getElementById('duplicateSlideBtn').addEventListener('click', duplicateSlide);
+document.getElementById('deleteSlideBtn').addEventListener('click', deleteSlide);
+document.getElementById('moveUpBtn').addEventListener('click', ()=>moveActive(-1));
+document.getElementById('moveDownBtn').addEventListener('click', ()=>moveActive(1));
+document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentSnippet);
+document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
+document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
+document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
+
+syncFields();
+applyPreset('concept');
+buildPreview();
+renderDeckList();
+</script>
+</body>
+</html>
