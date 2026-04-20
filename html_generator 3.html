@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HTML Slide Snippet Generator</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121933;
+    --panel-2: #0f1630;
+    --text: #eef3ff;
+    --muted: #aab7d8;
+    --blue: #61b4ff;
+    --red: #ff6b7a;
+    --green: #6fda8f;
+    --gold: #ffd36b;
+    --line: rgba(255,255,255,0.10);
+    --shadow: 0 24px 60px rgba(0,0,0,0.28);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(circle at top left, #17214a 0%, var(--bg) 45%, #070b17 100%);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  body { padding: 1rem; }
+  .page {
+    max-width: 1480px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 500px minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02));
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 1rem 1rem 1.1rem;
+  }
+  .panel.dark { background: linear-gradient(180deg, rgba(7,11,23,0.7), rgba(255,255,255,0.02)); }
+  h1, h2, h3 { margin: 0; line-height: 1.08; }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1rem; color: var(--text); }
+  p, li, label, small { color: var(--muted); }
+  .lede { margin-top: .65rem; font-size: 1rem; line-height: 1.5; }
+  .toolbar {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .btn {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color: var(--text);
+    border-radius: 14px;
+    padding: .8rem 1rem;
+    font-size: .98rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn.primary {
+    background: linear-gradient(90deg, rgba(97,180,255,.18), rgba(142,208,255,.08));
+    border-color: rgba(97,180,255,.45);
+  }
+  .btn:active { transform: translateY(1px); }
+  .stack { display: grid; gap: .9rem; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+  .field { display: grid; gap: .36rem; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: .92rem; }
+  input, select, textarea {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+    padding: .8rem .9rem;
+    font: inherit;
+  }
+  textarea { min-height: 100px; resize: vertical; line-height: 1.4; }
+  textarea.code {
+    min-height: 260px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .93rem;
+    white-space: pre;
+  }
+  .help {
+    font-size: .86rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .kicker {
+    color: var(--blue);
+    font-size: .92rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: .9rem;
+  }
+  .chips { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+  .chip {
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 999px;
+    padding: .55rem .82rem;
+    color: var(--text);
+    background: rgba(255,255,255,.04);
+    font-size: .96rem;
+  }
+  .slide {
+    position: relative;
+    min-height: 720px;
+    padding: 3.2rem 3.5rem 5rem;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 2rem;
+    border: 1px dashed rgba(255,255,255,.08);
+    border-radius: 28px;
+    background: rgba(0,0,0,.12);
+  }
+  .slide.single { grid-template-columns: 1fr; }
+  .slide.title-center {
+    grid-template-columns: 1fr;
+    place-items: center;
+    text-align: center;
+    min-height: 720px;
+    padding: 3rem;
+  }
+  .slide.title-center .title-center-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+    width: 100%;
+  }
+  .slide.title-center h1,
+  .slide.title-center h2 {
+    margin: 0;
+    max-width: 16ch;
+    font-size: clamp(3rem, 8vw, 5.4rem);
+    line-height: 1.02;
+  }
+  .mathjax-helper {
+    margin-top: .75rem;
+    padding: .8rem .9rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+  }
+  .col { min-width: 0; }
+  .slide h1, .slide h2 { margin: 0 0 1rem; line-height: 1.05; }
+  .slide h1 { font-size: 3rem; max-width: 13ch; }
+  .slide h2 { font-size: 2.15rem; }
+  .lede-preview { color: var(--muted); font-size: 1.18rem; line-height: 1.5; max-width: 60ch; }
+  .rich p { color: var(--muted); font-size: 1.08rem; line-height: 1.48; margin: 0 0 .9rem; }
+  .rich ul { margin: .4rem 0 1rem 1.1rem; padding: 0; }
+  .rich li { margin: .45rem 0; font-size: 1.05rem; line-height: 1.48; }
+  .eq {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text);
+    font-size: 1.02rem;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: .8rem .95rem;
+    margin: .8rem 0;
+    white-space: pre-wrap;
+  }
+  .bullet-card {
+    padding: .95rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255,255,255,.03);
+    margin-top: .75rem;
+  }
+  .bullet-card b { color: var(--text); display: block; margin-bottom: .2rem; }
+  .two-col-mini { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin-top: .85rem; }
+  .placeholder {
+    min-height: 280px;
+    border: 1px dashed rgba(255,255,255,.18);
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,.02);
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem;
+  }
+  .diag {
+    min-height: 280px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 1.25rem;
+    background: linear-gradient(180deg, rgba(7,11,23,0.7), rgba(255,255,255,0.02));
+    display: grid;
+    place-items: center;
+  }
+  svg.diagram { width: 100%; max-width: 640px; height: auto; }
+  .node { fill: #1b2447; stroke: rgba(255,255,255,.12); stroke-width: 2; }
+  .node.blue { fill: rgba(97,180,255,.18); stroke: rgba(97,180,255,.85); }
+  .node.red { fill: rgba(255,107,122,.16); stroke: rgba(255,107,122,.88); }
+  .label { font-size: 18px; fill: var(--text); font-weight: 600; }
+  .edge { stroke: rgba(255,255,255,.22); stroke-width: 4; stroke-linecap: round; }
+  .edge.blue { stroke: rgba(97,180,255,.95); }
+  .edge.red { stroke: rgba(255,107,122,.95); }
+  .code-hint {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: .65rem;
+  }
+  .mini {
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+    font-size: .82rem;
+  }
+  .copy-toast {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 20;
+    background: rgba(15,22,48,.96);
+    border: 1px solid rgba(255,255,255,.16);
+    color: var(--text);
+    padding: .8rem 1rem;
+    border-radius: 14px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+  }
+  .copy-toast.show { opacity: 1; transform: translateY(0); }
+  .template-list {
+    display: grid;
+    gap: .65rem;
+  }
+  .template-list button {
+    text-align: left;
+    width: 100%;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.1);
+    color: var(--text);
+    border-radius: 16px;
+    padding: .85rem .95rem;
+    font: inherit;
+    cursor: pointer;
+  }
+  .template-list button small {
+    display: block;
+    margin-top: .2rem;
+  }
+  details summary {
+    cursor: pointer;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: .55rem;
+  }
+  @media (max-width: 1100px) {
+    .page { grid-template-columns: 1fr; }
+    .slide { grid-template-columns: 1fr; padding: 1.5rem 1.2rem 2rem; min-height: 0; }
+    .slide h1 { font-size: 2.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="panel stack">
+    <div>
+      <div class="badge">Reusable generator for your existing HTML deck template</div>
+      <h1 style="margin-top:.7rem;">HTML slide snippet generator</h1>
+      <p class="lede">Fill in the form, preview the result, then copy the generated <code>&lt;section class="slide"&gt;...&lt;/section&gt;</code> block into one of your existing HTML presentations.</p>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" id="loadTitle">Load centered title preset</button>
+      <button class="btn" id="loadConcept">Load concept slide preset</button>
+      <button class="btn" id="loadDiagram">Load diagram slide preset</button>
+      <button class="btn" id="loadAppendix">Load appendix slide preset</button>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label for="slideType">Slide type</label>
+        <select id="slideType">
+          <option value="two-col">Two-column slide</option>
+          <option value="single">Single-column slide</option>
+          <option value="title-center">Centered title slide</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="headingLevel">Heading style</label>
+        <select id="headingLevel">
+          <option value="h1">Large title (h1)</option>
+          <option value="h2" selected>Standard title (h2)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bgColor">Slide background color</label>
+        <select id="bgColor">
+          <option value="#0f1630">Navy</option>
+          <option value="#121212">Charcoal</option>
+          <option value="#ffffff" selected>White</option>
+          <option value="#f7f1e3">Warm cream</option>
+          <option value="#1d3b2a">Forest</option>
+          <option value="#3a1028">Plum</option>
+          <option value="#102a43">Slate blue</option>
+          <option value="#5b1d00">Burnt orange</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fontColor">Font color</label>
+        <select id="fontColor">
+          <option value="#eef3ff">Soft white</option>
+          <option value="#ffffff">White</option>
+          <option value="#111111" selected>Black</option>
+          <option value="#1f2937">Slate</option>
+          <option value="#ffe9a8">Warm gold</option>
+          <option value="#d6f5ff">Pale blue</option>
+          <option value="#ffd7e0">Pale pink</option>
+          <option value="#c8ffd8">Mint</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label for="kicker">Kicker</label>
+        <input id="kicker" value="Core idea" />
+      </div>
+
+      <div class="field full">
+        <label for="title">Title</label>
+        <input id="title" value="Backprop as local chain rule" />
+      </div>
+
+      <div class="field full">
+        <label for="lede">Lead paragraph</label>
+        <textarea id="lede">Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.</textarea>
+      </div>
+
+      <div class="field full">
+        <label for="chips">Bullets, one per line</label>
+        <textarea id="chips">incoming gradient × local derivative
+layer-by-layer reuse
+same pattern for weights</textarea>
+      </div>
+
+      <div class="field full">
+        <label for="leftHtml">Left-column rich content (simple lines)</label>
+        <textarea id="leftHtml">P: Use this slide to explain the core backprop template before diving into full equations.
+UL: incoming gradient
+UL: multiply by local derivative
+UL: pass the result backward
+EQ: dL/dz = (dL/da) · (da/dz)
+CARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensitivity.</textarea>
+        <div class="help">Use one item per line. Prefixes: <code>P:</code>, <code>UL:</code>, <code>EQ:</code>, <code>CARD:title|body</code>. Plain text lines become paragraphs. Math is supported with <code>$x$</code> for inline math and <code>\( x^2 + y^2 \)</code> for displayed math.</div>
+      </div>
+
+      <div class="field full">
+        <label for="rightMode">Right-column content</label>
+        <select id="rightMode">
+          <option value="panel">Panel text</option>
+          <option value="diagram">Neural-network diagram placeholder</option>
+          <option value="custom">Custom HTML block</option>
+          <option value="placeholder">Simple placeholder box</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label for="rightHtml">Right-column content text / HTML</label>
+        <textarea id="rightHtml">P: Output-layer example
+EQ: dL/dw_j = (dL/dz) a_j
+CARD:Teaching line|A weight gets a large gradient when a large activation carries a large downstream error signal.</textarea>
+        <div class="help">If the mode is <b>panel</b>, this uses the same line prefixes as the left column. If the mode is <b>custom</b>, paste raw HTML. Inline math like <code>$\nabla L$</code> and displayed math like <code>\( \frac{dL}{dw} = x \)</code> will render in the preview.</div>
+      </div>
+
+      <div class="field">
+        <label for="notesTitle">Speaker notes title</label>
+        <input id="notesTitle" value="Speaker notes" />
+      </div>
+      <div class="field">
+        <label for="notesBody">Speaker notes body</label>
+        <input id="notesBody" value="Explain the template first, then attach it to the output neuron example." />
+      </div>
+    </div>
+
+    <details>
+      <summary>How to use the generated code</summary>
+      <div class="help">
+        <p>Paste the generated <code>&lt;section class="slide" ...&gt;</code> block into your existing HTML deck inside the main <code>.deck</code> container. The snippet uses the same CSS class names as the earlier presentation files.</p>
+        <p>Good workflow on phone: pick a preset, edit a few fields, tap <b>Copy snippet</b>, then paste into your deck file where you want the new slide.</p>
+        <p>The color menus add inline slide styles, so the copied snippet keeps your chosen background and font colors when pasted into the larger deck.</p>
+        <p>Math preview uses MathJax. If your deck does not already load MathJax, tap <b>Copy MathJax helper</b> once and paste that script block near the end of your deck HTML.</p>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn primary" id="copyBtn">Copy snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
+      <button class="btn" id="downloadBtn">Download snippet as .html fragment</button>
+      <button class="btn" id="resetBtn">Reset to current preset</button>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="panel dark">
+      <div class="code-hint">
+        <h2>Live preview</h2>
+        <div class="mini">Updates as you type</div>
+      </div>
+      <div id="preview"></div>
+    </div>
+
+    <div class="panel dark">
+      <div class="code-hint">
+        <h2>Generated slide snippet</h2>
+        <div class="mini">Copy-paste into your deck</div>
+      </div>
+      <textarea class="code" id="output" spellcheck="false"></textarea>
+      <div class="mathjax-helper">
+        <div class="code-hint" style="margin:0 0 .55rem;">
+          <h3>One-time MathJax helper for your deck</h3>
+          <div class="mini">Paste once per presentation if needed</div>
+        </div>
+        <textarea class="code" id="mathjaxOutput" spellcheck="false" style="min-height: 130px;"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied to clipboard.</div>
+
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\(', '\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script>
+const fields = {
+  slideType: document.getElementById('slideType'),
+  headingLevel: document.getElementById('headingLevel'),
+  bgColor: document.getElementById('bgColor'),
+  fontColor: document.getElementById('fontColor'),  title: document.getElementById('title'),
+  lede: document.getElementById('lede'),  leftHtml: document.getElementById('leftHtml'),
+  rightMode: document.getElementById('rightMode'),
+  rightHtml: document.getElementById('rightHtml'),
+  notesTitle: document.getElementById('notesTitle'),
+  notesBody: document.getElementById('notesBody')
+};
+
+const preview = document.getElementById('preview');
+const output = document.getElementById('output');
+const mathjaxOutput = document.getElementById('mathjaxOutput');
+const toast = document.getElementById('toast');
+const mathJaxHelper = `<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\(', '\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>`;
+let currentPreset = null;
+
+function preserveMathTokens(str) {
+  const tokens = [];
+  const text = String(str || '').replace(/\\\(([^]*?)\\\)|\$([^$]+)\$/g, (match) => {
+    const key = `__MATH_${tokens.length}__`;
+    tokens.push(match);
+    return key;
+  });
+  return { text, tokens };
+}
+
+function restoreMathTokens(str, tokens) {
+  return String(str).replace(/__MATH_(\d+)__/g, (_, idx) => tokens[Number(idx)] || '');
+}
+
+function escapeHtml(str) {
+  const { text, tokens } = preserveMathTokens(str);
+  const escaped = String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  return restoreMathTokens(escaped, tokens);
+}
+
+function escapeAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function hexToRgb(hex) {
+  const clean = String(hex || '').trim().replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const num = parseInt(full, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function rgbaFromHex(hex, alpha) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return `rgba(255,255,255,${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function buildSlideStyle() {
+  const bg = fields.bgColor.value || '#ffffff';
+  const font = fields.fontColor.value || '#111111';
+  const muted = rgbaFromHex(font, 0.72);
+  const line = rgbaFromHex(font, 0.14);
+  return `background:${bg};color:${font};--text:${font};--muted:${muted};--line:${line};`;
+}
+
+function parseStructuredText(raw) {
+  const lines = String(raw || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+  const blocks = [];
+  let ulItems = [];
+
+  function flushUl() {
+    if (!ulItems.length) return;
+    blocks.push('<ul>' + ulItems.map(item => `<li>${escapeHtml(item)}</li>`).join('') + '</ul>');
+    ulItems = [];
+  }
+
+  for (const line of lines) {
+    if (/^UL:/i.test(line)) {
+      ulItems.push(line.replace(/^UL:/i, '').trim());
+      continue;
+    }
+    flushUl();
+
+    if (/^P:/i.test(line)) {
+      blocks.push(`<p>${escapeHtml(line.replace(/^P:/i, '').trim())}</p>`);
+    } else if (/^EQ:/i.test(line)) {
+      blocks.push(`<div class="eq">${escapeHtml(line.replace(/^EQ:/i, '').trim())}</div>`);
+    } else if (/^CARD:/i.test(line)) {
+      const payload = line.replace(/^CARD:/i, '').trim();
+      const parts = payload.split('|');
+      const title = parts.shift() || '';
+      const body = parts.join('|');
+      blocks.push(`<div class="bullet-card"><b>${escapeHtml(title.trim())}</b><div>${escapeHtml(body.trim())}</div></div>`);
+    } else {
+      blocks.push(`<p>${escapeHtml(line)}</p>`);
+    }
+  }
+  flushUl();
+  return blocks.join('\n');
+}
+
+function renderBullets(raw) {
+  const items = String(raw || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+  if (!items.length) return '';
+  return `<div class="chips">${items.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('')}</div>`;
+}
+
+function diagramMarkup() {
+  return `
+  <div class="diag">
+    <svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder">
+      <line x1="145" y1="145" x2="355" y2="125" class="edge blue"/>
+      <line x1="145" y1="145" x2="355" y2="295" class="edge blue"/>
+      <line x1="145" y1="285" x2="355" y2="125" class="edge blue"/>
+      <line x1="145" y1="285" x2="355" y2="295" class="edge blue"/>
+      <line x1="405" y1="125" x2="615" y2="215" class="edge red"/>
+      <line x1="405" y1="295" x2="615" y2="215" class="edge red"/>
+
+      <circle cx="115" cy="145" r="34" class="node blue"/>
+      <circle cx="115" cy="285" r="34" class="node blue"/>
+      <circle cx="375" cy="125" r="38" class="node blue"/>
+      <circle cx="375" cy="295" r="38" class="node blue"/>
+      <circle cx="645" cy="215" r="42" class="node red"/>
+
+      <text x="100" y="151" class="label">x₁</text>
+      <text x="100" y="291" class="label">x₂</text>
+      <text x="360" y="131" class="label">h₁</text>
+      <text x="360" y="301" class="label">h₂</text>
+      <text x="628" y="221" class="label">ŷ</text>
+    </svg>
+  </div>`;
+}
+
+function buildRightColumn(mode, raw) {
+  if (mode === 'diagram') return diagramMarkup();
+  if (mode === 'custom') return raw || '<div class="placeholder">Paste custom HTML here.</div>';
+  if (mode === 'placeholder') return `<div class="placeholder">${escapeHtml(raw || 'Right-column placeholder')}</div>`;
+  return `<div class="panel dark rich">${parseStructuredText(raw)}</div>`;
+}
+
+function buildSlideHtml() {
+  const slideType = fields.slideType.value;
+  const slideClass = slideType === 'single' ? 'slide single' : (slideType === 'title-center' ? 'slide title-center' : 'slide');
+  const headingTag = fields.headingLevel.value === 'h1' ? 'h1' : 'h2';
+  const kicker = fields.kicker.value.trim();
+  const title = fields.title.value.trim();
+  const lede = fields.lede.value.trim();
+  const notesTitle = escapeAttr(fields.notesTitle.value.trim() || 'Speaker notes');
+  const notesBody = escapeAttr(fields.notesBody.value.trim() || '');
+
+  let inner = '';
+
+  if (slideType === 'title-center') {
+    inner = `
+    <div class="title-center-wrap">
+      <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
+    </div>`;
+  } else {
+    const leftBody = `
+    <div class="col">
+      ${kicker ? `<div class="kicker">${escapeHtml(kicker)}</div>` : ''}
+      <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
+      ${lede ? `<p class="lede-preview">${escapeHtml(lede)}</p>` : ''}
+      ${renderBullets(fields.chips.value)}
+      <div class="rich">${parseStructuredText(fields.leftHtml.value)}</div>
+    </div>`;
+
+    inner = leftBody;
+    if (slideType !== 'single') {
+      inner += `\n    <div class="col">${buildRightColumn(fields.rightMode.value, fields.rightHtml.value)}</div>`;
+    }
+  }
+
+  const slideStyle = escapeAttr(buildSlideStyle());
+  const rawHtml = `<section class="${slideClass}" style="${slideStyle}" data-notes-title="${notesTitle}" data-notes-body="${notesBody}">
+  ${inner}
+</section>`;
+
+  return rawHtml;
+}
+
+function typesetPreview() {
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    window.MathJax.typesetPromise([preview]).catch(() => {});
+  }
+}
+
+function buildPreview() {
+  const html = buildSlideHtml();
+  preview.innerHTML = html;
+  output.value = html;
+  mathjaxOutput.value = mathJaxHelper;
+  typesetPreview();
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+async function copySnippet() {
+  try {
+    await navigator.clipboard.writeText(output.value);
+    showToast('Copied slide snippet.');
+  } catch {
+    output.select();
+    document.execCommand('copy');
+    showToast('Copied slide snippet.');
+  }
+}
+
+async function copyMathJaxHelper() {
+  try {
+    await navigator.clipboard.writeText(mathjaxOutput.value);
+    showToast('Copied MathJax helper.');
+  } catch {
+    mathjaxOutput.select();
+    document.execCommand('copy');
+    showToast('Copied MathJax helper.');
+  }
+}
+
+function downloadSnippet() {
+  const blob = new Blob([output.value], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'slide-snippet.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 800);
+}
+
+function applyPreset(preset) {
+  currentPreset = JSON.parse(JSON.stringify(preset));
+  for (const [key, value] of Object.entries(preset)) {
+    if (fields[key]) fields[key].value = value;
+  }
+  buildPreview();
+}
+
+const presets = {
+  title: {
+    slideType: 'title-center',
+    headingLevel: 'h1',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'Backpropagation,\nstage by stage',
+    lede: '',    leftHtml: '',
+    rightMode: 'panel',
+    rightHtml: '',
+    notesTitle: 'Speaker notes',
+    notesBody: 'Open the lecture with the central question before showing any formulas.'
+  },
+  concept: {
+    slideType: 'two-col',
+    headingLevel: 'h2',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'Backprop as local chain rule',
+    lede: 'Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.',    leftHtml: 'P: Teach the pattern before teaching every symbol.\nUL: start at the loss\nUL: move one edge backward\nUL: multiply by the local slope\nEQ: \\( \\frac{dL}{dz} = \\frac{dL}{da} \\cdot \\frac{da}{dz} \\)\nCARD:Teaching line|Incoming gradient times local derivative gives the outgoing gradient.',
+    rightMode: 'panel',
+    rightHtml: 'P: Output-layer example\nEQ: \\( \\frac{dL}{dw_j} = \\frac{dL}{dz} a_j \\)\nCARD:Interpretation|A weight gets a large gradient when a large activation carries a large downstream error signal.',
+    notesTitle: 'Speaker notes',
+    notesBody: 'Repeat the phrase incoming gradient times local derivative several times.'
+  },
+  diagram: {
+    slideType: 'two-col',
+    headingLevel: 'h2',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'A tiny 2–2–1 network',
+    lede: 'Keep the network small enough that every activation and derivative can stay visible on screen.',    leftHtml: 'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
+    rightMode: 'diagram',
+    rightHtml: 'Diagram',
+    notesTitle: 'Speaker notes',
+    notesBody: 'Name the variables once here so you can reference them quickly later.'
+  },
+  appendix: {
+    slideType: 'single',
+    headingLevel: 'h2',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'Backprop recipe',
+    lede: 'This makes a clean end-of-lecture summary slide.',    leftHtml: 'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward using chain rule\nUL: compute parameter gradients\nUL: update the weights\nCARD:Takeaway|Backpropagation is the chain rule organized efficiently over a computation graph.',
+    rightMode: 'panel',
+    rightHtml: '',
+    notesTitle: 'Speaker notes',
+    notesBody: 'Use this as a closing recap or a transition into gradient descent.'
+  }
+};
+
+for (const el of Object.values(fields)) {
+  el.addEventListener('input', buildPreview);
+  el.addEventListener('change', buildPreview);
+}
+
+document.getElementById('copyBtn').addEventListener('click', copySnippet);
+document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
+document.getElementById('downloadBtn').addEventListener('click', downloadSnippet);
+document.getElementById('resetBtn').addEventListener('click', () => currentPreset && applyPreset(currentPreset));
+document.getElementById('loadTitle').addEventListener('click', () => applyPreset(presets.title));
+document.getElementById('loadConcept').addEventListener('click', () => applyPreset(presets.concept));
+document.getElementById('loadDiagram').addEventListener('click', () => applyPreset(presets.diagram));
+document.getElementById('loadAppendix').addEventListener('click', () => applyPreset(presets.appendix));
+
+window.addEventListener('load', () => {
+  mathjaxOutput.value = mathJaxHelper;
+  typesetPreview();
+});
+
+applyPreset(presets.concept);
+</script>
+</body>
+</html>
