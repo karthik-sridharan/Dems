@@ -520,16 +520,25 @@ const preview = document.getElementById('preview');
 const output = document.getElementById('output');
 const mathjaxOutput = document.getElementById('mathjaxOutput');
 const toast = document.getElementById('toast');
-const mathJaxHelper = `<script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$', '$']],
-    displayMath: [['\\(', '\\)']]
-  },
-  svg: { fontCache: 'global' }
-};
-<\/script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>`;
+const mathJaxHelper = '<scr' + 'ipt>
+' +
+  'window.MathJax = {
+' +
+  '  tex: {
+' +
+  "    inlineMath: [['$', '$']],
+" +
+  "    displayMath: [['\\(', '\\)']]
+" +
+  '  },
+' +
+  "  svg: { fontCache: 'global' }
+" +
+  '};
+' +
+  '</scr' + 'ipt>
+' +
+  '<scr' + 'ipt defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr' + 'ipt>';
 let currentPreset = null;
 
 function preserveMathTokens(str) {
@@ -702,6 +711,9 @@ function buildSlideHtml() {
 
 function typesetPreview() {
   if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    if (typeof window.MathJax.typesetClear === 'function') {
+      window.MathJax.typesetClear([preview]);
+    }
     window.MathJax.typesetPromise([preview]).catch(() => {});
   }
 }
@@ -843,21 +855,19 @@ function buildStandaloneHtml() {
     .stage { padding: 12px; }
   }
 </style>
-<script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$', '$']],
-    displayMath: [['\\\\(', '\\\\)']]
-  },
-  svg: { fontCache: 'global' }
-};
-<\/script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
+${mathJaxHelper}
 </head>
 <body>
   <div class="stage">
     ${slideHtml}
   </div>
+<script>
+window.addEventListener('load', () => {
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    window.MathJax.typesetPromise().catch(() => {});
+  }
+});
+</script>
 </body>
 </html>`;
 }
