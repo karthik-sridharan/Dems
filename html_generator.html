@@ -300,6 +300,32 @@
     box-shadow: none;
   }
 
+
+  .right-plain {
+    background: transparent !important;
+    background-image: none !important;
+    color: inherit;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+
+  .preview-slide.two-col .col:first-child,
+  .preview-slide.two-col .col:last-child,
+  .slide.two-col .col:first-child,
+  .slide.two-col .col:last-child,
+  .two-col .col:first-child,
+  .two-col .col:last-child {
+    background: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: inherit;
+  }
+
 </style>
 </head>
 <body>
@@ -639,7 +665,7 @@ function buildRightColumn(mode, raw) {
   if (mode === 'diagram') return diagramMarkup();
   if (mode === 'custom') return raw || '<div class="placeholder">Paste custom HTML here.</div>';
   if (mode === 'placeholder') return `<div class="placeholder">${escapeHtml(raw || 'Right-column placeholder')}</div>`;
-  return `<div class="panel dark rich">${parseStructuredText(raw)}</div>`;
+  return `<div class="rich right-plain">${parseStructuredText(raw)}</div>`;
 }
 
 function buildSlideHtml() {
