@@ -1320,8 +1320,12 @@ function downloadStandalone(){
 
 function downloadDeck(){
   const deckSlides = slides.length ? slides : [getFormSlide()];
-  downloadText('presentation.html', buildDeckHtml(fields.deckTitle.value.trim(), deckSlides));
-  showToast('Downloaded full presentation.');
+  const suggestedBase = (fields.deckTitle.value || 'presentation').trim() || 'presentation';
+  const requested = window.prompt('Save full presentation as:', sanitizeHtmlFilename(suggestedBase, 'presentation'));
+  if(requested === null) return;
+  const filename = sanitizeHtmlFilename(requested, 'presentation');
+  downloadText(filename, buildDeckHtml(fields.deckTitle.value.trim(), deckSlides));
+  showToast(`Downloaded ${filename}`);
 }
 
 
