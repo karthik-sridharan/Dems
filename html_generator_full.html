@@ -275,7 +275,6 @@ window.MathJax = {
       </div>
     </details>
 
-    <div class="help" style="margin:.25rem 0 .85rem;color:var(--muted)">Exported presentations can now be loaded back into the generator later with <b>Load generated HTML</b>.</div>
     <div class="toolbar">
       <button class="btn primary" id="addSlideBtn">Add as new slide</button>
       <button class="btn" id="updateSlideBtn">Update selected slide</button>
@@ -807,48 +806,38 @@ window.addEventListener('load', ()=> {
 }
 
 
-function escapeJsonForScript(value){
-  return JSON.stringify(value)
-    .replace(/<\//g, '<\\/')
-    .replace(/<!--/g, '<\\!--')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-}
-
-function decodeHtmlEntities(str){
-  const ta = document.createElement('textarea');
-  ta.innerHTML = str;
-  return ta.value;
-}
-
-function extractEmbeddedDeckData(htmlText){
-  const match = htmlText.match(/<script[^>]*id=["']deck-source["'][^>]*>([\s\S]*?)<\/script>/i);
-  if(!match) return null;
-  const raw = decodeHtmlEntities(match[1].trim());
-  return JSON.parse(raw);
+function encodeDeckPayload(payload){
+  return JSON.stringify(payload)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
 }
 
 async function loadDeckFromFile(file){
-  const text = await file.text();
-  const payload = extractEmbeddedDeckData(text);
-  if(!payload || !Array.isArray(payload.slides)) {
-    throw new Error('This HTML file does not contain editable slide data from the generator.');
+  const htmlText = await file.text();
+  const match = htmlText.match(/<script id="deck-source" type="application\/json">([\s\S]*?)<\/script>/i);
+  if(!match) throw new Error('This HTML file does not contain editable slide data.');
+  let payload;
+  try{
+    payload = JSON.parse(match[1]);
+  }catch(err){
+    throw new Error('Editable slide data exists but could not be parsed.');
   }
+  if(!payload || !Array.isArray(payload.slides)) throw new Error('Editable slide data is invalid.');
+  fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   slides = payload.slides.map(s => structuredClone(s));
-  fields.deckTitle.value = payload.deckTitle || 'Presentation';
-  activeIndex = slides.length ? 0 : -1;
-  if(activeIndex >= 0) applySlideToForm(slides[0]);
-  else clearForm();
+  if(slides.length){
+    activeIndex = 0;
+    applySlideToForm(slides[0]);
+  }else{
+    activeIndex = -1;
+    clearForm();
+  }
   renderDeckList();
   buildPreview();
 }
 
 function buildDeckHtml(deckTitle, deckSlides){
-  const deckPayload = {
-    deckTitle: deckTitle || 'Presentation',
-    slides: deckSlides
-  };
-  const deckDataScript = `<script id="deck-source" type="application/json">${escapeJsonForScript(deckPayload)}<\/script>`;
   const slideSections = deckSlides.map((slide, idx)=>{
     const cls = slide.slideType === 'title-center' ? 'deck-slide title-center' : (slide.slideType === 'two-col' ? 'deck-slide two-col' : 'deck-slide single');
     return `<section class="${cls}" data-index="${idx}" data-title="${escapeAttr(slide.title || `Slide ${idx+1}`)}" style="${escapeAttr(buildSlideStyle(slide))}">
@@ -859,6 +848,7 @@ function buildDeckHtml(deckTitle, deckSlides){
   }).join('\n');
 
   const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('\n');
+  const deckPayload = encodeDeckPayload({ deckTitle: deckTitle || 'Presentation', slides: deckSlides });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -866,7 +856,6 @@ function buildDeckHtml(deckTitle, deckSlides){
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(deckTitle || 'Presentation')}</title>
-${deckDataScript}
 <style>
   :root{
     --deck-bg:#060a16;
@@ -970,79 +959,69 @@ ${deckDataScript}
     padding:1rem;
   }
   .slide-map-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:1rem}
-  .slide-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem}
+  .slide-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.85rem}
   .slide-map-item{
-    width:100%;text-align:left;padding:1rem;border-radius:18px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(255,255,255,.04);
-    color:var(--deck-text);cursor:pointer;font:inherit;
-    display:grid;gap:.35rem
+    text-align:left;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--deck-text);
+    border-radius:18px;padding:1rem;font:inherit;cursor:pointer;display:grid;gap:.3rem
   }
-  .slide-map-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.13)}
-  .slide-map-item span:first-child{font-size:.85rem;color:var(--deck-muted)}
-  .slide-map-help{margin-top:1rem;color:var(--deck-muted);font-size:.92rem}
-  .deck-slide .bullet-card{
-    padding:1rem 1.15rem;
-    background:rgba(127,127,127,.045);
+  .slide-map-item span:first-child{color:var(--deck-muted);font-size:.9rem}
+  .bullet-card{
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:.85rem .95rem;
+    margin:.9rem 0;
+    background:rgba(127,127,127,.04);
   }
-  .deck-slide .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
-  .deck-slide .placeholder{
-    min-height:220px;
-    display:grid;
-    place-items:center;
-    color:rgba(17,17,17,.72);
-    padding:1rem 1.15rem;
-    text-align:center;
+  .bullet-card b{display:block;margin-bottom:.3rem}
+  .placeholder{
+    min-height:220px;border:1px dashed var(--line);border-radius:24px;display:grid;place-items:center;color:rgba(17,17,17,.55);padding:1rem;text-align:center;
   }
-  .deck-slide .diag{display:grid;place-items:center;padding:.9rem}
-  .deck-slide .diagram{width:100%;max-width:680px;height:auto}
-  .deck-slide .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
-  .deck-slide .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
-  .deck-slide .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  @media (max-width:900px){
-    .deck-slide{padding:1.5rem 1.2rem 5rem}
+  .diag{display:grid;place-items:center;padding:.5rem 0}
+  .diagram{width:100%;max-width:680px;height:auto}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
+  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+  @media (max-width: 900px){
+    .deck-slide{padding:4.4rem 1.15rem 5rem}
     .deck-slide.two-col .slide-body{grid-template-columns:1fr}
-    .deck-slide h1{font-size:2.4rem}
-    .deck-slide h2{font-size:1.95rem}
-    .deck-controls{bottom:.7rem}
-    .slides-button{left:.7rem;top:.7rem}
-    .slide-number{right:.7rem;top:.7rem}
+    .deck-slide h1{font-size:2.5rem}
+    .deck-slide h2{font-size:1.8rem}
   }
 </style>
 <script>
 window.MathJax = {
-  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
+  tex: {
+    inlineMath: [['$','$'], ['\\\\(','\\\\)']],
+    displayMath: [['$$','$$'], ['\\\\[','\\\\]']]
+  },
   svg: { fontCache: 'global' }
 };
 <\/script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
 </head>
 <body>
-<div class="deck" id="deck">
-${slideSections}
-</div>
+<div class="deck">
+  ${slideSections}
+  <div class="deck-controls">
+    <button class="nav-btn" id="prevBtn" type="button">Previous</button>
+    <button class="nav-btn" id="nextBtn" type="button">Next</button>
+  </div>
 
-<div class="deck-controls">
-  <button class="nav-btn" type="button" id="prevBtn">Previous</button>
-  <button class="nav-btn" type="button" id="nextBtn">Next</button>
-</div>
-
-<div class="slide-map" id="slideMap" aria-hidden="true">
-  <div class="slide-map-panel">
-    <div class="slide-map-head">
-      <div>
-        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--deck-muted);font-weight:800">Slides</div>
-        <h2 style="margin:.2rem 0 0">${escapeHtml(deckTitle || 'Presentation')}</h2>
+  <div class="slide-map" id="slideMap" aria-hidden="true">
+    <div class="slide-map-panel">
+      <div class="slide-map-head">
+        <div>
+          <div style="letter-spacing:.12em;text-transform:uppercase;color:var(--deck-muted);font-size:.76rem">Slide list</div>
+          <h2 style="margin:.2rem 0 0 0;font-size:1.45rem">${escapeHtml(deckTitle || 'Presentation')}</h2>
+        </div>
+        <button class="map-close" id="mapClose" type="button">Close</button>
       </div>
-      <button class="map-close" type="button" id="mapClose">Close</button>
+      <div class="slide-map-grid">${slideList}</div>
+      <p style="color:var(--deck-muted);margin-top:1rem">Keyboard: ←/→ navigate, T open slide list, F fullscreen, Esc close.</p>
     </div>
-    <div class="slide-map-grid" id="slideMapGrid">
-${slideList}
-    </div>
-    <div class="slide-map-help">Navigation: → / Space next, ← previous, T open slide list, Esc close, F fullscreen. Swipe also works on phone.</div>
   </div>
 </div>
-
+<script id="deck-source" type="application/json">${deckPayload}<\/script>
 <script>
 const slides = Array.from(document.querySelectorAll('.deck-slide'));
 const map = document.getElementById('slideMap');
@@ -1050,19 +1029,16 @@ const mapItems = Array.from(document.querySelectorAll('.slide-map-item'));
 let index = 0;
 function render(){
   slides.forEach((slide,i)=>slide.classList.toggle('active', i === index));
-  mapItems.forEach((item,i)=>item.classList.toggle('active', i === index));
   if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
-    window.MathJax.typesetPromise(slides[index]).catch(()=>{});
+    window.MathJax.typesetPromise([slides[index]]).catch(()=>{});
   }
 }
-function go(i){
-  if(i < 0 || i >= slides.length) return;
-  index = i;
+function go(n){
+  index = (n + slides.length) % slides.length;
   render();
-  closeMap();
 }
-function next(){ if(index < slides.length - 1) { index += 1; render(); } }
-function prev(){ if(index > 0) { index -= 1; render(); } }
+function next(){ go(index + 1); }
+function prev(){ go(index - 1); }
 function openMap(){ map.classList.add('open'); map.setAttribute('aria-hidden','false'); }
 function closeMap(){ map.classList.remove('open'); map.setAttribute('aria-hidden','true'); }
 
@@ -1099,7 +1075,6 @@ window.addEventListener('load', ()=> {
 </body>
 </html>`;
 }
-
 function mathJaxHelper(){
   return `<script>
 window.MathJax = {
