@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Backprop as local chain rule</title>
+<style>
+  :root {
+    --panel: #121933;
+    --text: #111111;
+    --muted: rgba(17,17,17,.72);
+    --line: rgba(17,17,17,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111111;
+  }
+  .stage {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .slide {
+    position: relative;
+    width: min(1400px, calc(100vw - 48px));
+    min-height: min(720px, calc(100vh - 48px));
+    padding: 3.2rem 3.5rem 5rem;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 2rem;
+    border-radius: 28px;
+  }
+  .slide.single { grid-template-columns: 1fr; }
+  .slide.title-center {
+    grid-template-columns: 1fr;
+    place-items: center;
+    text-align: center;
+    padding: 3rem;
+  }
+  .slide.title-center .title-center-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+    width: 100%;
+  }
+  .slide.title-center h1,
+  .slide.title-center h2 {
+    margin: 0;
+    max-width: 16ch;
+    font-size: clamp(3rem, 8vw, 5.4rem);
+    line-height: 1.02;
+  }
+  .col { min-width: 0; }
+  .slide h1, .slide h2 { margin: 0 0 1rem; line-height: 1.05; }
+  .slide h1 { font-size: 3rem; max-width: 13ch; }
+  .slide h2 { font-size: 2.15rem; }
+  .kicker {
+    color: inherit;
+    opacity: .78;
+    font-size: .92rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: .15rem 0 .9rem;
+  }
+  .lede-preview { color: var(--muted); font-size: 1.18rem; line-height: 1.5; max-width: 60ch; }
+  .rich p { color: var(--muted); font-size: 1.08rem; line-height: 1.48; margin: 0 0 .9rem; }
+  .rich ul { margin: .4rem 0 1rem 1.1rem; padding: 0; }
+  .rich li { margin: .45rem 0; font-size: 1.05rem; line-height: 1.48; color: var(--muted); }
+  .eq {
+    color: var(--text);
+    font-size: 1.02rem;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: .8rem .95rem;
+    margin: .8rem 0;
+    overflow-x: auto;
+  }
+  .bullet-card {
+    padding: .95rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255,255,255,.03);
+    margin-top: .75rem;
+  }
+  .bullet-card b { color: var(--text); display: block; margin-bottom: .2rem; }
+  .placeholder {
+    min-height: 280px;
+    border: 1px dashed var(--line);
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem;
+  }
+  .diag {
+    min-height: 280px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 1.25rem;
+    background: rgba(255,255,255,.03);
+    display: grid;
+    place-items: center;
+  }
+  svg.diagram { width: 100%; max-width: 640px; height: auto; }
+  .node { fill: #1b2447; stroke: rgba(255,255,255,.12); stroke-width: 2; }
+  .node.blue { fill: rgba(97,180,255,.18); stroke: rgba(97,180,255,.85); }
+  .node.red { fill: rgba(255,107,122,.16); stroke: rgba(255,107,122,.88); }
+  .label { font-size: 18px; fill: currentColor; font-weight: 600; }
+  .edge { stroke: rgba(255,255,255,.22); stroke-width: 4; stroke-linecap: round; }
+  .edge.blue { stroke: rgba(97,180,255,.95); }
+  .edge.red { stroke: rgba(255,107,122,.95); }
+  .right-plain {
+    background: transparent !important;
+    background-image: none !important;
+    color: inherit;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  @media (max-width: 1100px) {
+    .slide { grid-template-columns: 1fr; padding: 1.5rem 1.2rem 2rem; min-height: auto; width: min(1400px, calc(100vw - 24px)); }
+    .slide h1 { font-size: 2.25rem; }
+    .stage { padding: 12px; }
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\(', '\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="stage">
+    <section class="slide" style="background:#ffffff;color:#111111;--text:#111111;--muted:rgba(17, 17, 17, 0.72);--line:rgba(17, 17, 17, 0.14);" data-notes-title="Speaker notes" data-notes-body="Repeat the phrase incoming gradient times local derivative several times.">
+  
+    <div class="col">
+      <h2>Backprop as local chain rule</h2>
+      
+      <p class="lede-preview">Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.</p>
+      <div class="rich"><p>Teach the pattern before teaching every symbol.</p>
+<ul><li>start at the loss</li><li>move one edge backward</li><li>multiply by the local slope</li></ul>
+<div class="eq">\( \frac{dL}{dz} = \frac{dL}{da} \cdot \frac{da}{dz} \)</div>
+<div class="bullet-card"><b>Teaching line</b><div>Incoming gradient times local derivative gives the outgoing gradient.</div></div></div>
+    </div>
+    <div class="col"><div class="rich right-plain"><p>Output-layer example</p>
+<div class="eq">\( \frac{dL}{dw_j} = \frac{dL}{dz} a_j \)</div>
+<div class="bullet-card"><b>Interpretation</b><div>A weight gets a large gradient when a large activation carries a large downstream error signal.</div></div></div></div>
+</section>
+  </div>
+  <script>
+    window.addEventListener('load', () => {
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        window.MathJax.typesetPromise().catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>
