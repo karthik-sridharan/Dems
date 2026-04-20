@@ -96,6 +96,30 @@
     .slide h1{font-size:2.3rem}
     .slide h2{font-size:1.9rem}
   }
+
+  .bullet-card{
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:.85rem .95rem;
+    margin:.9rem 0;
+    background:rgba(127,127,127,.04);
+  }
+  .bullet-card b{display:block;margin-bottom:.3rem}
+  .placeholder{
+    min-height:220px;
+    border:1px dashed var(--line);
+    border-radius:24px;
+    display:grid;
+    place-items:center;
+    color:var(--muted);
+    padding:1rem;
+    text-align:center;
+  }
+  .diag{display:grid;place-items:center;padding:.5rem 0}
+  .diagram{width:100%;max-width:680px;height:auto}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
+  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
 </style>
 <script>
 window.MathJax = {
@@ -177,15 +201,27 @@ window.MathJax = {
         <textarea id="leftHtml" placeholder="- Bullet one&#10;- Bullet two&#10;&#10;Inline math: $x^2$&#10;Displayed: \( \frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz} \)"></textarea>
       </div>
       <div class="field full" id="rightModeField">
-        <label for="rightMode">Right column style</label>
+        <label for="rightMode">Right column content</label>
         <select id="rightMode">
-          <option value="plain" selected>Plain text / rich content</option>
-          <option value="placeholder">Diagram placeholder box</option>
+          <option value="panel" selected>Panel text</option>
+          <option value="diagram">Neural-network diagram placeholder</option>
+          <option value="custom">Custom HTML block</option>
+          <option value="placeholder">Simple placeholder box</option>
+          <option value="plain">Plain text / rich content</option>
         </select>
       </div>
       <div class="field full" id="rightHtmlField">
-        <label for="rightHtml">Right column content</label>
+        <label for="rightHtml">Right-column content text / HTML</label>
         <textarea id="rightHtml" placeholder="Only used for two-column slides"></textarea>
+        <div class="help">If the mode is <b>panel</b> or <b>plain</b>, this uses the same line prefixes as the left column. If the mode is <b>custom</b>, paste raw HTML. Inline math like <code>$\nabla L$</code> and displayed math like <code>\( \frac{dL}{dw} = x \)</code> render in preview and export.</div>
+      </div>
+      <div class="field">
+        <label for="notesTitle">Speaker notes title</label>
+        <input id="notesTitle" value="Speaker notes" />
+      </div>
+      <div class="field">
+        <label for="notesBody">Speaker notes body</label>
+        <input id="notesBody" value="" />
       </div>
     </div>
 
@@ -195,6 +231,8 @@ window.MathJax = {
         <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
         <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
         <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
+        <button data-preset="diagram">Diagram slide<small>Tiny-network slide with a built-in neural-net placeholder.</small></button>
+        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
       </div>
     </details>
 
@@ -223,6 +261,7 @@ window.MathJax = {
       <div class="help" style="margin-top:.55rem">
         <p>Use plain text with light structure:</p>
         <p>- Start lines with <b>- </b> for bullets.</p>
+        <p>- Or use prefixed lines: <b>P:</b>, <b>UL:</b>, <b>EQ:</b>, <b>CARD:title|body</b>.</p>
         <p>- Start lines with <b>### </b> for a small section heading.</p>
         <p>- Leave blank lines between paragraphs.</p>
         <p>- Inline math: <b>$x^2$</b></p>
@@ -232,7 +271,9 @@ window.MathJax = {
 
     <div class="toolbar">
       <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
       <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
+      <button class="btn" id="resetBtn">Reset to current preset</button>
       <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
     </div>
   </div>
@@ -272,7 +313,9 @@ const fields = {
   lede: document.getElementById('lede'),
   leftHtml: document.getElementById('leftHtml'),
   rightMode: document.getElementById('rightMode'),
-  rightHtml: document.getElementById('rightHtml')
+  rightHtml: document.getElementById('rightHtml'),
+  notesTitle: document.getElementById('notesTitle'),
+  notesBody: document.getElementById('notesBody')
 };
 const preview = document.getElementById('preview');
 const snippetOutput = document.getElementById('snippetOutput');
@@ -348,6 +391,7 @@ function buildSlideStyle(slide){
   return `background:${bg};color:${font};--text:${font};--muted:${muted};--line:${line};`;
 }
 
+
 function parseStructuredText(raw){
   const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
   if(!text) return '';
@@ -355,25 +399,23 @@ function parseStructuredText(raw){
   const parts = [];
   let paragraph = [];
   let list = [];
+
+  function safeWithMath(str){
+    const { out, tokens } = preserveMathTokens(str);
+    return restoreMathTokens(escapeHtml(out), tokens);
+  }
   function flushParagraph(){
     if(!paragraph.length) return;
     const joined = paragraph.join(' ').trim();
-    if(joined){
-      const { out, tokens } = preserveMathTokens(joined);
-      const safe = restoreMathTokens(escapeHtml(out), tokens);
-      parts.push(`<p>${safe}</p>`);
-    }
+    if(joined) parts.push(`<p>${safeWithMath(joined)}</p>`);
     paragraph = [];
   }
   function flushList(){
     if(!list.length) return;
-    parts.push(`<ul>${list.map(item=>{
-      const { out, tokens } = preserveMathTokens(item);
-      const safe = restoreMathTokens(escapeHtml(out), tokens);
-      return `<li>${safe}</li>`;
-    }).join('')}</ul>`);
+    parts.push(`<ul>${list.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ul>`);
     list = [];
   }
+
   for(const rawLine of lines){
     const line = rawLine.trim();
     if(!line){
@@ -381,12 +423,9 @@ function parseStructuredText(raw){
       flushList();
       continue;
     }
-    if(line.startsWith('### ')){
+    if(/^UL:/i.test(line)){
       flushParagraph();
-      flushList();
-      const { out, tokens } = preserveMathTokens(line.slice(4).trim());
-      const safe = restoreMathTokens(escapeHtml(out), tokens);
-      parts.push(`<h3>${safe}</h3>`);
+      list.push(line.replace(/^UL:/i, '').trim());
       continue;
     }
     if(line.startsWith('- ')){
@@ -394,16 +433,39 @@ function parseStructuredText(raw){
       list.push(line.slice(2).trim());
       continue;
     }
+    flushList();
+    if(line.startsWith('### ')){
+      flushParagraph();
+      parts.push(`<h3>${safeWithMath(line.slice(4).trim())}</h3>`);
+      continue;
+    }
+    if(/^P:/i.test(line)){
+      flushParagraph();
+      parts.push(`<p>${safeWithMath(line.replace(/^P:/i, '').trim())}</p>`);
+      continue;
+    }
+    if(/^EQ:/i.test(line)){
+      flushParagraph();
+      const eq = line.replace(/^EQ:/i, '').trim();
+      parts.push(`<div class="display-math">${safeWithMath(eq)}</div>`);
+      continue;
+    }
+    if(/^CARD:/i.test(line)){
+      flushParagraph();
+      const payload = line.replace(/^CARD:/i, '').trim();
+      const [cardTitle, ...rest] = payload.split('|');
+      const cardBody = rest.join('|');
+      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardTitle || '')}</b><div>${safeWithMath(cardBody || '')}</div></div>`);
+      continue;
+    }
     if((/^\\\(.+\\\)$/s).test(line)){
       flushParagraph();
-      flushList();
       const body = line.replace(/^\\\(/, '').replace(/\\\)$/, '');
       parts.push(`<div class="display-math">\\[${body}\\]</div>`);
       continue;
     }
     if((/^\\\[.+\\\]$/s).test(line) || (/^\$\$.+\$\$$/s).test(line)){
       flushParagraph();
-      flushList();
       parts.push(`<div class="display-math">${line}</div>`);
       continue;
     }
@@ -414,6 +476,29 @@ function parseStructuredText(raw){
   return parts.join('\n');
 }
 
+function diagramMarkup(){
+  return `
+  <div class="diag">
+    <svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder">
+      <line x1="145" y1="145" x2="355" y2="125" class="edge blue"/>
+      <line x1="145" y1="145" x2="355" y2="295" class="edge blue"/>
+      <line x1="145" y1="285" x2="355" y2="125" class="edge blue"/>
+      <line x1="145" y1="285" x2="355" y2="295" class="edge blue"/>
+      <line x1="405" y1="125" x2="615" y2="215" class="edge red"/>
+      <line x1="405" y1="295" x2="615" y2="215" class="edge red"/>
+      <circle cx="115" cy="145" r="34" class="node blue"/>
+      <circle cx="115" cy="285" r="34" class="node blue"/>
+      <circle cx="375" cy="125" r="38" class="node blue"/>
+      <circle cx="375" cy="295" r="38" class="node blue"/>
+      <circle cx="645" cy="215" r="42" class="node red"/>
+      <text x="100" y="151" class="label">x₁</text>
+      <text x="100" y="291" class="label">x₂</text>
+      <text x="360" y="131" class="label">h₁</text>
+      <text x="360" y="301" class="label">h₂</text>
+      <text x="628" y="221" class="label">ŷ</text>
+    </svg>
+  </div>`;
+}
 function getFormSlide(){
   return {
     slideType: fields.slideType.value,
@@ -425,7 +510,9 @@ function getFormSlide(){
     lede: fields.lede.value.trim(),
     leftHtml: fields.leftHtml.value,
     rightMode: fields.rightMode.value,
-    rightHtml: fields.rightHtml.value
+    rightHtml: fields.rightHtml.value,
+    notesTitle: fields.notesTitle.value.trim(),
+    notesBody: fields.notesBody.value.trim()
   };
 }
 
@@ -438,18 +525,25 @@ function applySlideToForm(slide){
   fields.kicker.value = slide.kicker || '';
   fields.lede.value = slide.lede || '';
   fields.leftHtml.value = slide.leftHtml || '';
-  fields.rightMode.value = slide.rightMode || 'plain';
+  fields.rightMode.value = slide.rightMode || 'panel';
   fields.rightHtml.value = slide.rightHtml || '';
+  fields.notesTitle.value = slide.notesTitle || 'Speaker notes';
+  fields.notesBody.value = slide.notesBody || '';
   syncFields();
 }
 
-function buildRightContent(slide){
-  if(slide.rightMode === 'placeholder'){
-    return `<div style="min-height:320px;border:1px dashed var(--line);border-radius:24px;display:grid;place-items:center;color:var(--muted);padding:1rem;text-align:center;">${escapeHtml(slide.rightHtml || 'Diagram / figure / demo area')}</div>`;
-  }
-  return `<div class="rich">${parseStructuredText(slide.rightHtml)}</div>`;
-}
 
+function buildRightContent(slide){
+  const mode = slide.rightMode || 'panel';
+  if(mode === 'diagram') return diagramMarkup();
+  if(mode === 'custom') return slide.rightHtml || '<div class="placeholder">Paste custom HTML here.</div>';
+  if(mode === 'placeholder'){
+    return `<div class="placeholder">${escapeHtml(slide.rightHtml || 'Right-column placeholder')}</div>`;
+  }
+  const rich = parseStructuredText(slide.rightHtml);
+  if(mode === 'plain') return `<div class="rich">${rich}</div>`;
+  return `<div class="rich">${rich}</div>`;
+}
 function buildSlideInner(slide){
   const heading = slide.headingLevel || 'h2';
   const titleHtml = `<${heading}>${escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>')}</${heading}>`;
@@ -499,7 +593,7 @@ function buildPreview(){
   const slide = getFormSlide();
   preview.innerHTML = buildSlideSnippet(slide);
   snippetOutput.value = buildSlideSnippet(slide);
-  previewTitle.textContent = slide.title || 'Current slide';
+  previewTitle.textContent = activeIndex >= 0 ? ((slide.title || 'Untitled slide') + ` (editing slide ${activeIndex + 1})`) : (slide.title || 'Draft slide');
   typesetPreview();
 }
 
@@ -507,6 +601,7 @@ function renderDeckList(){
   deckList.innerHTML = '';
   slides.forEach((slide, idx)=>{
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'deck-item' + (idx === activeIndex ? ' active' : '');
     btn.innerHTML = `<b>${idx + 1}. ${escapeHtml(slide.title || 'Untitled slide')}</b><span class="meta">${escapeHtml(slide.slideType)}</span>`;
     btn.addEventListener('click', ()=>{
@@ -521,11 +616,12 @@ function renderDeckList(){
 }
 
 function addSlide(){
-  const slide = getFormSlide();
-  slides.push(structuredClone(slide));
-  activeIndex = slides.length - 1;
+  const slide = structuredClone(getFormSlide());
+  slides = slides.concat([slide]);
+  activeIndex = -1;
   renderDeckList();
-  showToast('Added slide.');
+  buildPreview();
+  showToast('Added slide as a new deck item.');
 }
 
 function updateSlide(){
@@ -578,10 +674,14 @@ function clearForm(){
     kicker:'',
     lede:'',
     leftHtml:'',
-    rightMode:'plain',
-    rightHtml:''
+    rightMode:'panel',
+    rightHtml:'',
+    notesTitle:'Speaker notes',
+    notesBody:''
   });
+  activeIndex = -1;
   buildPreview();
+  renderDeckList();
 }
 
 function syncFields(){
@@ -871,7 +971,23 @@ window.addEventListener('load', ()=> {
 </html>`;
 }
 
-async function copyCurrentSnippet(){
+async 
+function mathJaxHelper(){
+  return `<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>`;
+}
+
+async function copyMathJaxHelper(){
+  await copyText(mathJaxHelper());
+  showToast('Copied MathJax helper.');
+}
+
+function copyCurrentSnippet(){
   const ok = await copyText(snippetOutput.value);
   if(ok) showToast('Copied current slide snippet.');
 }
@@ -887,6 +1003,7 @@ function downloadDeck(){
   showToast('Downloaded full presentation.');
 }
 
+
 function applyPreset(name){
   const presets = {
     title: {
@@ -895,11 +1012,13 @@ function applyPreset(name){
       bgColor:'#ffffff',
       fontColor:'#111111',
       title:'Lecture title',
-      kicker:'Optional subtitle',
+      kicker:'',
       lede:'',
       leftHtml:'',
-      rightMode:'plain',
-      rightHtml:''
+      rightMode:'panel',
+      rightHtml:'',
+      notesTitle:'Speaker notes',
+      notesBody:'Open the lecture with the central question before showing any formulas.'
     },
     concept: {
       slideType:'single',
@@ -909,9 +1028,11 @@ function applyPreset(name){
       title:'Main concept',
       kicker:'',
       lede:'One sentence to frame the slide.',
-      leftHtml:'- First key point\n- Second key point\n- Third key point\n\n### Equation\n\\( \\nabla_w L = \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w} \\)',
-      rightMode:'plain',
-      rightHtml:''
+      leftHtml:'P: Teach the pattern before teaching every symbol.\nUL: First key point\nUL: Second key point\nUL: Third key point\nEQ: \\( \\nabla_w L = \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w} \\)\nCARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensitivity.',
+      rightMode:'panel',
+      rightHtml:'',
+      notesTitle:'Speaker notes',
+      notesBody:'State the pattern first, then connect it to the symbols.'
     },
     twocol: {
       slideType:'two-col',
@@ -921,15 +1042,44 @@ function applyPreset(name){
       title:'Two-column lecture slide',
       kicker:'Title spans the full width',
       lede:'Use the left side for bullets and the right side for a figure, derivation, or demo.',
-      leftHtml:'- Left-column point one\n- Left-column point two\n\n### Key identity\n\\( I_T(S)=\\frac{|S_L|}{|S|}I(S_L)+\\frac{|S_R|}{|S|}I(S_R) \\)',
-      rightMode:'plain',
-      rightHtml:'### Right column\n- Figure description\n- Example\n- Mini derivation'
+      leftHtml:'P: Put the main story in the left column.\nUL: Left-column point one\nUL: Left-column point two\nEQ: \\( I_T(S)=\\frac{|S_L|}{|S|}I(S_L)+\\frac{|S_R|}{|S|}I(S_R) \\)',
+      rightMode:'panel',
+      rightHtml:'P: Use the right column for examples.\nUL: Figure description\nUL: Example\nUL: Mini derivation',
+      notesTitle:'Speaker notes',
+      notesBody:'Pause before moving from the left column to the right.'
+    },
+    diagram: {
+      slideType:'two-col',
+      headingLevel:'h2',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'A tiny 2–2–1 network',
+      kicker:'',
+      lede:'Keep the network small enough that every activation and derivative can stay visible on screen.',
+      leftHtml:'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
+      rightMode:'diagram',
+      rightHtml:'Diagram',
+      notesTitle:'Speaker notes',
+      notesBody:'Name the variables once here so you can reference them quickly later.'
+    },
+    appendix: {
+      slideType:'single',
+      headingLevel:'h2',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'Backprop recipe',
+      kicker:'',
+      lede:'This makes a clean end-of-lecture summary slide.',
+      leftHtml:'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward via local derivatives\nUL: update the parameters',
+      rightMode:'panel',
+      rightHtml:'',
+      notesTitle:'Speaker notes',
+      notesBody:'Deliver this slide briskly as the recap.'
     }
   };
   applySlideToForm(presets[name]);
   buildPreview();
 }
-
 document.querySelectorAll('input,select,textarea').forEach(el=>{
   el.addEventListener('input', ()=>{
     syncFields();
@@ -948,6 +1098,8 @@ document.getElementById('moveUpBtn').addEventListener('click', ()=>moveActive(-1
 document.getElementById('moveDownBtn').addEventListener('click', ()=>moveActive(1));
 document.getElementById('clearFormBtn').addEventListener('click', clearForm);
 document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentSnippet);
+document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
+document.getElementById('resetBtn').addEventListener('click', ()=>clearForm());
 document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
 document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
