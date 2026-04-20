@@ -35,13 +35,13 @@
     gap: 1rem;
   }
   .panel {
-    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02));
+    background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 24px;
     box-shadow: var(--shadow);
     padding: 1rem 1rem 1.1rem;
   }
-  .panel.dark { background: linear-gradient(180deg, rgba(7,11,23,0.7), rgba(255,255,255,0.02)); }
+  .panel.dark { background: var(--panel); }
   h1, h2, h3 { margin: 0; line-height: 1.08; }
   h1 { font-size: 2rem; }
   h2 { font-size: 1.25rem; }
@@ -65,7 +65,7 @@
     cursor: pointer;
   }
   .btn.primary {
-    background: linear-gradient(90deg, rgba(97,180,255,.18), rgba(142,208,255,.08));
+    background: var(--panel);
     border-color: rgba(97,180,255,.45);
   }
   .btn:active { transform: translateY(1px); }
@@ -196,7 +196,7 @@
     border: 1px solid var(--line);
     border-radius: 24px;
     padding: 1.25rem;
-    background: linear-gradient(180deg, rgba(7,11,23,0.7), rgba(255,255,255,0.02));
+    background: var(--panel);
     display: grid;
     place-items: center;
   }
@@ -276,6 +276,30 @@
     .slide { grid-template-columns: 1fr; padding: 1.5rem 1.2rem 2rem; min-height: 0; }
     .slide h1 { font-size: 2.25rem; }
   }
+
+  .preview-slide.two-col .col:last-child,
+  .slide.two-col .col:last-child,
+  .two-col .col:last-child {
+    background: var(--panel) !important;
+    background-image: none !important;
+    color: inherit;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: none;
+  }
+
+
+  .preview-slide.two-col .col:first-child,
+  .slide.two-col .col:first-child,
+  .two-col .col:first-child {
+    background: var(--panel) !important;
+    background-image: none !important;
+    color: inherit;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: none;
+  }
+
 </style>
 </head>
 <body>
