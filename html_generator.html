@@ -326,6 +326,32 @@
     color: inherit;
   }
 
+
+  .two-col-split {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    width: 100%;
+  }
+  .two-col-split .slide-header {
+    width: 100%;
+  }
+  .two-col-split .slide-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .two-col-split .slide-body > .col {
+    min-width: 0;
+  }
+  @media (max-width: 900px) {
+    .two-col-split .slide-body {
+      grid-template-columns: 1fr;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -348,7 +374,7 @@
       <div class="field">
         <label for="slideType">Slide type</label>
         <select id="slideType">
-          <option value="two-col">Two-column slide</option>
+          <option value="two-col">Two-column body, full-width title</option>
           <option value="single">Single-column slide</option>
           <option value="title-center">Centered title slide</option>
         </select>
@@ -680,19 +706,29 @@ function buildSlideHtml() {
     <div class="title-center-wrap">
       <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
     </div>`;
+  } else if (slideType === 'two-col') {
+    const titleBlock = `
+      <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
+      ${kicker ? `<div class="kicker">${escapeHtml(kicker)}</div>` : ''}
+      ${lede ? `<p class="lede-preview">${escapeHtml(lede)}</p>` : ''}`;
+    inner = `
+    <div class="two-col-split">
+      <div class="slide-header">${titleBlock}</div>
+      <div class="slide-body">
+        <div class="col">
+          <div class="rich">${parseStructuredText(fields.leftHtml.value)}</div>
+        </div>
+        <div class="col">${buildRightColumn(fields.rightMode.value, fields.rightHtml.value)}</div>
+      </div>
+    </div>`;
   } else {
-    const leftBody = `
+    inner = `
     <div class="col">
       <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
       ${kicker ? `<div class="kicker">${escapeHtml(kicker)}</div>` : ''}
       ${lede ? `<p class="lede-preview">${escapeHtml(lede)}</p>` : ''}
       <div class="rich">${parseStructuredText(fields.leftHtml.value)}</div>
     </div>`;
-
-    inner = leftBody;
-    if (slideType !== 'single') {
-      inner += `\n    <div class="col">${buildRightColumn(fields.rightMode.value, fields.rightHtml.value)}</div>`;
-    }
   }
 
   const slideStyle = escapeAttr(buildSlideStyle());
