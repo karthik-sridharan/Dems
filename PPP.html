@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My HTML Presentation</title>
+<style>
+  :root{
+    --deck-bg:#060a16;
+    --deck-panel:rgba(10,16,32,.82);
+    --deck-line:rgba(255,255,255,.14);
+    --deck-text:#eef3ff;
+    --deck-muted:#b7c4e8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%, #0b1020 45%, #070b17 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{color:var(--deck-text);overflow:hidden}
+  .deck{position:relative;width:100vw;height:100svh}
+  .deck-slide{
+    display:none;
+    position:absolute;
+    inset:0;
+    overflow:auto;
+    padding:3.2rem 3.5rem 5rem;
+    background:#fff;
+    color:#111;
+  }
+  .deck-slide.active{display:block}
+  .deck-slide h1,.deck-slide h2{margin:0;line-height:1.05}
+  .deck-slide h1{font-size:3.5rem;max-width:15ch}
+  .deck-slide h2{font-size:2.3rem}
+  .deck-slide .kicker{margin-top:.6rem;color:rgba(17,17,17,.72);font-size:1.08rem;line-height:1.5;max-width:68ch}
+  .deck-slide .lede{margin-top:1rem;color:rgba(17,17,17,.72);font-size:1.24rem;line-height:1.56;max-width:68ch}
+  .deck-slide .slide-body{margin-top:1.35rem}
+  .deck-slide.single .slide-body{display:block}
+  .deck-slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
+  .deck-slide .col{min-width:0}
+  .deck-slide .rich{display:grid;gap:1rem}
+  .deck-slide .rich p,
+  .deck-slide .rich ul,
+  .deck-slide .rich ol,
+  .deck-slide .rich h3,
+  .deck-slide .display-math,
+  .deck-slide .bullet-card,
+  .deck-slide .placeholder,
+  .deck-slide .diag{
+    margin:0;
+    border:1px solid var(--line);
+    border-radius:22px;
+    background:rgba(127,127,127,.045);
+    box-shadow:0 8px 24px rgba(0,0,0,.04);
+  }
+  .deck-slide .rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
+  .deck-slide .rich ul,.deck-slide .rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
+  .deck-slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
+  .deck-slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
+  .deck-slide .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
+  .deck-slide.title-center{
+    display:none;
+    place-items:center;
+    text-align:center;
+    padding:3rem;
+  }
+  .deck-slide.title-center.active{display:grid}
+  .deck-slide.title-center h1,.deck-slide.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+  .deck-slide.title-center .kicker{max-width:24ch;margin-left:auto;margin-right:auto}
+  .slides-button,.nav-btn,.map-close{
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(9,15,31,.85);
+    color:var(--deck-text);
+    border-radius:999px;
+    padding:.72rem 1rem;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+    backdrop-filter:blur(12px);
+  }
+  .slides-button{position:fixed;left:1rem;top:1rem;z-index:12}
+  .slide-number{
+    position:fixed;right:1rem;top:1rem;z-index:12;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(9,15,31,.72);
+    color:var(--deck-text);
+    border-radius:999px;
+    padding:.62rem .85rem;
+    font-size:.92rem;
+    backdrop-filter:blur(12px);
+  }
+  .deck-controls{
+    position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);
+    z-index:12;display:flex;gap:.65rem
+  }
+  .slide-map{
+    position:fixed;inset:0;z-index:20;display:none;
+    background:rgba(4,8,18,.72);backdrop-filter:blur(12px);
+    padding:1rem;
+  }
+  .slide-map.open{display:block}
+  .slide-map-panel{
+    max-width:980px;
+    margin:0 auto;
+    height:calc(100svh - 2rem);
+    background:rgba(9,15,31,.92);
+    color:var(--deck-text);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:28px;
+    overflow:auto;
+    padding:1rem;
+  }
+  .slide-map-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:1rem}
+  .slide-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.85rem}
+  .slide-map-item{
+    text-align:left;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--deck-text);
+    border-radius:18px;padding:1rem;font:inherit;cursor:pointer;display:grid;gap:.3rem
+  }
+  .slide-map-item span:first-child{color:var(--deck-muted);font-size:.9rem}
+  .bullet-card{
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:.85rem .95rem;
+    margin:.9rem 0;
+    background:rgba(127,127,127,.04);
+  }
+  .bullet-card b{display:block;margin-bottom:.3rem}
+  .placeholder{
+    min-height:220px;border:1px dashed var(--line);border-radius:24px;display:grid;place-items:center;color:rgba(17,17,17,.55);padding:1rem;text-align:center;
+  }
+  .diag{display:grid;place-items:center;padding:.5rem 0}
+  .diagram{width:100%;max-width:680px;height:auto}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
+  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+  @media (max-width: 900px){
+    .deck-slide{padding:4.4rem 1.15rem 5rem}
+    .deck-slide.two-col .slide-body{grid-template-columns:1fr}
+    .deck-slide h1{font-size:2.5rem}
+    .deck-slide h2{font-size:1.8rem}
+  }
+
+  .slide .bullet-card > div,
+  .deck-slide .bullet-card > div{
+    margin-top:.4rem;
+  }
+  .slide .bullet-card p,
+  .slide .bullet-card ul,
+  .slide .bullet-card ol,
+  .slide .bullet-card h3,
+  .slide .bullet-card .display-math,
+  .deck-slide .bullet-card p,
+  .deck-slide .bullet-card ul,
+  .deck-slide .bullet-card ol,
+  .deck-slide .bullet-card h3,
+  .deck-slide .bullet-card .display-math{
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    padding:0 !important;
+    border-radius:0 !important;
+    margin:.45rem 0 0 0 !important;
+  }
+  .slide .bullet-card p:first-child,
+  .slide .bullet-card ul:first-child,
+  .slide .bullet-card ol:first-child,
+  .slide .bullet-card h3:first-child,
+  .slide .bullet-card .display-math:first-child,
+  .deck-slide .bullet-card p:first-child,
+  .deck-slide .bullet-card ul:first-child,
+  .deck-slide .bullet-card ol:first-child,
+  .deck-slide .bullet-card h3:first-child,
+  .deck-slide .bullet-card .display-math:first-child{
+    margin-top:0 !important;
+  }
+
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    displayMath: [['$$','$$'], ['\\[','\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="deck">
+  <section class="deck-slide title-center" data-index="0" data-title="Deep Learning: Backpropagation" style="background:#ffffff;color:#111111;--text:#111111;--muted:rgba(17, 17, 17, 0.72);--line:rgba(17, 17, 17, 0.14);">
+      <button class="slides-button" type="button">Slides</button>
+      <div class="slide-number">1 / 2</div>
+      <div class="title-center"><h2>Deep Learning: Backpropagation</h2></div>
+    </section>
+<section class="deck-slide single" data-index="1" data-title="Main concept" style="background:#ffffff;color:#111111;--text:#111111;--muted:rgba(17, 17, 17, 0.72);--line:rgba(17, 17, 17, 0.14);">
+      <button class="slides-button" type="button">Slides</button>
+      <div class="slide-number">2 / 2</div>
+      <h2>Main concept</h2>
+    
+    <div class="lede">One sentence to frame the slide.</div>
+    <div class="slide-body">
+      <div class="col"><div class="rich"><p>Teach the pattern before teaching every symbol.</p>
+<ol><li>First key point</li><li>Second key point</li><li>Third key point</li></ol>
+<div class="display-math">\[\begin{aligned}\nabla_w L &amp;= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\
+&amp;= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\end{aligned}\]</div>
+<div class="bullet-card"><b>Key idea</b><div><p>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</p></div></div></div></div>
+    </div>
+    </section>
+  <div class="deck-controls">
+    <button class="nav-btn" id="prevBtn" type="button">Previous</button>
+    <button class="nav-btn" id="nextBtn" type="button">Next</button>
+  </div>
+
+  <div class="slide-map" id="slideMap" aria-hidden="true">
+    <div class="slide-map-panel">
+      <div class="slide-map-head">
+        <div>
+          <div style="letter-spacing:.12em;text-transform:uppercase;color:var(--deck-muted);font-size:.76rem">Slide list</div>
+          <h2 style="margin:.2rem 0 0 0;font-size:1.45rem">My HTML Presentation</h2>
+        </div>
+        <button class="map-close" id="mapClose" type="button">Close</button>
+      </div>
+      <div class="slide-map-grid"><button type="button" class="slide-map-item" data-go="0"><span>1.</span> <span>Deep Learning: Backpropagation</span></button>
+<button type="button" class="slide-map-item" data-go="1"><span>2.</span> <span>Main concept</span></button></div>
+      <p style="color:var(--deck-muted);margin-top:1rem">Keyboard: ←/→ navigate, T open slide list, F fullscreen, Esc close.</p>
+    </div>
+  </div>
+</div>
+<script id="deck-source" type="application/json">{"deckTitle":"My HTML Presentation","slides":[{"slideType":"title-center","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Deep Learning: Backpropagation","kicker":"","lede":"One sentence to frame the slide.","leftMode":"panel","leftHtml":"\\paragraph{Teach the pattern before teaching every symbol.}\n\n\\begin{enumerate}\n\\item First key point\n\\item Second key point\n\\item Third key point\n\\end{enumerate}\n\n\\begin{equation}\n\\nabla_w L \u0026= \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w}\\\\\n\u0026= \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w}\n\\end{equation}\n\n\\begin{card}{Key idea}\nEach neuron turns an incoming sensitivity into an outgoing sensitivity.\n\\end{card}","rightMode":"panel","rightHtml":"","notesTitle":"Speaker notes","notesBody":"State the pattern first, then connect it to the symbols."},{"slideType":"single","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Main concept","kicker":"","lede":"One sentence to frame the slide.","leftMode":"panel","leftHtml":"\\paragraph{Teach the pattern before teaching every symbol.}\n\n\\begin{enumerate}\n\\item First key point\n\\item Second key point\n\\item Third key point\n\\end{enumerate}\n\n\\begin{equation}\n\\nabla_w L \u0026= \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w}\\\\\n\u0026= \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w}\n\\end{equation}\n\n\\begin{card}{Key idea}\nEach neuron turns an incoming sensitivity into an outgoing sensitivity.\n\\end{card}","rightMode":"panel","rightHtml":"","notesTitle":"Speaker notes","notesBody":"State the pattern first, then connect it to the symbols."}]}</script>
+<script>
+const slides = Array.from(document.querySelectorAll('.deck-slide'));
+const map = document.getElementById('slideMap');
+const mapItems = Array.from(document.querySelectorAll('.slide-map-item'));
+let index = 0;
+function render(){
+  slides.forEach((slide,i)=>slide.classList.toggle('active', i === index));
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    window.MathJax.typesetPromise([slides[index]]).catch(()=>{});
+  }
+}
+function go(n){
+  index = (n + slides.length) % slides.length;
+  render();
+}
+function next(){ go(index + 1); }
+function prev(){ go(index - 1); }
+function openMap(){ map.classList.add('open'); map.setAttribute('aria-hidden','false'); }
+function closeMap(){ map.classList.remove('open'); map.setAttribute('aria-hidden','true'); }
+
+document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click', openMap));
+document.getElementById('mapClose').addEventListener('click', closeMap);
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('prevBtn').addEventListener('click', prev);
+mapItems.forEach(item=>item.addEventListener('click', ()=>go(Number(item.dataset.go))));
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); prev(); }
+  else if(e.key.toLowerCase() === 't'){ openMap(); }
+  else if(e.key === 'Escape'){ closeMap(); }
+  else if(e.key.toLowerCase() === 'f'){
+    if(document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.();
+  }
+});
+let touchStartX = null;
+document.addEventListener('touchstart', e=>{ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e=>{
+  if(touchStartX == null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
+  touchStartX = null;
+}, {passive:true});
+window.addEventListener('load', ()=> {
+  render();
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    window.MathJax.typesetPromise().catch(()=>{});
+  }
+});
+</script>
+</body>
+</html>
