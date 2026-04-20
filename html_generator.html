@@ -446,7 +446,7 @@ CARD:Teaching line|A weight gets a large gradient when a large activation carrie
       <summary>How to use the generated code</summary>
       <div class="help">
         <p>Paste the generated <code>&lt;section class="slide" ...&gt;</code> block into your existing HTML deck inside the main <code>.deck</code> container. The snippet uses the same CSS class names as the earlier presentation files.</p>
-        <p>Good workflow on phone: pick a preset, edit a few fields, tap <b>Copy snippet</b>, then paste into your deck file where you want the new slide.</p>
+        <p>Good workflow on phone: use <b>Copy snippet</b> for your deck, or use <b>Download standalone .html</b> to export a self-contained single-slide page that should match the preview.</p>
         <p>The color menus add inline slide styles, so the copied snippet keeps your chosen background and font colors when pasted into the larger deck.</p>
         <p>This version removes chips entirely and keeps kicker optional, with kicker shown below the title when used.</p>
         <p>Math preview uses MathJax. If your deck does not already load MathJax, tap <b>Copy MathJax helper</b> once and paste that script block near the end of your deck HTML.</p>
@@ -456,7 +456,7 @@ CARD:Teaching line|A weight gets a large gradient when a large activation carrie
     <div class="toolbar">
       <button class="btn primary" id="copyBtn">Copy snippet</button>
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
-      <button class="btn" id="downloadBtn">Download snippet as .html fragment</button>
+      <button class="btn" id="downloadBtn">Download standalone .html</button>
       <button class="btn" id="resetBtn">Reset to current preset</button>
     </div>
   </div>
@@ -473,7 +473,7 @@ CARD:Teaching line|A weight gets a large gradient when a large activation carrie
     <div class="panel dark">
       <div class="code-hint">
         <h2>Generated slide snippet</h2>
-        <div class="mini">Copy-paste into your deck</div>
+        <div class="mini">Fragment for your deck</div>
       </div>
       <textarea class="code" id="output" spellcheck="false"></textarea>
       <div class="mathjax-helper">
@@ -706,6 +706,162 @@ function typesetPreview() {
   }
 }
 
+
+function buildStandaloneHtml() {
+  const slideHtml = buildSlideHtml();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(fields.title.value.trim() || 'Slide')}</title>
+<style>
+  :root {
+    --panel: #121933;
+    --text: #111111;
+    --muted: rgba(17,17,17,.72);
+    --line: rgba(17,17,17,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111111;
+  }
+  .stage {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .slide {
+    position: relative;
+    width: min(1400px, calc(100vw - 48px));
+    min-height: min(720px, calc(100vh - 48px));
+    padding: 3.2rem 3.5rem 5rem;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 2rem;
+    border-radius: 28px;
+  }
+  .slide.single { grid-template-columns: 1fr; }
+  .slide.title-center {
+    grid-template-columns: 1fr;
+    place-items: center;
+    text-align: center;
+    padding: 3rem;
+  }
+  .slide.title-center .title-center-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+    width: 100%;
+  }
+  .slide.title-center h1,
+  .slide.title-center h2 {
+    margin: 0;
+    max-width: 16ch;
+    font-size: clamp(3rem, 8vw, 5.4rem);
+    line-height: 1.02;
+  }
+  .col { min-width: 0; }
+  .slide h1, .slide h2 { margin: 0 0 1rem; line-height: 1.05; }
+  .slide h1 { font-size: 3rem; max-width: 13ch; }
+  .slide h2 { font-size: 2.15rem; }
+  .kicker {
+    color: inherit;
+    opacity: .78;
+    font-size: .92rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: .15rem 0 .9rem;
+  }
+  .lede-preview { color: var(--muted); font-size: 1.18rem; line-height: 1.5; max-width: 60ch; }
+  .rich p { color: var(--muted); font-size: 1.08rem; line-height: 1.48; margin: 0 0 .9rem; }
+  .rich ul { margin: .4rem 0 1rem 1.1rem; padding: 0; }
+  .rich li { margin: .45rem 0; font-size: 1.05rem; line-height: 1.48; color: var(--muted); }
+  .eq {
+    color: var(--text);
+    font-size: 1.02rem;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: .8rem .95rem;
+    margin: .8rem 0;
+    overflow-x: auto;
+  }
+  .bullet-card {
+    padding: .95rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255,255,255,.03);
+    margin-top: .75rem;
+  }
+  .bullet-card b { color: var(--text); display: block; margin-bottom: .2rem; }
+  .placeholder {
+    min-height: 280px;
+    border: 1px dashed var(--line);
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem;
+  }
+  .diag {
+    min-height: 280px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 1.25rem;
+    background: rgba(255,255,255,.03);
+    display: grid;
+    place-items: center;
+  }
+  svg.diagram { width: 100%; max-width: 640px; height: auto; }
+  .node { fill: #1b2447; stroke: rgba(255,255,255,.12); stroke-width: 2; }
+  .node.blue { fill: rgba(97,180,255,.18); stroke: rgba(97,180,255,.85); }
+  .node.red { fill: rgba(255,107,122,.16); stroke: rgba(255,107,122,.88); }
+  .label { font-size: 18px; fill: currentColor; font-weight: 600; }
+  .edge { stroke: rgba(255,255,255,.22); stroke-width: 4; stroke-linecap: round; }
+  .edge.blue { stroke: rgba(97,180,255,.95); }
+  .edge.red { stroke: rgba(255,107,122,.95); }
+  .right-plain {
+    background: transparent !important;
+    background-image: none !important;
+    color: inherit;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  @media (max-width: 1100px) {
+    .slide { grid-template-columns: 1fr; padding: 1.5rem 1.2rem 2rem; min-height: auto; width: min(1400px, calc(100vw - 24px)); }
+    .slide h1 { font-size: 2.25rem; }
+    .stage { padding: 12px; }
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\\\(', '\\\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
+</head>
+<body>
+  <div class="stage">
+    ${slideHtml}
+  </div>
+</body>
+</html>`;
+}
+
 function buildPreview() {
   const html = buildSlideHtml();
   preview.innerHTML = html;
@@ -744,11 +900,12 @@ async function copyMathJaxHelper() {
 }
 
 function downloadSnippet() {
-  const blob = new Blob([output.value], { type: 'text/html;charset=utf-8' });
+  const standalone = buildStandaloneHtml();
+  const blob = new Blob([standalone], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'slide-snippet.html';
+  a.download = 'slide-standalone.html';
   document.body.appendChild(a);
   a.click();
   a.remove();
