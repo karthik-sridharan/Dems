@@ -351,9 +351,10 @@ window.MathJax = {
         <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
         <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
         <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
-        <p><code>\begin{equation}</code><br><code>\nabla_w L = \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
+        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
         <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
         <p>Inline math still works as <code>$x^2$</code>.</p>
+        <p>Inside <code>\begin{equation}...\end{equation}</code>, multi-line alignment with <code>&</code> and <code>\\</code> is supported automatically.</p>
         <p>Older slides can still use the legacy shortcuts too.</p>
       </div>
     </details>
@@ -589,7 +590,7 @@ function parseStructuredText(raw){
       flushList();
       const { body, endIndex } = collectUntil(/^\\end\{equation\}$/i, i + 1);
       const mathBody = escapeHtml(body);
-      parts.push(`<div class="display-math">\\[${mathBody}\\]</div>`);
+      parts.push(`<div class="display-math">\\[\\begin{aligned}${mathBody}\\end{aligned}\\]</div>`);
       i = endIndex;
       continue;
     }
