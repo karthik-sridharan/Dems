@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Backpropagation on a 2×3×1 Network — Clean White Theme</title>
+  <title>Backpropagation on a 2×3×1 Network</title>
 
   <script>
     window.MathJax = {
@@ -40,17 +40,6 @@
       max-width:1500px;
       margin:0 auto;
       padding:22px;
-    }
-    h1{
-      margin:0 0 8px;
-      font-size:30px;
-      color:#000000;
-    }
-    .subtitle{
-      color:#000000;
-      line-height:1.5;
-      margin-bottom:18px;
-      font-size:17px;
     }
     .top{
       display:flex;
@@ -148,13 +137,13 @@
     }
     .label{
       fill:#000000;
-      font-size:16px;
+      font-size:22px;
       text-anchor:middle;
       font-family: Arial, Helvetica, sans-serif;
     }
     .grad{
       fill:#b45309;
-      font-size:13px;
+      font-size:17px;
       font-weight:700;
       text-anchor:middle;
       opacity:0;
@@ -179,35 +168,11 @@
       background:#ffffff;
       border:1.5px solid #000000;
       line-height:1.7;
-      min-height:190px;
+      min-height:260px;
       color:#000000;
       overflow-x:auto;
       font-size:18px;
     }
-    .smallGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-      margin-top:12px;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      overflow:hidden;
-      border-radius:12px;
-      background:#ffffff;
-      font-size:14px;
-      color:#000000;
-    }
-    th, td{
-      padding:8px 10px;
-      border:1px solid #000000;
-      text-align:left;
-      vertical-align:top;
-      color:#000000;
-      background:#ffffff;
-    }
-    th{ font-weight:700; }
     .note{
       margin-top:12px;
       padding:11px 12px;
@@ -230,12 +195,11 @@
     .dot{
       width:12px;height:12px;border-radius:999px;display:inline-block;
     }
-    .muted{color:#444444}
-    .tiny{font-size:13px;color:#000000}
+    .tiny{font-size:15px;color:#000000}
 
     mjx-container { font-size: 100% !important; }
     .formula mjx-container[display="true"] { margin: 0.5em 0 !important; }
-    .explain mjx-container, .note mjx-container, td mjx-container, th mjx-container, .subtitle mjx-container {
+    .explain mjx-container, .note mjx-container {
       font-size: 1em !important;
     }
 
@@ -247,12 +211,6 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Backpropagation on a \(2 \times 3 \times 1\) Network</h1>
-  <div class="subtitle">
-    Each hidden unit is split into a linear node \(z_j\) and an activation node \(a_j=\sigma(z_j)\), and the output is split into
-    a linear node \(s\) and prediction node \(\hat y\). This makes it visually clear where the factor \(\sigma'(z_j)\) enters during backpropagation.
-  </div>
-
   <div class="top">
     <div class="controls">
       <button id="prevBtn">◀ Prev</button>
@@ -266,10 +224,10 @@
   <div class="layout">
     <div class="card" id="networkCard">
       <svg viewBox="0 0 1100 800">
-        <text x="90" y="40" fill="#000000" font-size="20" font-weight="700">Inputs</text>
-        <text x="420" y="40" fill="#000000" font-size="20" font-weight="700" text-anchor="middle">Hidden linear nodes</text>
-        <text x="650" y="40" fill="#000000" font-size="20" font-weight="700" text-anchor="middle">Hidden activations</text>
-        <text x="895" y="40" fill="#000000" font-size="20" font-weight="700" text-anchor="middle">Output</text>
+        <text x="90" y="40" fill="#000000" font-size="26" font-weight="700">Inputs</text>
+        <text x="420" y="40" fill="#000000" font-size="26" font-weight="700" text-anchor="middle">Hidden linear nodes</text>
+        <text x="650" y="40" fill="#000000" font-size="26" font-weight="700" text-anchor="middle">Hidden activations</text>
+        <text x="895" y="40" fill="#000000" font-size="26" font-weight="700" text-anchor="middle">Output</text>
 
         <line id="e_x1_z1" class="edge" x1="120" y1="170" x2="360" y2="120"></line>
         <line id="e_x1_z2" class="edge" x1="120" y1="170" x2="360" y2="280"></line>
@@ -282,42 +240,45 @@
         <line id="e_z2_a2" class="edge" x1="420" y1="280" x2="590" y2="280"></line>
         <line id="e_z3_a3" class="edge" x1="420" y1="440" x2="590" y2="440"></line>
 
-        <line id="e_a1_s" class="edge" x1="650" y1="120" x2="840" y2="250"></line>
-        <line id="e_a2_s" class="edge" x1="650" y1="280" x2="840" y2="250"></line>
-        <line id="e_a3_s" class="edge" x1="650" y1="440" x2="840" y2="250"></line>
+        <line id="e_a1_z2out" class="edge" x1="650" y1="120" x2="840" y2="250"></line>
+        <line id="e_a2_z2out" class="edge" x1="650" y1="280" x2="840" y2="250"></line>
+        <line id="e_a3_z2out" class="edge" x1="650" y1="440" x2="840" y2="250"></line>
 
-        <line id="e_s_yhat" class="edge" x1="900" y1="250" x2="900" y2="390"></line>
+        <line id="e_z2out_yhat" class="edge" x1="900" y1="250" x2="900" y2="390"></line>
         <line id="e_yhat_L" class="edge" x1="900" y1="450" x2="900" y2="590"></line>
 
-        <text class="label" x="240" y="118">w₁₁</text>
-        <text class="label" x="245" y="210">w₁₂</text>
-        <text class="label" x="245" y="304">w₁₃</text>
-        <text class="label" x="245" y="205">w₂₁</text>
-        <text class="label" x="245" y="330">w₂₂</text>
-        <text class="label" x="245" y="408">w₂₃</text>
+        <text class="label" x="240" y="118">W¹₁,₁</text>
+        <text class="label" x="245" y="210">W¹₁,₂</text>
+        <text class="label" x="245" y="304">W¹₁,₃</text>
+        <text class="label" x="245" y="205">W¹₂,₁</text>
+        <text class="label" x="245" y="330">W¹₂,₂</text>
+        <text class="label" x="245" y="408">W¹₂,₃</text>
 
         <text class="label" x="505" y="105">σ</text>
         <text class="label" x="505" y="265">σ</text>
         <text class="label" x="505" y="425">σ</text>
 
-        <text class="label" x="745" y="148">v₁</text>
-        <text class="label" x="740" y="268">v₂</text>
-        <text class="label" x="745" y="420">v₃</text>
+        <text class="label" x="745" y="148">W²₁</text>
+        <text class="label" x="740" y="268">W²₂</text>
+        <text class="label" x="745" y="420">W²₃</text>
 
-        <text class="label" x="390" y="65">+ b₁</text>
-        <text class="label" x="390" y="225">+ b₂</text>
-        <text class="label" x="390" y="385">+ b₃</text>
-        <text class="label" x="955" y="245">+ c</text>
+        <text class="label" x="390" y="65">+ b¹₁</text>
+        <text class="label" x="390" y="225">+ b¹₂</text>
+        <text class="label" x="390" y="385">+ b¹₃</text>
+        <text class="label" x="955" y="245">+ b²</text>
         <text class="label" x="965" y="522">y</text>
 
         <text id="g_yhat_L" class="grad" x="980" y="520"></text>
-        <text id="g_s_yhat" class="grad" x="980" y="335"></text>
-        <text id="g_a1_s" class="grad" x="760" y="120"></text>
-        <text id="g_a2_s" class="grad" x="750" y="250"></text>
-        <text id="g_a3_s" class="grad" x="760" y="452"></text>
+        <text id="g_z2out_yhat" class="grad" x="980" y="335"></text>
+
+        <text id="g_a1_z2out" class="grad" x="765" y="120"></text>
+        <text id="g_a2_z2out" class="grad" x="750" y="250"></text>
+        <text id="g_a3_z2out" class="grad" x="765" y="452"></text>
+
         <text id="g_z1_a1" class="grad" x="505" y="98"></text>
         <text id="g_z2_a2" class="grad" x="505" y="258"></text>
         <text id="g_z3_a3" class="grad" x="505" y="418"></text>
+
         <text id="g_x1_z1" class="grad" x="255" y="96"></text>
         <text id="g_x2_z1" class="grad" x="250" y="170"></text>
         <text id="g_x1_z2" class="grad" x="260" y="242"></text>
@@ -335,15 +296,15 @@
         </g>
         <g id="z1" class="node">
           <circle cx="390" cy="120" r="40"></circle>
-          <text class="title" x="390" y="120">z₁</text>
+          <text class="title" x="390" y="120">z¹₁</text>
         </g>
         <g id="z2" class="node">
           <circle cx="390" cy="280" r="40"></circle>
-          <text class="title" x="390" y="280">z₂</text>
+          <text class="title" x="390" y="280">z¹₂</text>
         </g>
         <g id="z3" class="node">
           <circle cx="390" cy="440" r="40"></circle>
-          <text class="title" x="390" y="440">z₃</text>
+          <text class="title" x="390" y="440">z¹₃</text>
         </g>
         <g id="a1" class="node">
           <circle cx="620" cy="120" r="40"></circle>
@@ -357,9 +318,9 @@
           <circle cx="620" cy="440" r="40"></circle>
           <text class="title" x="620" y="440">a₃</text>
         </g>
-        <g id="s" class="node">
+        <g id="z2out" class="node">
           <circle cx="900" cy="250" r="48"></circle>
-          <text class="title" x="900" y="250">s</text>
+          <text class="title" x="900" y="250">z²</text>
         </g>
         <g id="yhat" class="node">
           <circle cx="900" cy="420" r="48"></circle>
@@ -367,7 +328,7 @@
         </g>
         <g id="loss" class="node">
           <circle cx="900" cy="620" r="48"></circle>
-          <text class="title" x="900" y="620">L</text>
+          <text class="title" x="900" y="620">L(ŷ)</text>
         </g>
       </svg>
 
@@ -383,35 +344,7 @@
       <h2 class="panelTitle" id="panelTitle">Step 1: Structure</h2>
       <div class="explain" id="explain"></div>
       <div class="formula" id="formula"></div>
-
-      <div class="smallGrid">
-        <div>
-          <table>
-            <thead><tr><th>Node type</th><th>Meaning</th></tr></thead>
-            <tbody>
-              <tr><td>\(x_1, x_2\)</td><td>input features</td></tr>
-              <tr><td>\(z_j\)</td><td>linear output before activation</td></tr>
-              <tr><td>\(a_j\)</td><td>activated hidden value, \(a_j=\sigma(z_j)\)</td></tr>
-              <tr><td>\(s\)</td><td>linear output node at final layer</td></tr>
-              <tr><td>\(\hat y\)</td><td>prediction; here \(\hat y=s\)</td></tr>
-              <tr><td>\(L\)</td><td>loss</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <table>
-            <thead><tr><th>Final gradient formulas</th><th>Expression</th></tr></thead>
-            <tbody id="summaryTable">
-              <tr><td colspan="2" class="muted">They appear gradually as you step.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="note" id="noteBox">
-        Splitting \(z_j\) and \(a_j\) into separate nodes makes the chain rule very explicit:
-        the gradient reaches \(a_j\), then crosses the activation edge and picks up \(\sigma'(z_j)\).
-      </div>
+      <div class="note" id="noteBox" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -419,65 +352,52 @@
 <script>
   const $ = (id) => document.getElementById(id);
 
-  const allNodes = ["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"];
-  const linearNodes = ["z1","z2","z3","s"];
+  const allNodes = ["x1","x2","z1","z2","z3","a1","a2","a3","z2out","yhat","loss"];
+  const linearNodes = ["z1","z2","z3","z2out"];
   const allEdges = [
     "e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3",
     "e_z1_a1","e_z2_a2","e_z3_a3",
-    "e_a1_s","e_a2_s","e_a3_s",
-    "e_s_yhat","e_yhat_L"
+    "e_a1_z2out","e_a2_z2out","e_a3_z2out",
+    "e_z2out_yhat","e_yhat_L"
   ];
   const gradIds = [
-    "g_yhat_L","g_s_yhat","g_a1_s","g_a2_s","g_a3_s","g_z1_a1","g_z2_a2","g_z3_a3",
+    "g_yhat_L","g_z2out_yhat","g_a1_z2out","g_a2_z2out","g_a3_z2out","g_z1_a1","g_z2_a2","g_z3_a3",
     "g_x1_z1","g_x2_z1","g_x1_z2","g_x2_z2","g_x1_z3","g_x2_z3"
-  ];
-
-  const summaryRows = [
-    ["\\(\\partial L / \\partial \\hat y\\)", "\\(\\hat y - y\\)"],
-    ["\\(\\partial L / \\partial s\\)", "\\(\\hat y - y\\), since \\(\\hat y=s\\)"],
-    ["\\(\\partial L / \\partial v_j\\)", "\\((\\hat y-y)a_j = (\\hat y-y)\\sigma(z_j)\\)"],
-    ["\\(\\partial L / \\partial c\\)", "\\(\\hat y - y\\)"],
-    ["\\(\\partial L / \\partial a_j\\)", "\\((\\hat y-y)v_j\\)"],
-    ["\\(\\partial L / \\partial z_j\\)", "\\((\\hat y-y)v_j\\sigma'(z_j)\\)"],
-    ["\\(\\partial L / \\partial w_{ij}\\)", "\\((\\hat y-y)v_j\\sigma'(z_j)x_i\\)"],
-    ["\\(\\partial L / \\partial b_j\\)", "\\((\\hat y-y)v_j\\sigma'(z_j)\\)"]
   ];
 
   const steps = [
     {
       title:"Step 1: Structure",
-      explain:`Each hidden unit is split into two nodes:
-      a linear node \\(z_j\\) and an activation node \\(a_j=\\sigma(z_j)\\).
-      The output is also split into a linear node \\(s\\) and prediction node \\(\\hat y\\).`,
+      explain:`The hidden layer is written using linear nodes \\(z^1_j\\) and activation nodes \\(a_j=\\sigma(z^1_j)\\). The output layer is written as a linear node \\(z^2\\) followed by the prediction \\(\\hat y=\\sigma(z^2)\\).`,
       formula:String.raw`\[
 \begin{aligned}
-z_j &= w_{1j}x_1 + w_{2j}x_2 + b_j, \quad j=1,2,3,\\
-a_j &= \sigma(z_j),\\
-s &= v_1 a_1 + v_2 a_2 + v_3 a_3 + c,\\
-\hat y &= s,\\
+z^1_j &= W^1_{1,j}x_1 + W^1_{2,j}x_2 + b^1_j, \qquad j=1,2,3,\\
+a_j &= \sigma(z^1_j),\\
+z^2 &= W^2_1 a_1 + W^2_2 a_2 + W^2_3 a_3 + b^2,\\
+\hat y &= \sigma(z^2),\\
 L &= \frac12(\hat y-y)^2.
 \end{aligned}
 \]`,
-      note:`This separation lets you see exactly where each local derivative comes from.`,
-      linear:["z1","z2","z3","s"],
-      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
-      forwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3","e_z1_a1","e_z2_a2","e_z3_a3","e_a1_s","e_a2_s","e_a3_s","e_s_yhat","e_yhat_L"],
+      note:`This notation shows exactly where the layer-1 parameters, layer-2 parameters, and activation derivatives enter.`,
+      linear:["z1","z2","z3","z2out"],
+      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","z2out","yhat","loss"],
+      forwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3","e_z1_a1","e_z2_a2","e_z3_a3","e_a1_z2out","e_a2_z2out","e_a3_z2out","e_z2out_yhat","e_yhat_L"],
       backwardNodes:[],
       backwardEdges:[],
       grads:{}
     },
     {
       title:"Step 2: Hidden linear outputs",
-      explain:`First compute the hidden linear outputs. These are pure affine combinations of the inputs.`,
+      explain:`First compute the hidden linear outputs. These are affine combinations of the inputs using the first-layer weights and biases.`,
       formula:String.raw`\[
 \begin{aligned}
-z_1 &= w_{11}x_1 + w_{21}x_2 + b_1,\\
-z_2 &= w_{12}x_1 + w_{22}x_2 + b_2,\\
-z_3 &= w_{13}x_1 + w_{23}x_2 + b_3.
+z^1_1 &= W^1_{1,1}x_1 + W^1_{2,1}x_2 + b^1_1,\\
+z^1_2 &= W^1_{1,2}x_1 + W^1_{2,2}x_2 + b^1_2,\\
+z^1_3 &= W^1_{1,3}x_1 + W^1_{2,3}x_2 + b^1_3.
 \end{aligned}
 \]`,
-      note:`These nodes do not yet apply \\(\\sigma\\).`,
-      linear:["z1","z2","z3","s"],
+      note:`These nodes are purely linear; the nonlinearity has not yet been applied.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:["x1","x2","z1","z2","z3"],
       forwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
       backwardNodes:[],
@@ -489,13 +409,13 @@ z_3 &= w_{13}x_1 + w_{23}x_2 + b_3.
       explain:`Now apply the activation \\(\\sigma\\) to each hidden linear node.`,
       formula:String.raw`\[
 \begin{aligned}
-a_1 &= \sigma(z_1),\\
-a_2 &= \sigma(z_2),\\
-a_3 &= \sigma(z_3).
+a_1 &= \sigma(z^1_1),\\
+a_2 &= \sigma(z^1_2),\\
+a_3 &= \sigma(z^1_3).
 \end{aligned}
 \]`,
-      note:`Later, when the gradient crosses from \\(a_j\\) back to \\(z_j\\), it multiplies by \\(\\sigma'(z_j)\\).`,
-      linear:["z1","z2","z3","s"],
+      note:`Later, when the gradient crosses from \\(a_j\\) back to \\(z^1_j\\), it multiplies by \\(\\sigma'(z^1_j)\\).`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:["z1","z2","z3","a1","a2","a3"],
       forwardEdges:["e_z1_a1","e_z2_a2","e_z3_a3"],
       backwardNodes:[],
@@ -503,32 +423,32 @@ a_3 &= \sigma(z_3).
       grads:{}
     },
     {
-      title:"Step 4: Final linear output",
-      explain:`The output layer first forms a linear combination of the hidden activations. We call that node \\(s\\).`,
+      title:"Step 4: Output linear node",
+      explain:`The output layer first forms the linear quantity \\(z^2\\) from the hidden activations.`,
       formula:String.raw`\[
 \begin{aligned}
-s &= v_1 a_1 + v_2 a_2 + v_3 a_3 + c\\
-  &= v_1\sigma(z_1) + v_2\sigma(z_2) + v_3\sigma(z_3) + c.
+z^2 &= W^2_1 a_1 + W^2_2 a_2 + W^2_3 a_3 + b^2\\
+    &= W^2_1\sigma(z^1_1) + W^2_2\sigma(z^1_2) + W^2_3\sigma(z^1_3) + b^2.
 \end{aligned}
 \]`,
-      note:`This makes the output-layer gradients especially clear.`,
-      linear:["z1","z2","z3","s"],
-      forwardNodes:["a1","a2","a3","s"],
-      forwardEdges:["e_a1_s","e_a2_s","e_a3_s"],
+      note:`This is the pre-activation of the output unit.`,
+      linear:["z1","z2","z3","z2out"],
+      forwardNodes:["a1","a2","a3","z2out"],
+      forwardEdges:["e_a1_z2out","e_a2_z2out","e_a3_z2out"],
       backwardNodes:[],
       backwardEdges:[],
       grads:{}
     },
     {
       title:"Step 5: Prediction node",
-      explain:`Here the prediction is just the identity applied to the linear output, so \\(\\hat y=s\\).`,
+      explain:`Now apply the output activation.`,
       formula:String.raw`\[
-\hat y = s.
+\hat y = \sigma(z^2).
 \]`,
-      note:`Since the derivative of the identity map is \\(1\\), the gradient from \\(\\hat y\\) to \\(s\\) passes through unchanged.`,
-      linear:["z1","z2","z3","s"],
-      forwardNodes:["s","yhat"],
-      forwardEdges:["e_s_yhat"],
+      note:`This means the backward pass must also cross the output activation edge and pick up \\(\\sigma'(z^2)\\).`,
+      linear:["z1","z2","z3","z2out"],
+      forwardNodes:["z2out","yhat"],
+      forwardEdges:["e_z2out_yhat"],
       backwardNodes:[],
       backwardEdges:[],
       grads:{}
@@ -539,8 +459,8 @@ s &= v_1 a_1 + v_2 a_2 + v_3 a_3 + c\\
       formula:String.raw`\[
 L = \frac12(\hat y-y)^2.
 \]`,
-      note:`Now we begin backprop.`,
-      linear:["z1","z2","z3","s"],
+      note:`Backpropagation starts here.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:["yhat","loss"],
       forwardEdges:["e_yhat_L"],
       backwardNodes:[],
@@ -553,160 +473,159 @@ L = \frac12(\hat y-y)^2.
       formula:String.raw`\[
 \frac{\partial L}{\partial \hat y} = \hat y - y.
 \]`,
-      note:`This is the first backprop signal.`,
-      linear:["z1","z2","z3","s"],
+      note:`This is the first upstream gradient.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:[],
       backwardNodes:["yhat","loss"],
       backwardEdges:["e_yhat_L"],
       grads:{ g_yhat_L:"∂L/∂ŷ = ŷ - y" }
     },
     {
-      title:"Step 8: Move from \\(\\hat y\\) back to \\(s\\)",
-      explain:`Since \\(\\hat y=s\\), the local derivative is \\(\\partial \hat y / \partial s = 1\\). So the gradient reaching \\(s\\) is unchanged.`,
+      title:"Step 8: Cross the output activation",
+      explain:`Since \\(\\hat y=\\sigma(z^2)\\), the gradient picks up the derivative of the output activation.`,
       formula:String.raw`\[
-\frac{\partial L}{\partial s}
+\frac{\partial L}{\partial z^2}
 =
 \frac{\partial L}{\partial \hat y}
-\frac{\partial \hat y}{\partial s}
+\frac{\partial \hat y}{\partial z^2}
 =
-(\hat y-y)(1)
-=
-\hat y-y.
+(\hat y-y)\sigma'(z^2).
 \]`,
-      note:`Separating \\(s\\) and \\(\\hat y\\) makes this identity step explicit.`,
-      linear:["z1","z2","z3","s"],
+      note:`This is the correct replacement for the earlier identity step.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:[],
-      backwardNodes:["s","yhat"],
-      backwardEdges:["e_s_yhat"],
-      grads:{ g_s_yhat:"∂L/∂s = ŷ - y" }
+      backwardNodes:["z2out","yhat"],
+      backwardEdges:["e_z2out_yhat"],
+      grads:{ g_z2out_yhat:"× σ′(z²)" }
     },
     {
-      title:"Step 9: Output weights and hidden activation gradients",
-      explain:`From the linear output node \\(s\\), compute gradients of the output weights and the gradients arriving at the hidden activations.`,
+      title:"Step 9: Second-layer gradients and messages to hidden activations",
+      explain:`Now use \\(z^2 = W^2_1 a_1 + W^2_2 a_2 + W^2_3 a_3 + b^2\\) to compute the layer-2 parameter gradients and the gradients arriving at the hidden activations.`,
       formula:String.raw`\[
 \begin{aligned}
-\frac{\partial L}{\partial v_1} &= \frac{\partial L}{\partial s}\frac{\partial s}{\partial v_1} = (\hat y-y)a_1,\\
-\frac{\partial L}{\partial v_2} &= (\hat y-y)a_2,\\
-\frac{\partial L}{\partial v_3} &= (\hat y-y)a_3,\\
-\frac{\partial L}{\partial c} &= \frac{\partial L}{\partial s}\frac{\partial s}{\partial c} = \hat y-y,\\
-\frac{\partial L}{\partial a_1} &= \frac{\partial L}{\partial s}\frac{\partial s}{\partial a_1} = (\hat y-y)v_1,\\
-\frac{\partial L}{\partial a_2} &= (\hat y-y)v_2,\\
-\frac{\partial L}{\partial a_3} &= (\hat y-y)v_3.
+\frac{\partial L}{\partial W^2_1} &= \frac{\partial L}{\partial z^2}\frac{\partial z^2}{\partial W^2_1}
+= (\hat y-y)\sigma'(z^2)a_1,\\
+\frac{\partial L}{\partial W^2_2} &= (\hat y-y)\sigma'(z^2)a_2,\\
+\frac{\partial L}{\partial W^2_3} &= (\hat y-y)\sigma'(z^2)a_3,\\
+\frac{\partial L}{\partial b^2} &= (\hat y-y)\sigma'(z^2),\\[4pt]
+\frac{\partial L}{\partial a_1} &= \frac{\partial L}{\partial z^2}\frac{\partial z^2}{\partial a_1}
+= (\hat y-y)\sigma'(z^2)W^2_1,\\
+\frac{\partial L}{\partial a_2} &= (\hat y-y)\sigma'(z^2)W^2_2,\\
+\frac{\partial L}{\partial a_3} &= (\hat y-y)\sigma'(z^2)W^2_3.
 \end{aligned}
 \]`,
-      note:`The hidden nodes \\(a_1,a_2,a_3\\) now carry the backward messages from the output layer.`,
-      linear:["z1","z2","z3","s"],
+      note:`These are the backward messages arriving at the hidden activation nodes.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:[],
-      backwardNodes:["a1","a2","a3","s"],
-      backwardEdges:["e_a1_s","e_a2_s","e_a3_s"],
+      backwardNodes:["a1","a2","a3","z2out"],
+      backwardEdges:["e_a1_z2out","e_a2_z2out","e_a3_z2out"],
       grads:{
-        g_a1_s:"∂L/∂a₁=(ŷ-y)v₁",
-        g_a2_s:"∂L/∂a₂=(ŷ-y)v₂",
-        g_a3_s:"∂L/∂a₃=(ŷ-y)v₃"
+        g_a1_z2out:"∂L/∂a₁=(ŷ-y)σ′(z²)W²₁",
+        g_a2_z2out:"∂L/∂a₂=(ŷ-y)σ′(z²)W²₂",
+        g_a3_z2out:"∂L/∂a₃=(ŷ-y)σ′(z²)W²₃"
       }
     },
     {
-      title:"Step 10: Cross the activation edges",
-      explain:`Now the gradient crosses each activation edge from \\(a_j\\) back to \\(z_j\\). This is where \\(\\sigma'(z_j)\\) appears.`,
+      title:"Step 10: Cross the hidden activation edges",
+      explain:`Now move from each hidden activation \\(a_j\\) back to the corresponding hidden linear node \\(z^1_j\\).`,
       formula:String.raw`\[
 \begin{aligned}
-\frac{\partial L}{\partial z_1}
+\frac{\partial L}{\partial z^1_1}
 &=
 \frac{\partial L}{\partial a_1}
-\frac{\partial a_1}{\partial z_1}
+\frac{\partial a_1}{\partial z^1_1}
 =
-(\hat y-y)v_1\sigma'(z_1),\\
-\frac{\partial L}{\partial z_2}
+(\hat y-y)\sigma'(z^2)W^2_1\sigma'(z^1_1),\\
+\frac{\partial L}{\partial z^1_2}
 &=
-(\hat y-y)v_2\sigma'(z_2),\\
-\frac{\partial L}{\partial z_3}
+(\hat y-y)\sigma'(z^2)W^2_2\sigma'(z^1_2),\\
+\frac{\partial L}{\partial z^1_3}
 &=
-(\hat y-y)v_3\sigma'(z_3).
+(\hat y-y)\sigma'(z^2)W^2_3\sigma'(z^1_3).
 \end{aligned}
 \]`,
-      note:`This is the clearest reason for splitting \\(z_j\\) and \\(a_j\\) into different nodes.`,
-      linear:["z1","z2","z3","s"],
+      note:`This is where the hidden-layer activation derivatives enter.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:[],
       backwardNodes:["z1","z2","z3","a1","a2","a3"],
       backwardEdges:["e_z1_a1","e_z2_a2","e_z3_a3"],
       grads:{
-        g_z1_a1:"× σ′(z₁)",
-        g_z2_a2:"× σ′(z₂)",
-        g_z3_a3:"× σ′(z₃)"
+        g_z1_a1:"× σ′(z¹₁)",
+        g_z2_a2:"× σ′(z¹₂)",
+        g_z3_a3:"× σ′(z¹₃)"
       }
     },
     {
-      title:"Step 11: Hidden weights and biases",
-      explain:`Each linear node \\(z_j\\) depends on its incoming weights and bias. Differentiate those affine expressions.`,
+      title:"Step 11: First-layer weights and biases",
+      explain:`Finally differentiate the hidden linear expressions with respect to the first-layer weights and biases.`,
       formula:String.raw`\[
 \begin{aligned}
-\frac{\partial L}{\partial w_{1j}}
+\frac{\partial L}{\partial W^1_{1,j}}
 &=
-\frac{\partial L}{\partial z_j}
-\frac{\partial z_j}{\partial w_{1j}}
+\frac{\partial L}{\partial z^1_j}
+\frac{\partial z^1_j}{\partial W^1_{1,j}}
 =
-(\hat y-y)v_j\sigma'(z_j)x_1,\\
-\frac{\partial L}{\partial w_{2j}}
+(\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j)x_1,\\
+\frac{\partial L}{\partial W^1_{2,j}}
 &=
-\frac{\partial L}{\partial z_j}
-\frac{\partial z_j}{\partial w_{2j}}
+\frac{\partial L}{\partial z^1_j}
+\frac{\partial z^1_j}{\partial W^1_{2,j}}
 =
-(\hat y-y)v_j\sigma'(z_j)x_2,\\
-\frac{\partial L}{\partial b_j}
+(\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j)x_2,\\
+\frac{\partial L}{\partial b^1_j}
 &=
-\frac{\partial L}{\partial z_j}
-\frac{\partial z_j}{\partial b_j}
+\frac{\partial L}{\partial z^1_j}
+\frac{\partial z^1_j}{\partial b^1_j}
 =
-(\hat y-y)v_j\sigma'(z_j).
+(\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j).
 \end{aligned}
 \]`,
-      note:`So every hidden weight gets: upstream gradient × activation derivative × input.`,
-      linear:["z1","z2","z3","s"],
+      note:`So each first-layer weight gets: upstream gradient × output activation derivative × second-layer weight × hidden activation derivative × input.`,
+      linear:["z1","z2","z3","z2out"],
       forwardNodes:[],
       backwardNodes:["x1","x2","z1","z2","z3"],
       backwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
       grads:{
-        g_x1_z1:"∂L/∂w₁₁=(ŷ-y)v₁σ′(z₁)x₁",
-        g_x2_z1:"∂L/∂w₂₁=(ŷ-y)v₁σ′(z₁)x₂",
-        g_x1_z2:"∂L/∂w₁₂=(ŷ-y)v₂σ′(z₂)x₁",
-        g_x2_z2:"∂L/∂w₂₂=(ŷ-y)v₂σ′(z₂)x₂",
-        g_x1_z3:"∂L/∂w₁₃=(ŷ-y)v₃σ′(z₃)x₁",
-        g_x2_z3:"∂L/∂w₂₃=(ŷ-y)v₃σ′(z₃)x₂"
+        g_x1_z1:"∂L/∂W¹₁,₁=(ŷ-y)σ′(z²)W²₁σ′(z¹₁)x₁",
+        g_x2_z1:"∂L/∂W¹₂,₁=(ŷ-y)σ′(z²)W²₁σ′(z¹₁)x₂",
+        g_x1_z2:"∂L/∂W¹₁,₂=(ŷ-y)σ′(z²)W²₂σ′(z¹₂)x₁",
+        g_x2_z2:"∂L/∂W¹₂,₂=(ŷ-y)σ′(z²)W²₂σ′(z¹₂)x₂",
+        g_x1_z3:"∂L/∂W¹₁,₃=(ŷ-y)σ′(z²)W²₃σ′(z¹₃)x₁",
+        g_x2_z3:"∂L/∂W¹₂,₃=(ŷ-y)σ′(z²)W²₃σ′(z¹₃)x₂"
       }
     },
     {
       title:"Step 12: Full result",
-      explain:`Here is the full picture. The chain rule flows from the loss to \\(\\hat y\\), from \\(\\hat y\\) to \\(s\\), from \\(s\\) to \\(a_j\\), from \\(a_j\\) through \\(\\sigma'(z_j)\\) to \\(z_j\\), and from \\(z_j\\) to its incoming weights and bias.`,
+      explain:`Putting everything together gives the complete backpropagation formulas for this notation.`,
       formula:String.raw`\[
 \begin{aligned}
 \frac{\partial L}{\partial \hat y} &= \hat y-y,\\
-\frac{\partial L}{\partial s} &= \hat y-y,\\
-\frac{\partial L}{\partial v_j} &= (\hat y-y)a_j = (\hat y-y)\sigma(z_j),\\
-\frac{\partial L}{\partial c} &= \hat y-y,\\
-\frac{\partial L}{\partial a_j} &= (\hat y-y)v_j,\\
-\frac{\partial L}{\partial z_j} &= (\hat y-y)v_j\sigma'(z_j),\\
-\frac{\partial L}{\partial w_{1j}} &= (\hat y-y)v_j\sigma'(z_j)x_1,\\
-\frac{\partial L}{\partial w_{2j}} &= (\hat y-y)v_j\sigma'(z_j)x_2,\\
-\frac{\partial L}{\partial b_j} &= (\hat y-y)v_j\sigma'(z_j).
+\frac{\partial L}{\partial z^2} &= (\hat y-y)\sigma'(z^2),\\
+\frac{\partial L}{\partial W^2_j} &= (\hat y-y)\sigma'(z^2)a_j,\\
+\frac{\partial L}{\partial b^2} &= (\hat y-y)\sigma'(z^2),\\
+\frac{\partial L}{\partial a_j} &= (\hat y-y)\sigma'(z^2)W^2_j,\\
+\frac{\partial L}{\partial z^1_j} &= (\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j),\\
+\frac{\partial L}{\partial W^1_{1,j}} &= (\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j)x_1,\\
+\frac{\partial L}{\partial W^1_{2,j}} &= (\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j)x_2,\\
+\frac{\partial L}{\partial b^1_j} &= (\hat y-y)\sigma'(z^2)W^2_j\sigma'(z^1_j).
 \end{aligned}
 \]`,
-      note:`Because \\(z_j\\) and \\(a_j\\) are shown as separate nodes, you can visually see the exact place where the activation derivative enters.`,
-      linear:["z1","z2","z3","s"],
-      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
+      note:`The output activation contributes the factor \\(\\sigma'(z^2)\\), and each hidden activation contributes \\(\\sigma'(z^1_j)\\).`,
+      linear:["z1","z2","z3","z2out"],
+      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","z2out","yhat","loss"],
       forwardEdges:[],
-      backwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
-      backwardEdges:["e_yhat_L","e_s_yhat","e_a1_s","e_a2_s","e_a3_s","e_z1_a1","e_z2_a2","e_z3_a3","e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
+      backwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","z2out","yhat","loss"],
+      backwardEdges:["e_yhat_L","e_z2out_yhat","e_a1_z2out","e_a2_z2out","e_a3_z2out","e_z1_a1","e_z2_a2","e_z3_a3","e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
       grads:{
         g_yhat_L:"∂L/∂ŷ=ŷ-y",
-        g_s_yhat:"∂L/∂s=ŷ-y",
-        g_a1_s:"∂L/∂a₁=(ŷ-y)v₁",
-        g_a2_s:"∂L/∂a₂=(ŷ-y)v₂",
-        g_a3_s:"∂L/∂a₃=(ŷ-y)v₃",
-        g_z1_a1:"×σ′(z₁)",
-        g_z2_a2:"×σ′(z₂)",
-        g_z3_a3:"×σ′(z₃)"
-      },
-      fillSummary:true
+        g_z2out_yhat:"×σ′(z²)",
+        g_a1_z2out:"∂L/∂a₁=(ŷ-y)σ′(z²)W²₁",
+        g_a2_z2out:"∂L/∂a₂=(ŷ-y)σ′(z²)W²₂",
+        g_a3_z2out:"∂L/∂a₃=(ŷ-y)σ′(z²)W²₃",
+        g_z1_a1:"×σ′(z¹₁)",
+        g_z2_a2:"×σ′(z¹₂)",
+        g_z3_a3:"×σ′(z¹₃)"
+      }
     }
   ];
 
@@ -717,15 +636,6 @@ L = \frac12(\hat y-y)^2.
       $(id).textContent = "";
       $(id).setAttribute("class","grad");
     });
-  }
-
-  function renderSummary(fill){
-    const tb = $("summaryTable");
-    if(!fill){
-      tb.innerHTML = '<tr><td colspan="2" class="muted">They appear gradually as you step.</td></tr>';
-      return;
-    }
-    tb.innerHTML = summaryRows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`).join("");
   }
 
   async function typesetIfReady() {
@@ -760,8 +670,6 @@ L = \frac12(\hat y-y)^2.
       $(id).textContent = txt;
       $(id).classList.add("show");
     });
-
-    renderSummary(!!s.fillSummary);
 
     $("prevBtn").disabled = step === 0;
     $("nextBtn").disabled = step === steps.length - 1;
