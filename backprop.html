@@ -185,6 +185,19 @@
       color:#000000;
       font-size:14px;
     }
+    .vectorBlock{
+      margin-top:18px;
+      padding:14px 16px;
+      border:1.5px solid #000000;
+      border-radius:12px;
+      background:#ffffff;
+      color:#000000;
+      font-size:18px;
+      line-height:1.75;
+    }
+    .vectorBlock mjx-container[display="true"]{
+      margin:0.45em 0 !important;
+    }
     .legendItem{display:flex; align-items:center; gap:8px;}
     .dot{
       width:12px;height:12px;border-radius:999px;display:inline-block;
@@ -332,6 +345,30 @@
         <div class="legendItem"><span class="dot" style="background:#2f6fed"></span> forward computation</div>
         <div class="legendItem"><span class="dot" style="background:#d97706"></span> backward gradient flow</div>
         <div class="legendItem"><span class="dot" style="background:#cc0033"></span> loss</div>
+      </div>
+      <div class="vectorBlock">
+        \[
+        \mathbf{x}
+        \]
+        \[
+        \mathbf{z}^{1} = W^{1}\mathbf{x} + \mathbf{b}^{1}
+        \]
+        \[
+        \mathbf{a} = \sigma(\mathbf{z}^{1})
+        \]
+        \[
+        z^{2} = W^{2}\mathbf{a} + b^{2}
+        \]
+        \[
+        \hat{y} = \sigma(z^{2})
+        \]
+        \[
+        \hat{y}
+        =
+        \sigma\!\left(W^{2}\mathbf{a} + b^{2}\right)
+        =
+        \sigma\!\left(W^{2}\sigma\!\left(W^{1}\mathbf{x} + \mathbf{b}^{1}\right) + b^{2}\right)
+        \]
       </div>
     </div>
 
