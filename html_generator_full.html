@@ -275,6 +275,7 @@ window.MathJax = {
       </div>
     </details>
 
+    <div class="help" style="margin:.25rem 0 .85rem;color:var(--muted)">Exported presentations can now be loaded back into the generator later with <b>Load generated HTML</b>.</div>
     <div class="toolbar">
       <button class="btn primary" id="addSlideBtn">Add as new slide</button>
       <button class="btn" id="updateSlideBtn">Update selected slide</button>
@@ -313,6 +314,8 @@ window.MathJax = {
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
       <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
       <button class="btn" id="resetBtn">Reset to current preset</button>
+      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
       <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
     </div>
   </div>
@@ -803,7 +806,49 @@ window.addEventListener('load', ()=> {
 </html>`;
 }
 
+
+function escapeJsonForScript(value){
+  return JSON.stringify(value)
+    .replace(/<\//g, '<\\/')
+    .replace(/<!--/g, '<\\!--')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function decodeHtmlEntities(str){
+  const ta = document.createElement('textarea');
+  ta.innerHTML = str;
+  return ta.value;
+}
+
+function extractEmbeddedDeckData(htmlText){
+  const match = htmlText.match(/<script[^>]*id=["']deck-source["'][^>]*>([\s\S]*?)<\/script>/i);
+  if(!match) return null;
+  const raw = decodeHtmlEntities(match[1].trim());
+  return JSON.parse(raw);
+}
+
+async function loadDeckFromFile(file){
+  const text = await file.text();
+  const payload = extractEmbeddedDeckData(text);
+  if(!payload || !Array.isArray(payload.slides)) {
+    throw new Error('This HTML file does not contain editable slide data from the generator.');
+  }
+  slides = payload.slides.map(s => structuredClone(s));
+  fields.deckTitle.value = payload.deckTitle || 'Presentation';
+  activeIndex = slides.length ? 0 : -1;
+  if(activeIndex >= 0) applySlideToForm(slides[0]);
+  else clearForm();
+  renderDeckList();
+  buildPreview();
+}
+
 function buildDeckHtml(deckTitle, deckSlides){
+  const deckPayload = {
+    deckTitle: deckTitle || 'Presentation',
+    slides: deckSlides
+  };
+  const deckDataScript = `<script id="deck-source" type="application/json">${escapeJsonForScript(deckPayload)}<\/script>`;
   const slideSections = deckSlides.map((slide, idx)=>{
     const cls = slide.slideType === 'title-center' ? 'deck-slide title-center' : (slide.slideType === 'two-col' ? 'deck-slide two-col' : 'deck-slide single');
     return `<section class="${cls}" data-index="${idx}" data-title="${escapeAttr(slide.title || `Slide ${idx+1}`)}" style="${escapeAttr(buildSlideStyle(slide))}">
@@ -811,9 +856,11 @@ function buildDeckHtml(deckTitle, deckSlides){
       <div class="slide-number">${idx + 1} / ${deckSlides.length}</div>
       ${buildSlideInner(slide).trim()}
     </section>`;
-  }).join('\n');
+  }).join('
+');
 
-  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('\n');
+  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('
+');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -821,6 +868,7 @@ function buildDeckHtml(deckTitle, deckSlides){
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(deckTitle || 'Presentation')}</title>
+${deckDataScript}
 <style>
   :root{
     --deck-bg:#060a16;
@@ -1189,6 +1237,19 @@ document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxH
 document.getElementById('resetBtn').addEventListener('click', ()=>clearForm());
 document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
 document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
+document.getElementById('loadDeckBtn').addEventListener('click', ()=>document.getElementById('loadDeckInput').click());
+document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    await loadDeckFromFile(file);
+    showToast('Loaded editable presentation.');
+  }catch(err){
+    alert(err.message || 'Could not load this HTML file.');
+  }finally{
+    e.target.value = '';
+  }
+});
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
 
 syncFields();
