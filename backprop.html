@@ -142,15 +142,9 @@
       font-family: Arial, Helvetica, sans-serif;
     }
     .grad{
-      fill:#b45309;
-      font-size:17px;
-      font-weight:700;
-      text-anchor:middle;
-      opacity:0;
-      transition:opacity .2s ease;
-      font-family: Arial, Helvetica, sans-serif;
+      display:none;
     }
-    .grad.show{opacity:1}
+    .grad.show{display:none;}
     .panelTitle{
       margin:0 0 8px;
       font-size:24px;
@@ -245,6 +239,7 @@
         <line id="e_a3_z2out" class="edge" x1="650" y1="440" x2="840" y2="250"></line>
 
         <line id="e_z2out_yhat" class="edge" x1="900" y1="250" x2="900" y2="390"></line>
+        <text class="label" x="940" y="330">σ</text>
         <line id="e_yhat_L" class="edge" x1="900" y1="450" x2="900" y2="590"></line>
 
         <text class="label" x="240" y="118">W¹₁,₁</text>
