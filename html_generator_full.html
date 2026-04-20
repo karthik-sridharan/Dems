@@ -917,6 +917,16 @@ function downloadText(filename, text){
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
 }
 
+
+function sanitizeHtmlFilename(name, fallback){
+  let base = String(name || '').trim();
+  if(!base) base = fallback;
+  base = base.replace(/\.html?$/i, '').trim();
+  base = base.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+  if(!base) base = fallback;
+  return `${base}.html`;
+}
+
 function buildStandaloneSlideHtml(slide){
   return `<!DOCTYPE html>
 <html lang="en">
