@@ -226,8 +226,19 @@ window.MathJax = {
         <textarea id="lede" placeholder="Optional short framing sentence"></textarea>
       </div>
       <div class="field full">
-        <label for="leftHtml">Main content</label>
-        <textarea id="leftHtml" placeholder="- Bullet one&#10;- Bullet two&#10;&#10;Inline math: $x^2$&#10;Displayed: \( \frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz} \)"></textarea>
+        <div class="field">
+        <label for="leftMode">Main body content type</label>
+        <select id="leftMode">
+          <option value="panel" selected>Panel text</option>
+          <option value="diagram">Neural-network diagram placeholder</option>
+          <option value="custom">Custom HTML block</option>
+          <option value="placeholder">Simple placeholder box</option>
+          <option value="plain">Plain text / rich content</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="leftHtml">Main body content</label>
+        <textarea id="leftHtml" placeholder="Use bullets, short paragraphs, equations, or custom HTML depending on mode"></textarea>
       </div>
       <div class="field full" id="rightModeField">
         <label for="rightMode">Right column content</label>
@@ -340,6 +351,7 @@ const fields = {
   title: document.getElementById('title'),
   kicker: document.getElementById('kicker'),
   lede: document.getElementById('lede'),
+  leftMode: document.getElementById('leftMode'),
   leftHtml: document.getElementById('leftHtml'),
   rightMode: document.getElementById('rightMode'),
   rightHtml: document.getElementById('rightHtml'),
@@ -537,6 +549,7 @@ function getFormSlide(){
     title: fields.title.value.trim(),
     kicker: fields.kicker.value.trim(),
     lede: fields.lede.value.trim(),
+    leftMode: fields.leftMode.value,
     leftHtml: fields.leftHtml.value,
     rightMode: fields.rightMode.value,
     rightHtml: fields.rightHtml.value,
@@ -553,6 +566,7 @@ function applySlideToForm(slide){
   fields.title.value = slide.title || '';
   fields.kicker.value = slide.kicker || '';
   fields.lede.value = slide.lede || '';
+  fields.leftMode.value = slide.leftMode || 'panel';
   fields.leftHtml.value = slide.leftHtml || '';
   fields.rightMode.value = slide.rightMode || 'panel';
   fields.rightHtml.value = slide.rightHtml || '';
@@ -562,16 +576,21 @@ function applySlideToForm(slide){
 }
 
 
-function buildRightContent(slide){
-  const mode = slide.rightMode || 'panel';
-  if(mode === 'diagram') return diagramMarkup();
-  if(mode === 'custom') return slide.rightHtml || '<div class="placeholder">Paste custom HTML here.</div>';
-  if(mode === 'placeholder'){
-    return `<div class="placeholder">${escapeHtml(slide.rightHtml || 'Right-column placeholder')}</div>`;
+function buildModeContent(mode, content){
+  const normalizedMode = mode || 'panel';
+  const raw = content || '';
+  if(normalizedMode === 'diagram') return diagramMarkup();
+  if(normalizedMode === 'custom') return raw || '<div class="placeholder">Paste custom HTML here.</div>';
+  if(normalizedMode === 'placeholder'){
+    return `<div class="placeholder">${escapeHtml(raw || 'Placeholder content')}</div>`;
   }
-  const rich = parseStructuredText(slide.rightHtml);
-  if(mode === 'plain') return `<div class="rich">${rich}</div>`;
-  return `<div class="rich">${rich}</div>`;
+  const rich = parseStructuredText(raw);
+  if(normalizedMode === 'plain') return `<div class="rich">${rich}</div>`;
+  return `<div class="rich boxed-flow">${rich}</div>`;
+}
+
+function buildRightContent(slide){
+  return buildModeContent(slide.rightMode, slide.rightHtml);
 }
 function buildSlideInner(slide){
   const heading = slide.headingLevel || 'h2';
@@ -583,12 +602,16 @@ function buildSlideInner(slide){
   }
   if(slide.slideType === 'two-col'){
     return `
-      ${titleHtml}
-      ${kickerHtml}
-      ${ledeHtml}
-      <div class="slide-body">
-        <div class="col"><div class="rich">${parseStructuredText(slide.leftHtml)}</div></div>
-        <div class="col">${buildRightContent(slide)}</div>
+      <div class="two-col-split">
+        <div class="slide-header">
+          ${titleHtml}
+          ${kickerHtml}
+          ${ledeHtml}
+        </div>
+        <div class="slide-body">
+          <div class="col">${buildModeContent(slide.leftMode, slide.leftHtml)}</div>
+          <div class="col">${buildRightContent(slide)}</div>
+        </div>
       </div>
     `;
   }
@@ -597,7 +620,7 @@ function buildSlideInner(slide){
     ${kickerHtml}
     ${ledeHtml}
     <div class="slide-body">
-      <div class="col"><div class="rich">${parseStructuredText(slide.leftHtml)}</div></div>
+      <div class="col">${buildModeContent(slide.leftMode, slide.leftHtml)}</div>
     </div>
   `;
 }
@@ -702,6 +725,7 @@ function clearForm(){
     title:'',
     kicker:'',
     lede:'',
+    leftMode:'panel',
     leftHtml:'',
     rightMode:'panel',
     rightHtml:'',
@@ -717,6 +741,10 @@ function syncFields(){
   const twoCol = fields.slideType.value === 'two-col';
   document.getElementById('rightModeField').style.display = twoCol ? 'grid' : 'none';
   document.getElementById('rightHtmlField').style.display = twoCol ? 'grid' : 'none';
+  const leftModeLabel = document.querySelector('label[for="leftMode"]');
+  const leftHtmlLabel = document.querySelector('label[for="leftHtml"]');
+  if(leftModeLabel) leftModeLabel.textContent = twoCol ? 'Left-column content type' : 'Main body content type';
+  if(leftHtmlLabel) leftHtmlLabel.textContent = twoCol ? 'Left-column content' : 'Main body content';
 }
 
 async function copyText(text){
@@ -1074,7 +1102,9 @@ function applyPreset(name){
       title:'Lecture title',
       kicker:'',
       lede:'',
+      leftMode:'panel',
       leftHtml:'',
+      leftMode:'panel',
       rightMode:'panel',
       rightHtml:'',
       notesTitle:'Speaker notes',
@@ -1088,7 +1118,9 @@ function applyPreset(name){
       title:'Main concept',
       kicker:'',
       lede:'One sentence to frame the slide.',
+      leftMode:'panel',
       leftHtml:'P: Teach the pattern before teaching every symbol.\nUL: First key point\nUL: Second key point\nUL: Third key point\nEQ: \\( \\nabla_w L = \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w} \\)\nCARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensitivity.',
+      leftMode:'panel',
       rightMode:'panel',
       rightHtml:'',
       notesTitle:'Speaker notes',
@@ -1102,6 +1134,7 @@ function applyPreset(name){
       title:'Two-column lecture slide',
       kicker:'Title spans the full width',
       lede:'Use the left side for bullets and the right side for a figure, derivation, or demo.',
+      leftMode:'panel',
       leftHtml:'P: Put the main story in the left column.\nUL: Left-column point one\nUL: Left-column point two\nEQ: \\( I_T(S)=\\frac{|S_L|}{|S|}I(S_L)+\\frac{|S_R|}{|S|}I(S_R) \\)',
       rightMode:'panel',
       rightHtml:'P: Use the right column for examples.\nUL: Figure description\nUL: Example\nUL: Mini derivation',
@@ -1116,6 +1149,7 @@ function applyPreset(name){
       title:'A tiny 2–2–1 network',
       kicker:'',
       lede:'Keep the network small enough that every activation and derivative can stay visible on screen.',
+      leftMode:'panel',
       leftHtml:'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
       rightMode:'diagram',
       rightHtml:'Diagram',
@@ -1131,6 +1165,7 @@ function applyPreset(name){
       kicker:'',
       lede:'This makes a clean end-of-lecture summary slide.',
       leftHtml:'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward via local derivatives\nUL: update the parameters',
+      leftMode:'panel',
       rightMode:'panel',
       rightHtml:'',
       notesTitle:'Speaker notes',
