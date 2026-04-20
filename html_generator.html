@@ -520,25 +520,19 @@ const preview = document.getElementById('preview');
 const output = document.getElementById('output');
 const mathjaxOutput = document.getElementById('mathjaxOutput');
 const toast = document.getElementById('toast');
-const mathJaxHelper = '<scr' + 'ipt>
-' +
-  'window.MathJax = {
-' +
-  '  tex: {
-' +
-  "    inlineMath: [['$', '$']],
-" +
-  "    displayMath: [['\\(', '\\)']]
-" +
-  '  },
-' +
-  "  svg: { fontCache: 'global' }
-" +
-  '};
-' +
-  '</scr' + 'ipt>
-' +
-  '<scr' + 'ipt defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr' + 'ipt>';
+const scriptOpen = '<script>';
+const scriptClose = '</' + 'script>';
+const mathJaxCdn = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+const mathJaxHelper = `${scriptOpen}
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\\\(', '\\\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+${scriptClose}
+<script defer src="${mathJaxCdn}">${scriptClose}`;
 let currentPreset = null;
 
 function preserveMathTokens(str) {
@@ -855,19 +849,28 @@ function buildStandaloneHtml() {
     .stage { padding: 12px; }
   }
 </style>
-${mathJaxHelper}
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\\\(', '\\\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
 </head>
 <body>
   <div class="stage">
     ${slideHtml}
   </div>
-<script>
-window.addEventListener('load', () => {
-  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-    window.MathJax.typesetPromise().catch(() => {});
-  }
-});
-</script>
+  <script>
+    window.addEventListener('load', () => {
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        window.MathJax.typesetPromise().catch(() => {});
+      }
+    });
+  ${scriptClose}
 </body>
 </html>`;
 }
