@@ -856,11 +856,9 @@ function buildDeckHtml(deckTitle, deckSlides){
       <div class="slide-number">${idx + 1} / ${deckSlides.length}</div>
       ${buildSlideInner(slide).trim()}
     </section>`;
-  }).join('
-');
+  }).join('\n');
 
-  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('
-');
+  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
