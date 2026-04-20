@@ -237,7 +237,7 @@ window.MathJax = {
       </div>
       <div class="field full">
         <label for="leftHtml">Main content</label>
-        <textarea id="leftHtml" placeholder="- Bullet one&#10;- Bullet two&#10;&#10;Inline math: $x^2$&#10;Displayed: \( \frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz} \)"></textarea>
+        <textarea id="leftHtml" placeholder="\paragraph{Main idea goes here.}&#10;&#10;\begin{itemize}&#10;\item First point&#10;\item Second point&#10;\end{itemize}&#10;&#10;\begin{equation}&#10;\frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz}&#10;\end{equation}"></textarea>
       </div>
       <div class="field full" id="rightModeField">
         <label for="rightMode">Right column content</label>
@@ -298,13 +298,14 @@ window.MathJax = {
     <details>
       <summary>How to write content</summary>
       <div class="help" style="margin-top:.55rem">
-        <p>Use plain text with light structure:</p>
-        <p>- Start lines with <b>- </b> for bullets.</p>
-        <p>- Or use prefixed lines: <b>P:</b>, <b>UL:</b>, <b>EQ:</b>, <b>CARD:title|body</b>.</p>
-        <p>- Start lines with <b>### </b> for a small section heading.</p>
-        <p>- Leave blank lines between paragraphs.</p>
-        <p>- Inline math: <b>$x^2$</b></p>
-        <p>- Displayed math: put <b>\( ... \)</b> on its own line, or use <b>\[ ... \]</b>.</p>
+        <p>Use LaTeX-style content blocks:</p>
+        <p>- Paragraph block: <b>\paragraph{Teach the pattern before teaching every symbol.}</b></p>
+        <p>- Bulleted list: <b>\begin{itemize}</b>, then <b>\item ...</b>, then <b>\end{itemize}</b></p>
+        <p>- Numbered list: <b>\begin{enumerate}</b>, then <b>\item ...</b>, then <b>\end{enumerate}</b></p>
+        <p>- Equation block: <b>\begin{equation} ... \end{equation}</b></p>
+        <p>- Card block: <b>\begin{card}{Key idea} ... \end{card}</b></p>
+        <p>- Inline math still works as <b>$x^2$</b>.</p>
+        <p>- Legacy shortcuts like <b>P:</b>, <b>UL:</b>, <b>EQ:</b>, and <b>CARD:</b> still work for older slides.</p>
       </div>
     </details>
 
@@ -437,45 +438,140 @@ function buildSlideStyle(slide){
 function parseStructuredText(raw){
   const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
   if(!text) return '';
-  const lines = text.split('\n');
-  const parts = [];
-  let paragraph = [];
-  let list = [];
 
   function safeWithMath(str){
     const { out, tokens } = preserveMathTokens(str);
     return restoreMathTokens(escapeHtml(out), tokens);
   }
+
+  const lines = text.split('\n');
+  const parts = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+
   function flushParagraph(){
     if(!paragraph.length) return;
     const joined = paragraph.join(' ').trim();
     if(joined) parts.push(`<p>${safeWithMath(joined)}</p>`);
     paragraph = [];
   }
+
   function flushList(){
-    if(!list.length) return;
-    parts.push(`<ul>${list.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ul>`);
-    list = [];
+    if(!listItems.length) return;
+    const tag = listType === 'enumerate' ? 'ol' : 'ul';
+    parts.push(`<${tag}>${listItems.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</${tag}>`);
+    listItems = [];
+    listType = null;
   }
 
-  for(const rawLine of lines){
-    const line = rawLine.trim();
+  function collectUntil(endPattern, startIndex){
+    const chunk = [];
+    let i = startIndex;
+    while(i < lines.length && !endPattern.test(lines[i].trim())){
+      chunk.push(lines[i]);
+      i += 1;
+    }
+    return { body: chunk.join('\n').trim(), endIndex: i };
+  }
+
+  function simpleCardBody(body){
+    const trimmed = body.trim();
+    if(!trimmed) return '';
+    return trimmed
+      .split(/\n\s*\n/)
+      .map(block => `<p>${safeWithMath(block.replace(/\s*\n\s*/g, ' ').trim())}</p>`)
+      .join('');
+  }
+
+  for(let i = 0; i < lines.length; i += 1){
+    const line = lines[i].trim();
+
     if(!line){
       flushParagraph();
       flushList();
       continue;
     }
+
+    const paragraphMatch = line.match(/^\\paragraph\{([\s\S]*)\}$/);
+    if(paragraphMatch){
+      flushParagraph();
+      flushList();
+      parts.push(`<p>${safeWithMath(paragraphMatch[1].trim())}</p>`);
+      continue;
+    }
+
+    if(/^\\begin\{itemize\}$/i.test(line)){
+      flushParagraph();
+      flushList();
+      const items = [];
+      i += 1;
+      while(i < lines.length && !/^\\end\{itemize\}$/i.test(lines[i].trim())){
+        const itemLine = lines[i].trim();
+        if(itemLine){
+          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
+          if(itemMatch) items.push(itemMatch[1].trim());
+        }
+        i += 1;
+      }
+      parts.push(`<ul>${items.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ul>`);
+      continue;
+    }
+
+    if(/^\\begin\{enumerate\}$/i.test(line)){
+      flushParagraph();
+      flushList();
+      const items = [];
+      i += 1;
+      while(i < lines.length && !/^\\end\{enumerate\}$/i.test(lines[i].trim())){
+        const itemLine = lines[i].trim();
+        if(itemLine){
+          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
+          if(itemMatch) items.push(itemMatch[1].trim());
+        }
+        i += 1;
+      }
+      parts.push(`<ol>${items.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ol>`);
+      continue;
+    }
+
+    if(/^\\begin\{equation\}$/i.test(line)){
+      flushParagraph();
+      flushList();
+      const { body, endIndex } = collectUntil(/^\\end\{equation\}$/i, i + 1);
+      const mathBody = escapeHtml(body);
+      parts.push(`<div class="display-math">\\[${mathBody}\\]</div>`);
+      i = endIndex;
+      continue;
+    }
+
+    const cardBegin = line.match(/^\\begin\{card\}\{([\s\S]*)\}$/i);
+    if(cardBegin){
+      flushParagraph();
+      flushList();
+      const { body, endIndex } = collectUntil(/^\\end\{card\}$/i, i + 1);
+      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardBegin[1].trim())}</b><div>${simpleCardBody(body)}</div></div>`);
+      i = endIndex;
+      continue;
+    }
+
+    // Legacy syntax retained for older slides
     if(/^UL:/i.test(line)){
       flushParagraph();
-      list.push(line.replace(/^UL:/i, '').trim());
+      if(listType && listType !== 'itemize') flushList();
+      listType = 'itemize';
+      listItems.push(line.replace(/^UL:/i, '').trim());
       continue;
     }
     if(line.startsWith('- ')){
       flushParagraph();
-      list.push(line.slice(2).trim());
+      if(listType && listType !== 'itemize') flushList();
+      listType = 'itemize';
+      listItems.push(line.slice(2).trim());
       continue;
     }
     flushList();
+
     if(line.startsWith('### ')){
       flushParagraph();
       parts.push(`<h3>${safeWithMath(line.slice(4).trim())}</h3>`);
@@ -497,22 +593,24 @@ function parseStructuredText(raw){
       const payload = line.replace(/^CARD:/i, '').trim();
       const [cardTitle, ...rest] = payload.split('|');
       const cardBody = rest.join('|');
-      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardTitle || '')}</b><div>${safeWithMath(cardBody || '')}</div></div>`);
+      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardTitle || '')}</b><div><p>${safeWithMath(cardBody || '')}</p></div></div>`);
       continue;
     }
     if((/^\\\(.+\\\)$/s).test(line)){
       flushParagraph();
       const body = line.replace(/^\\\(/, '').replace(/\\\)$/, '');
-      parts.push(`<div class="display-math">\\[${body}\\]</div>`);
+      parts.push(`<div class="display-math">\\[${escapeHtml(body)}\\]</div>`);
       continue;
     }
     if((/^\\\[.+\\\]$/s).test(line) || (/^\$\$.+\$\$$/s).test(line)){
       flushParagraph();
-      parts.push(`<div class="display-math">${line}</div>`);
+      parts.push(`<div class="display-math">${safeWithMath(line)}</div>`);
       continue;
     }
+
     paragraph.push(line);
   }
+
   flushParagraph();
   flushList();
   return parts.join('\n');
@@ -890,6 +988,7 @@ function buildDeckHtml(deckTitle, deckSlides){
   .deck-slide .rich{display:grid;gap:1rem}
   .deck-slide .rich p,
   .deck-slide .rich ul,
+  .deck-slide .rich ol,
   .deck-slide .rich h3,
   .deck-slide .display-math,
   .deck-slide .bullet-card,
@@ -902,7 +1001,7 @@ function buildDeckHtml(deckTitle, deckSlides){
     box-shadow:0 8px 24px rgba(0,0,0,.04);
   }
   .deck-slide .rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
-  .deck-slide .rich ul{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
+  .deck-slide .rich ul,.deck-slide .rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
   .deck-slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
   .deck-slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
   .deck-slide .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
@@ -1133,7 +1232,7 @@ function applyPreset(name){
       kicker:'',
       lede:'One sentence to frame the slide.',
       leftMode:'panel',
-      leftHtml:'P: Teach the pattern before teaching every symbol.\nUL: First key point\nUL: Second key point\nUL: Third key point\nEQ: \\( \\nabla_w L = \\frac{\\partial L}{\\partial z}\\frac{\\partial z}{\\partial w} \\)\nCARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensitivity.',
+      leftHtml:'\paragraph{Teach the pattern before teaching every symbol.}\n\n\begin{itemize}\n\item First key point\n\item Second key point\n\item Third key point\n\end{itemize}\n\n\begin{equation}\n\nabla_w L = \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\n\end{equation}\n\n\begin{card}{Key idea}\nEach neuron turns an incoming sensitivity into an outgoing sensitivity.\n\end{card}',
       rightMode:'panel',
       rightHtml:'',
       notesTitle:'Speaker notes',
@@ -1148,9 +1247,9 @@ function applyPreset(name){
       kicker:'Title spans the full width',
       lede:'Use the left side for bullets and the right side for a figure, derivation, or demo.',
       leftMode:'panel',
-      leftHtml:'P: Put the main story in the left column.\nUL: Left-column point one\nUL: Left-column point two\nEQ: \\( I_T(S)=\\frac{|S_L|}{|S|}I(S_L)+\\frac{|S_R|}{|S|}I(S_R) \\)',
+      leftHtml:'\paragraph{Put the main story in the left column.}\n\n\begin{itemize}\n\item Left-column point one\n\item Left-column point two\n\end{itemize}\n\n\begin{equation}\nI_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)\n\end{equation}',
       rightMode:'panel',
-      rightHtml:'P: Use the right column for examples.\nUL: Figure description\nUL: Example\nUL: Mini derivation',
+      rightHtml:'\paragraph{Use the right column for examples.}\n\n\begin{itemize}\n\item Figure description\n\item Example\n\item Mini derivation\n\end{itemize}',
       notesTitle:'Speaker notes',
       notesBody:'Pause before moving from the left column to the right.'
     },
@@ -1163,7 +1262,7 @@ function applyPreset(name){
       kicker:'',
       lede:'Keep the network small enough that every activation and derivative can stay visible on screen.',
       leftMode:'panel',
-      leftHtml:'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
+      leftHtml:'\paragraph{This slide introduces the toy model used throughout the lecture.}\n\n\begin{card}{Why this network}\nIt is the smallest network that still has a hidden layer, so every stage of backprop is visible.\n\end{card}',
       rightMode:'diagram',
       rightHtml:'Diagram',
       notesTitle:'Speaker notes',
@@ -1178,7 +1277,7 @@ function applyPreset(name){
       kicker:'',
       lede:'This makes a clean end-of-lecture summary slide.',
       leftMode:'panel',
-      leftHtml:'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward via local derivatives\nUL: update the parameters',
+      leftHtml:'\paragraph{A concise recipe is often more memorable than full notation.}\n\n\begin{enumerate}\n\item run forward and cache activations\n\item compute the loss\n\item start at the output gradient\n\item move backward via local derivatives\n\item update the parameters\n\end{enumerate}',
       rightMode:'panel',
       rightHtml:'',
       notesTitle:'Speaker notes',
