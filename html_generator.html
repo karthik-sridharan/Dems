@@ -124,6 +124,33 @@
     background: rgba(0,0,0,.12);
   }
   .slide.single { grid-template-columns: 1fr; }
+  .slide.title-center {
+    grid-template-columns: 1fr;
+    place-items: center;
+    text-align: center;
+    min-height: 720px;
+    padding: 3rem;
+  }
+  .slide.title-center .title-center-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+    width: 100%;
+  }
+  .slide.title-center h1,
+  .slide.title-center h2 {
+    margin: 0;
+    max-width: 16ch;
+    font-size: clamp(3rem, 8vw, 5.4rem);
+    line-height: 1.02;
+  }
+  .mathjax-helper {
+    margin-top: .75rem;
+    padding: .8rem .9rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+  }
   .col { min-width: 0; }
   .slide h1, .slide h2 { margin: 0 0 1rem; line-height: 1.05; }
   .slide h1 { font-size: 3rem; max-width: 13ch; }
@@ -261,7 +288,7 @@
     </div>
 
     <div class="toolbar">
-      <button class="btn" id="loadTitle">Load title slide preset</button>
+      <button class="btn" id="loadTitle">Load centered title preset</button>
       <button class="btn" id="loadConcept">Load concept slide preset</button>
       <button class="btn" id="loadDiagram">Load diagram slide preset</button>
       <button class="btn" id="loadAppendix">Load appendix slide preset</button>
@@ -273,6 +300,7 @@
         <select id="slideType">
           <option value="two-col">Two-column slide</option>
           <option value="single">Single-column slide</option>
+          <option value="title-center">Centered title slide</option>
         </select>
       </div>
       <div class="field">
@@ -339,7 +367,7 @@ UL: multiply by local derivative
 UL: pass the result backward
 EQ: dL/dz = (dL/da) · (da/dz)
 CARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensitivity.</textarea>
-        <div class="help">Use one item per line. Prefixes: <code>P:</code>, <code>UL:</code>, <code>EQ:</code>, <code>CARD:title|body</code>. Plain text lines become paragraphs.</div>
+        <div class="help">Use one item per line. Prefixes: <code>P:</code>, <code>UL:</code>, <code>EQ:</code>, <code>CARD:title|body</code>. Plain text lines become paragraphs. Math is supported with <code>$x$</code> for inline math and <code>\( x^2 + y^2 \)</code> for displayed math.</div>
       </div>
 
       <div class="field full">
@@ -357,7 +385,7 @@ CARD:Key idea|Each neuron turns an incoming sensitivity into an outgoing sensiti
         <textarea id="rightHtml">P: Output-layer example
 EQ: dL/dw_j = (dL/dz) a_j
 CARD:Teaching line|A weight gets a large gradient when a large activation carries a large downstream error signal.</textarea>
-        <div class="help">If the mode is <b>panel</b>, this uses the same line prefixes as the left column. If the mode is <b>custom</b>, paste raw HTML.</div>
+        <div class="help">If the mode is <b>panel</b>, this uses the same line prefixes as the left column. If the mode is <b>custom</b>, paste raw HTML. Inline math like <code>$\nabla L$</code> and displayed math like <code>\( \frac{dL}{dw} = x \)</code> will render in the preview.</div>
       </div>
 
       <div class="field">
@@ -376,11 +404,13 @@ CARD:Teaching line|A weight gets a large gradient when a large activation carrie
         <p>Paste the generated <code>&lt;section class="slide" ...&gt;</code> block into your existing HTML deck inside the main <code>.deck</code> container. The snippet uses the same CSS class names as the earlier presentation files.</p>
         <p>Good workflow on phone: pick a preset, edit a few fields, tap <b>Copy snippet</b>, then paste into your deck file where you want the new slide.</p>
         <p>The color menus add inline slide styles, so the copied snippet keeps your chosen background and font colors when pasted into the larger deck.</p>
+        <p>Math preview uses MathJax. If your deck does not already load MathJax, tap <b>Copy MathJax helper</b> once and paste that script block near the end of your deck HTML.</p>
       </div>
     </details>
 
     <div class="toolbar">
       <button class="btn primary" id="copyBtn">Copy snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
       <button class="btn" id="downloadBtn">Download snippet as .html fragment</button>
       <button class="btn" id="resetBtn">Reset to current preset</button>
     </div>
@@ -401,12 +431,29 @@ CARD:Teaching line|A weight gets a large gradient when a large activation carrie
         <div class="mini">Copy-paste into your deck</div>
       </div>
       <textarea class="code" id="output" spellcheck="false"></textarea>
+      <div class="mathjax-helper">
+        <div class="code-hint" style="margin:0 0 .55rem;">
+          <h3>One-time MathJax helper for your deck</h3>
+          <div class="mini">Paste once per presentation if needed</div>
+        </div>
+        <textarea class="code" id="mathjaxOutput" spellcheck="false" style="min-height: 130px;"></textarea>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="copy-toast" id="toast">Copied to clipboard.</div>
 
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\(', '\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <script>
 const fields = {
   slideType: document.getElementById('slideType'),
@@ -426,16 +473,43 @@ const fields = {
 
 const preview = document.getElementById('preview');
 const output = document.getElementById('output');
+const mathjaxOutput = document.getElementById('mathjaxOutput');
 const toast = document.getElementById('toast');
+const mathJaxHelper = `<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['\\(', '\\)']]
+  },
+  svg: { fontCache: 'global' }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>`;
 let currentPreset = null;
 
+function preserveMathTokens(str) {
+  const tokens = [];
+  const text = String(str || '').replace(/\\\(([^]*?)\\\)|\$([^$]+)\$/g, (match) => {
+    const key = `__MATH_${tokens.length}__`;
+    tokens.push(match);
+    return key;
+  });
+  return { text, tokens };
+}
+
+function restoreMathTokens(str, tokens) {
+  return String(str).replace(/__MATH_(\d+)__/g, (_, idx) => tokens[Number(idx)] || '');
+}
+
 function escapeHtml(str) {
-  return String(str)
+  const { text, tokens } = preserveMathTokens(str);
+  const escaped = String(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+  return restoreMathTokens(escaped, tokens);
 }
 
 function escapeAttr(str) {
@@ -544,7 +618,8 @@ function buildRightColumn(mode, raw) {
 }
 
 function buildSlideHtml() {
-  const slideClass = fields.slideType.value === 'single' ? 'slide single' : 'slide';
+  const slideType = fields.slideType.value;
+  const slideClass = slideType === 'single' ? 'slide single' : (slideType === 'title-center' ? 'slide title-center' : 'slide');
   const headingTag = fields.headingLevel.value === 'h1' ? 'h1' : 'h2';
   const kicker = fields.kicker.value.trim();
   const title = fields.title.value.trim();
@@ -552,7 +627,15 @@ function buildSlideHtml() {
   const notesTitle = escapeAttr(fields.notesTitle.value.trim() || 'Speaker notes');
   const notesBody = escapeAttr(fields.notesBody.value.trim() || '');
 
-  const leftBody = `
+  let inner = '';
+
+  if (slideType === 'title-center') {
+    inner = `
+    <div class="title-center-wrap">
+      <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
+    </div>`;
+  } else {
+    const leftBody = `
     <div class="col">
       ${kicker ? `<div class="kicker">${escapeHtml(kicker)}</div>` : ''}
       <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
@@ -561,9 +644,10 @@ function buildSlideHtml() {
       <div class="rich">${parseStructuredText(fields.leftHtml.value)}</div>
     </div>`;
 
-  let inner = leftBody;
-  if (fields.slideType.value !== 'single') {
-    inner += `\n    <div class="col">${buildRightColumn(fields.rightMode.value, fields.rightHtml.value)}</div>`;
+    inner = leftBody;
+    if (slideType !== 'single') {
+      inner += `\n    <div class="col">${buildRightColumn(fields.rightMode.value, fields.rightHtml.value)}</div>`;
+    }
   }
 
   const slideStyle = escapeAttr(buildSlideStyle());
@@ -574,10 +658,18 @@ function buildSlideHtml() {
   return rawHtml;
 }
 
+function typesetPreview() {
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    window.MathJax.typesetPromise([preview]).catch(() => {});
+  }
+}
+
 function buildPreview() {
   const html = buildSlideHtml();
   preview.innerHTML = html;
   output.value = html;
+  mathjaxOutput.value = mathJaxHelper;
+  typesetPreview();
 }
 
 function showToast(message) {
@@ -595,6 +687,17 @@ async function copySnippet() {
     output.select();
     document.execCommand('copy');
     showToast('Copied slide snippet.');
+  }
+}
+
+async function copyMathJaxHelper() {
+  try {
+    await navigator.clipboard.writeText(mathjaxOutput.value);
+    showToast('Copied MathJax helper.');
+  } catch {
+    mathjaxOutput.select();
+    document.execCommand('copy');
+    showToast('Copied MathJax helper.');
   }
 }
 
@@ -620,42 +723,40 @@ function applyPreset(preset) {
 
 const presets = {
   title: {
-    slideType: 'two-col',
+    slideType: 'title-center',
     headingLevel: 'h1',
     bgColor: '#0f1630',
     fontColor: '#eef3ff',
-    kicker: 'Lecture deck • self-contained HTML',
+    kicker: '',
     title: 'Backpropagation,\nstage by stage',
-    lede: 'A lecture-ready visual explanation of how a neural network assigns credit or blame to each weight.',
-    chips: 'Tiny 2–2–1 network\nStoryboard included\nSlide-by-slide notes included\nTouch-friendly deck',
-    leftHtml: 'P: Use the first slide to set the question before formulas appear.\nCARD:Visual language|Blue = forward activations. Red = backward gradients. Green = parameter update.',
-    rightMode: 'diagram',
-    rightHtml: 'Neural network diagram',
+    lede: '',
+    chips: '',
+    leftHtml: '',
+    rightMode: 'panel',
+    rightHtml: '',
     notesTitle: 'Speaker notes',
-    notesBody: 'Motivate backprop as efficient credit assignment through the computation graph.'
+    notesBody: 'Open the lecture with the central question before showing any formulas.'
   },
   concept: {
     slideType: 'two-col',
     headingLevel: 'h2',
-    bgColor: '#ffffff',
-    fontColor: '#111111',
-    bgColor: '#0f1630',
-    fontColor: '#eef3ff',
     bgColor: '#0f1630',
     fontColor: '#eef3ff',
     kicker: 'Core idea',
     title: 'Backprop as local chain rule',
     lede: 'Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.',
     chips: 'incoming gradient × local derivative\nrecursive pattern\nreused across layers',
-    leftHtml: 'P: Teach the pattern before teaching every symbol.\nUL: start at the loss\nUL: move one edge backward\nUL: multiply by the local slope\nEQ: dL/dz = (dL/da) · (da/dz)\nCARD:Teaching line|Incoming gradient times local derivative gives the outgoing gradient.',
+    leftHtml: 'P: Teach the pattern before teaching every symbol.\nUL: start at the loss\nUL: move one edge backward\nUL: multiply by the local slope\nEQ: \\( \\frac{dL}{dz} = \\frac{dL}{da} \\cdot \\frac{da}{dz} \\)\nCARD:Teaching line|Incoming gradient times local derivative gives the outgoing gradient.',
     rightMode: 'panel',
-    rightHtml: 'P: Output-layer example\nEQ: dL/dw_j = (dL/dz) a_j\nCARD:Interpretation|A weight gets a large gradient when a large activation carries a large downstream error signal.',
+    rightHtml: 'P: Output-layer example\nEQ: \\( \\frac{dL}{dw_j} = \\frac{dL}{dz} a_j \\)\nCARD:Interpretation|A weight gets a large gradient when a large activation carries a large downstream error signal.',
     notesTitle: 'Speaker notes',
     notesBody: 'Repeat the phrase incoming gradient times local derivative several times.'
   },
   diagram: {
     slideType: 'two-col',
     headingLevel: 'h2',
+    bgColor: '#0f1630',
+    fontColor: '#eef3ff',
     kicker: 'Worked example',
     title: 'A tiny 2–2–1 network',
     lede: 'Keep the network small enough that every activation and derivative can stay visible on screen.',
@@ -669,6 +770,8 @@ const presets = {
   appendix: {
     slideType: 'single',
     headingLevel: 'h2',
+    bgColor: '#ffffff',
+    fontColor: '#111111',
     kicker: 'Appendix',
     title: 'Backprop recipe',
     lede: 'This makes a clean end-of-lecture summary slide.',
@@ -687,12 +790,18 @@ for (const el of Object.values(fields)) {
 }
 
 document.getElementById('copyBtn').addEventListener('click', copySnippet);
+document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
 document.getElementById('downloadBtn').addEventListener('click', downloadSnippet);
 document.getElementById('resetBtn').addEventListener('click', () => currentPreset && applyPreset(currentPreset));
 document.getElementById('loadTitle').addEventListener('click', () => applyPreset(presets.title));
 document.getElementById('loadConcept').addEventListener('click', () => applyPreset(presets.concept));
 document.getElementById('loadDiagram').addEventListener('click', () => applyPreset(presets.diagram));
 document.getElementById('loadAppendix').addEventListener('click', () => applyPreset(presets.appendix));
+
+window.addEventListener('load', () => {
+  mathjaxOutput.value = mathJaxHelper;
+  typesetPreview();
+});
 
 applyPreset(presets.concept);
 </script>
