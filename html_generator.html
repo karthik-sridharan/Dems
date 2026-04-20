@@ -313,9 +313,9 @@
       <div class="field">
         <label for="bgColor">Slide background color</label>
         <select id="bgColor">
-          <option value="#0f1630" selected>Navy</option>
+          <option value="#0f1630">Navy</option>
           <option value="#121212">Charcoal</option>
-          <option value="#ffffff">White</option>
+          <option value="#ffffff" selected>White</option>
           <option value="#f7f1e3">Warm cream</option>
           <option value="#1d3b2a">Forest</option>
           <option value="#3a1028">Plum</option>
@@ -326,9 +326,9 @@
       <div class="field">
         <label for="fontColor">Font color</label>
         <select id="fontColor">
-          <option value="#eef3ff" selected>Soft white</option>
+          <option value="#eef3ff">Soft white</option>
           <option value="#ffffff">White</option>
-          <option value="#111111">Black</option>
+          <option value="#111111" selected>Black</option>
           <option value="#1f2937">Slate</option>
           <option value="#ffe9a8">Warm gold</option>
           <option value="#d6f5ff">Pale blue</option>
@@ -353,7 +353,7 @@
       </div>
 
       <div class="field full">
-        <label for="chips">Chips, one per line</label>
+        <label for="chips">Bullets, one per line</label>
         <textarea id="chips">incoming gradient × local derivative
 layer-by-layer reuse
 same pattern for weights</textarea>
@@ -459,12 +459,8 @@ const fields = {
   slideType: document.getElementById('slideType'),
   headingLevel: document.getElementById('headingLevel'),
   bgColor: document.getElementById('bgColor'),
-  fontColor: document.getElementById('fontColor'),
-  kicker: document.getElementById('kicker'),
-  title: document.getElementById('title'),
-  lede: document.getElementById('lede'),
-  chips: document.getElementById('chips'),
-  leftHtml: document.getElementById('leftHtml'),
+  fontColor: document.getElementById('fontColor'),  title: document.getElementById('title'),
+  lede: document.getElementById('lede'),  leftHtml: document.getElementById('leftHtml'),
   rightMode: document.getElementById('rightMode'),
   rightHtml: document.getElementById('rightHtml'),
   notesTitle: document.getElementById('notesTitle'),
@@ -535,8 +531,8 @@ function rgbaFromHex(hex, alpha) {
 }
 
 function buildSlideStyle() {
-  const bg = fields.bgColor.value || '#0f1630';
-  const font = fields.fontColor.value || '#eef3ff';
+  const bg = fields.bgColor.value || '#ffffff';
+  const font = fields.fontColor.value || '#111111';
   const muted = rgbaFromHex(font, 0.72);
   const line = rgbaFromHex(font, 0.14);
   return `background:${bg};color:${font};--text:${font};--muted:${muted};--line:${line};`;
@@ -578,7 +574,7 @@ function parseStructuredText(raw) {
   return blocks.join('\n');
 }
 
-function renderChips(raw) {
+function renderBullets(raw) {
   const items = String(raw || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
   if (!items.length) return '';
   return `<div class="chips">${items.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join('')}</div>`;
@@ -640,7 +636,7 @@ function buildSlideHtml() {
       ${kicker ? `<div class="kicker">${escapeHtml(kicker)}</div>` : ''}
       <${headingTag}>${escapeHtml(title).replace(/\n/g, '<br>')}</${headingTag}>
       ${lede ? `<p class="lede-preview">${escapeHtml(lede)}</p>` : ''}
-      ${renderChips(fields.chips.value)}
+      ${renderBullets(fields.chips.value)}
       <div class="rich">${parseStructuredText(fields.leftHtml.value)}</div>
     </div>`;
 
@@ -725,13 +721,9 @@ const presets = {
   title: {
     slideType: 'title-center',
     headingLevel: 'h1',
-    bgColor: '#0f1630',
-    fontColor: '#eef3ff',
-    kicker: '',
-    title: 'Backpropagation,\nstage by stage',
-    lede: '',
-    chips: '',
-    leftHtml: '',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'Backpropagation,\nstage by stage',
+    lede: '',    leftHtml: '',
     rightMode: 'panel',
     rightHtml: '',
     notesTitle: 'Speaker notes',
@@ -740,13 +732,9 @@ const presets = {
   concept: {
     slideType: 'two-col',
     headingLevel: 'h2',
-    bgColor: '#0f1630',
-    fontColor: '#eef3ff',
-    kicker: 'Core idea',
-    title: 'Backprop as local chain rule',
-    lede: 'Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.',
-    chips: 'incoming gradient × local derivative\nrecursive pattern\nreused across layers',
-    leftHtml: 'P: Teach the pattern before teaching every symbol.\nUL: start at the loss\nUL: move one edge backward\nUL: multiply by the local slope\nEQ: \\( \\frac{dL}{dz} = \\frac{dL}{da} \\cdot \\frac{da}{dz} \\)\nCARD:Teaching line|Incoming gradient times local derivative gives the outgoing gradient.',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'Backprop as local chain rule',
+    lede: 'Each neuron only needs two things during the backward pass: the gradient coming in from downstream, and its own local derivative.',    leftHtml: 'P: Teach the pattern before teaching every symbol.\nUL: start at the loss\nUL: move one edge backward\nUL: multiply by the local slope\nEQ: \\( \\frac{dL}{dz} = \\frac{dL}{da} \\cdot \\frac{da}{dz} \\)\nCARD:Teaching line|Incoming gradient times local derivative gives the outgoing gradient.',
     rightMode: 'panel',
     rightHtml: 'P: Output-layer example\nEQ: \\( \\frac{dL}{dw_j} = \\frac{dL}{dz} a_j \\)\nCARD:Interpretation|A weight gets a large gradient when a large activation carries a large downstream error signal.',
     notesTitle: 'Speaker notes',
@@ -755,13 +743,9 @@ const presets = {
   diagram: {
     slideType: 'two-col',
     headingLevel: 'h2',
-    bgColor: '#0f1630',
-    fontColor: '#eef3ff',
-    kicker: 'Worked example',
-    title: 'A tiny 2–2–1 network',
-    lede: 'Keep the network small enough that every activation and derivative can stay visible on screen.',
-    chips: 'two inputs\ntwo hidden units\none output',
-    leftHtml: 'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
+    bgColor: '#ffffff',
+    fontColor: '#111111',    title: 'A tiny 2–2–1 network',
+    lede: 'Keep the network small enough that every activation and derivative can stay visible on screen.',    leftHtml: 'P: This slide introduces the toy model used throughout the lecture.\nCARD:Why this network?|It is the smallest network that still has a hidden layer, so every stage of backprop is visible.',
     rightMode: 'diagram',
     rightHtml: 'Diagram',
     notesTitle: 'Speaker notes',
@@ -771,12 +755,8 @@ const presets = {
     slideType: 'single',
     headingLevel: 'h2',
     bgColor: '#ffffff',
-    fontColor: '#111111',
-    kicker: 'Appendix',
-    title: 'Backprop recipe',
-    lede: 'This makes a clean end-of-lecture summary slide.',
-    chips: 'forward pass\nloss\nbackward pass\nupdate',
-    leftHtml: 'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward using chain rule\nUL: compute parameter gradients\nUL: update the weights\nCARD:Takeaway|Backpropagation is the chain rule organized efficiently over a computation graph.',
+    fontColor: '#111111',    title: 'Backprop recipe',
+    lede: 'This makes a clean end-of-lecture summary slide.',    leftHtml: 'P: A concise recipe is often more memorable than full notation.\nUL: run forward and cache activations\nUL: compute the loss\nUL: start at the output gradient\nUL: move backward using chain rule\nUL: compute parameter gradients\nUL: update the weights\nCARD:Takeaway|Backpropagation is the chain rule organized efficiently over a computation graph.',
     rightMode: 'panel',
     rightHtml: '',
     notesTitle: 'Speaker notes',
