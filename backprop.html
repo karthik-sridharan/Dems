@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backpropagation on a 2×3×1 Network with Explicit Linear and Activation Nodes</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121a2b;
+      --panel2:#172238;
+      --text:#e8eefc;
+      --muted:#9fb0d1;
+      --line:#5b6d93;
+      --forward:#4cc9f0;
+      --backward:#ff9f1c;
+      --loss:#ff4d6d;
+      --accent:#7c3aed;
+      --linear:#22c55e;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#09101d,#0f172a);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1480px;
+      margin:0 auto;
+      padding:22px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:30px;
+    }
+    .subtitle{
+      color:var(--muted);
+      line-height:1.5;
+      margin-bottom:18px;
+    }
+    .top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      border:0;
+      border-radius:12px;
+      padding:11px 16px;
+      cursor:pointer;
+      color:var(--text);
+      background:var(--panel2);
+      font-size:15px;
+      transition:transform .15s ease, opacity .15s ease, background .2s ease;
+    }
+    button:hover{transform:translateY(-1px)}
+    button:active{transform:translateY(1px)}
+    .primary{background:#2563eb}
+    .secondary{background:#334155}
+    .badge{
+      padding:8px 12px;
+      border-radius:999px;
+      background:#1e293b;
+      font-weight:700;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:1.55fr 1fr;
+      gap:18px;
+    }
+    .card{
+      background:rgba(18,26,43,.92);
+      border:1px solid rgba(144,163,198,.15);
+      border-radius:18px;
+      padding:16px;
+      box-shadow:0 8px 28px rgba(0,0,0,.25);
+    }
+    #networkCard{min-height:860px}
+    svg{width:100%; height:820px; display:block;}
+    .node circle{
+      fill:#0a1222;
+      stroke:#9fb0d1;
+      stroke-width:2.2;
+      transition:all .3s ease;
+    }
+    .node .title{
+      fill:white;
+      font-size:18px;
+      font-weight:700;
+      text-anchor:middle;
+    }
+    .node .value{
+      fill:#d7e3ff;
+      font-size:13px;
+      text-anchor:middle;
+    }
+    .node.forward circle{
+      stroke:var(--forward);
+      stroke-width:4;
+      filter:drop-shadow(0 0 10px rgba(76,201,240,.45));
+    }
+    .node.backward circle{
+      stroke:var(--backward);
+      stroke-width:4;
+      filter:drop-shadow(0 0 10px rgba(255,159,28,.45));
+    }
+    .node.linear circle{
+      stroke:var(--linear);
+      stroke-width:4;
+      filter:drop-shadow(0 0 10px rgba(34,197,94,.35));
+    }
+    .node.loss circle{
+      stroke:var(--loss);
+      stroke-width:4;
+      filter:drop-shadow(0 0 10px rgba(255,77,109,.45));
+    }
+    .edge{
+      stroke:var(--line);
+      stroke-width:3;
+      opacity:.78;
+      transition:all .3s ease;
+    }
+    .edge.forward{
+      stroke:var(--forward);
+      stroke-width:5;
+      opacity:1;
+      filter:drop-shadow(0 0 8px rgba(76,201,240,.45));
+    }
+    .edge.backward{
+      stroke:var(--backward);
+      stroke-width:5;
+      opacity:1;
+      filter:drop-shadow(0 0 8px rgba(255,159,28,.45));
+    }
+    .edge.linear{
+      stroke:var(--linear);
+      stroke-width:5;
+      opacity:1;
+      filter:drop-shadow(0 0 8px rgba(34,197,94,.35));
+    }
+    .label{
+      fill:#d8e3fb;
+      font-size:14px;
+      text-anchor:middle;
+    }
+    .grad{
+      fill:#ffbf69;
+      font-size:13px;
+      font-weight:700;
+      text-anchor:middle;
+      opacity:0;
+      transition:opacity .25s ease;
+    }
+    .grad.show{opacity:1}
+    .panelTitle{
+      margin:0 0 8px;
+      font-size:24px;
+    }
+    .explain{
+      line-height:1.6;
+      font-size:15px;
+      color:#ebf1ff;
+    }
+    .formula{
+      margin-top:12px;
+      padding:14px;
+      border-radius:14px;
+      background:#0a1222;
+      border:1px solid rgba(144,163,198,.14);
+      font-family:"Courier New", monospace;
+      line-height:1.6;
+      white-space:pre-wrap;
+      color:#dbeafe;
+      min-height:175px;
+    }
+    .smallGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border-radius:12px;
+      background:#0a1222;
+      font-size:14px;
+    }
+    th, td{
+      padding:8px 10px;
+      border-bottom:1px solid rgba(144,163,198,.12);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      background:#15203a;
+      color:#dce6ff;
+    }
+    tr:last-child td{border-bottom:0}
+    .note{
+      margin-top:12px;
+      padding:11px 12px;
+      border-radius:12px;
+      background:rgba(124,58,237,.12);
+      border:1px solid rgba(167,139,250,.2);
+      color:#e9ddff;
+      line-height:1.5;
+      font-size:14px;
+    }
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px 18px;
+      margin-top:10px;
+      color:#d6e1fc;
+      font-size:14px;
+    }
+    .legendItem{display:flex; align-items:center; gap:8px;}
+    .dot{
+      width:12px;height:12px;border-radius:999px;display:inline-block;
+    }
+    .muted{color:var(--muted)}
+    .tiny{font-size:13px;color:var(--muted)}
+    @media (max-width:1100px){
+      .layout{grid-template-columns:1fr}
+      svg{height:760px}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Backpropagation on a 2 × 3 × 1 Network</h1>
+  <div class="subtitle">
+    This version explicitly separates each hidden unit into a <b>linear node</b> <b>z</b> and an
+    <b>activation node</b> <b>a = σ(z)</b>, so you can see exactly where the derivative <b>σ′(z)</b> enters.
+    The output is also split into a linear node <b>s</b> and prediction node <b>ŷ</b>.
+  </div>
+
+  <div class="top">
+    <div class="controls">
+      <button id="prevBtn" class="secondary">◀ Prev</button>
+      <button id="nextBtn" class="primary">Next ▶</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+      <span class="badge" id="stepBadge">Step 1 / 12</span>
+    </div>
+    <div class="tiny">Keyboard shortcuts: ← →</div>
+  </div>
+
+  <div class="layout">
+    <div class="card" id="networkCard">
+      <svg viewBox="0 0 1100 800">
+        <text x="90" y="40" fill="#dce6ff" font-size="20" font-weight="700">Inputs</text>
+        <text x="420" y="40" fill="#dce6ff" font-size="20" font-weight="700" text-anchor="middle">Hidden linear nodes</text>
+        <text x="650" y="40" fill="#dce6ff" font-size="20" font-weight="700" text-anchor="middle">Hidden activations</text>
+        <text x="895" y="40" fill="#dce6ff" font-size="20" font-weight="700" text-anchor="middle">Output</text>
+
+        <!-- input -> z edges -->
+        <line id="e_x1_z1" class="edge" x1="120" y1="170" x2="360" y2="120"></line>
+        <line id="e_x1_z2" class="edge" x1="120" y1="170" x2="360" y2="280"></line>
+        <line id="e_x1_z3" class="edge" x1="120" y1="170" x2="360" y2="440"></line>
+
+        <line id="e_x2_z1" class="edge" x1="120" y1="340" x2="360" y2="120"></line>
+        <line id="e_x2_z2" class="edge" x1="120" y1="340" x2="360" y2="280"></line>
+        <line id="e_x2_z3" class="edge" x1="120" y1="340" x2="360" y2="440"></line>
+
+        <!-- z -> a edges -->
+        <line id="e_z1_a1" class="edge" x1="420" y1="120" x2="590" y2="120"></line>
+        <line id="e_z2_a2" class="edge" x1="420" y1="280" x2="590" y2="280"></line>
+        <line id="e_z3_a3" class="edge" x1="420" y1="440" x2="590" y2="440"></line>
+
+        <!-- a -> s edges -->
+        <line id="e_a1_s" class="edge" x1="650" y1="120" x2="840" y2="250"></line>
+        <line id="e_a2_s" class="edge" x1="650" y1="280" x2="840" y2="250"></line>
+        <line id="e_a3_s" class="edge" x1="650" y1="440" x2="840" y2="250"></line>
+
+        <!-- s -> yhat -> L -->
+        <line id="e_s_yhat" class="edge" x1="900" y1="250" x2="900" y2="390"></line>
+        <line id="e_yhat_L" class="edge" x1="900" y1="450" x2="900" y2="590"></line>
+
+        <!-- labels -->
+        <text class="label" x="240" y="118">w₁₁</text>
+        <text class="label" x="245" y="210">w₁₂</text>
+        <text class="label" x="245" y="304">w₁₃</text>
+
+        <text class="label" x="245" y="205">w₂₁</text>
+        <text class="label" x="245" y="330">w₂₂</text>
+        <text class="label" x="245" y="408">w₂₃</text>
+
+        <text class="label" x="505" y="105">σ</text>
+        <text class="label" x="505" y="265">σ</text>
+        <text class="label" x="505" y="425">σ</text>
+
+        <text class="label" x="745" y="148">v₁</text>
+        <text class="label" x="740" y="268">v₂</text>
+        <text class="label" x="745" y="420">v₃</text>
+
+        <text class="label" x="390" y="65">+ b₁</text>
+        <text class="label" x="390" y="225">+ b₂</text>
+        <text class="label" x="390" y="385">+ b₃</text>
+        <text class="label" x="955" y="245">+ c</text>
+        <text class="label" x="965" y="522">target y</text>
+
+        <!-- gradient labels -->
+        <text id="g_yhat_L" class="grad" x="980" y="520"></text>
+        <text id="g_s_yhat" class="grad" x="980" y="335"></text>
+
+        <text id="g_a1_s" class="grad" x="760" y="120"></text>
+        <text id="g_a2_s" class="grad" x="750" y="250"></text>
+        <text id="g_a3_s" class="grad" x="760" y="452"></text>
+
+        <text id="g_z1_a1" class="grad" x="505" y="98"></text>
+        <text id="g_z2_a2" class="grad" x="505" y="258"></text>
+        <text id="g_z3_a3" class="grad" x="505" y="418"></text>
+
+        <text id="g_x1_z1" class="grad" x="255" y="96"></text>
+        <text id="g_x2_z1" class="grad" x="250" y="170"></text>
+
+        <text id="g_x1_z2" class="grad" x="260" y="242"></text>
+        <text id="g_x2_z2" class="grad" x="255" y="315"></text>
+
+        <text id="g_x1_z3" class="grad" x="260" y="398"></text>
+        <text id="g_x2_z3" class="grad" x="255" y="468"></text>
+
+        <!-- nodes -->
+        <g id="x1" class="node">
+          <circle cx="80" cy="170" r="42"></circle>
+          <text class="title" x="80" y="165">x₁</text>
+          <text class="value" x="80" y="188">input</text>
+        </g>
+
+        <g id="x2" class="node">
+          <circle cx="80" cy="340" r="42"></circle>
+          <text class="title" x="80" y="335">x₂</text>
+          <text class="value" x="80" y="358">input</text>
+        </g>
+
+        <g id="z1" class="node">
+          <circle cx="390" cy="120" r="40"></circle>
+          <text class="title" x="390" y="114">z₁</text>
+          <text class="value" id="z1v" x="390" y="137"></text>
+        </g>
+
+        <g id="z2" class="node">
+          <circle cx="390" cy="280" r="40"></circle>
+          <text class="title" x="390" y="274">z₂</text>
+          <text class="value" id="z2v" x="390" y="297"></text>
+        </g>
+
+        <g id="z3" class="node">
+          <circle cx="390" cy="440" r="40"></circle>
+          <text class="title" x="390" y="434">z₃</text>
+          <text class="value" id="z3v" x="390" y="457"></text>
+        </g>
+
+        <g id="a1" class="node">
+          <circle cx="620" cy="120" r="40"></circle>
+          <text class="title" x="620" y="114">a₁</text>
+          <text class="value" id="a1v" x="620" y="137"></text>
+        </g>
+
+        <g id="a2" class="node">
+          <circle cx="620" cy="280" r="40"></circle>
+          <text class="title" x="620" y="274">a₂</text>
+          <text class="value" id="a2v" x="620" y="297"></text>
+        </g>
+
+        <g id="a3" class="node">
+          <circle cx="620" cy="440" r="40"></circle>
+          <text class="title" x="620" y="434">a₃</text>
+          <text class="value" id="a3v" x="620" y="457"></text>
+        </g>
+
+        <g id="s" class="node">
+          <circle cx="900" cy="250" r="48"></circle>
+          <text class="title" x="900" y="243">s</text>
+          <text class="value" id="sv" x="900" y="268"></text>
+        </g>
+
+        <g id="yhat" class="node">
+          <circle cx="900" cy="420" r="48"></circle>
+          <text class="title" x="900" y="413">ŷ</text>
+          <text class="value" id="yhv" x="900" y="438"></text>
+        </g>
+
+        <g id="loss" class="node">
+          <circle cx="900" cy="620" r="48"></circle>
+          <text class="title" x="900" y="613">L</text>
+          <text class="value" id="Lv" x="900" y="638"></text>
+        </g>
+      </svg>
+
+      <div class="legend">
+        <div class="legendItem"><span class="dot" style="background:#22c55e"></span> linear combination node</div>
+        <div class="legendItem"><span class="dot" style="background:#4cc9f0"></span> forward computation</div>
+        <div class="legendItem"><span class="dot" style="background:#ff9f1c"></span> backward gradient flow</div>
+        <div class="legendItem"><span class="dot" style="background:#ff4d6d"></span> loss</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="panelTitle" id="panelTitle">Step 1: Structure</h2>
+      <div class="explain" id="explain"></div>
+      <div class="formula" id="formula"></div>
+
+      <div class="smallGrid">
+        <div>
+          <table>
+            <thead><tr><th>Node type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>x₁, x₂</td><td>input features</td></tr>
+              <tr><td>zⱼ</td><td>linear output before activation</td></tr>
+              <tr><td>aⱼ</td><td>activated hidden value, aⱼ = σ(zⱼ)</td></tr>
+              <tr><td>s</td><td>linear output node at final layer</td></tr>
+              <tr><td>ŷ</td><td>prediction; here ŷ = s</td></tr>
+              <tr><td>L</td><td>loss</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <table>
+            <thead><tr><th>Final gradient formulas</th><th>Expression</th></tr></thead>
+            <tbody id="summaryTable">
+              <tr><td colspan="2" class="muted">They appear gradually as you step.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="note" id="noteBox">
+        Splitting z and a into separate nodes makes the chain rule much clearer:
+        gradient reaches a, then crosses the activation edge and picks up σ′(z).
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const allNodes = ["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"];
+  const linearNodes = ["z1","z2","z3","s"];
+  const allEdges = [
+    "e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3",
+    "e_z1_a1","e_z2_a2","e_z3_a3",
+    "e_a1_s","e_a2_s","e_a3_s",
+    "e_s_yhat","e_yhat_L"
+  ];
+  const gradIds = [
+    "g_yhat_L","g_s_yhat","g_a1_s","g_a2_s","g_a3_s","g_z1_a1","g_z2_a2","g_z3_a3",
+    "g_x1_z1","g_x2_z1","g_x1_z2","g_x2_z2","g_x1_z3","g_x2_z3"
+  ];
+
+  const summaryRows = [
+    ["∂L/∂ŷ", "ŷ - y"],
+    ["∂L/∂s", "ŷ - y since ŷ = s"],
+    ["∂L/∂vⱼ", "(ŷ - y) aⱼ = (ŷ - y)σ(zⱼ)"],
+    ["∂L/∂c", "ŷ - y"],
+    ["∂L/∂aⱼ", "(ŷ - y) vⱼ"],
+    ["∂L/∂zⱼ", "(ŷ - y) vⱼ σ′(zⱼ)"],
+    ["∂L/∂wᵢⱼ", "(ŷ - y) vⱼ σ′(zⱼ) xᵢ"],
+    ["∂L/∂bⱼ", "(ŷ - y) vⱼ σ′(zⱼ)"]
+  ];
+
+  const steps = [
+    {
+      title:"Step 1: Structure",
+      explain:`Each hidden unit is now split into two nodes:
+      a <b>linear node zⱼ</b> and an <b>activation node aⱼ = σ(zⱼ)</b>.
+      The output is also split into a linear node <b>s</b> and prediction node <b>ŷ</b>.`,
+      formula:
+`Hidden layer:
+zj = w1j x1 + w2j x2 + bj
+aj = σ(zj)
+
+Output layer:
+s = v1 a1 + v2 a2 + v3 a3 + c
+ŷ = s
+L = 1/2 (ŷ - y)^2`,
+      note:`This separation lets you see exactly where each local derivative comes from.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
+      forwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3","e_z1_a1","e_z2_a2","e_z3_a3","e_a1_s","e_a2_s","e_a3_s","e_s_yhat","e_yhat_L"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{z1:"",z2:"",z3:"",a1:"",a2:"",a3:"",s:"",yhat:"",loss:""},
+      grads:{}
+    },
+    {
+      title:"Step 2: Hidden linear outputs",
+      explain:`First compute the hidden linear outputs. These are pure affine combinations of the inputs.`,
+      formula:
+`z1 = w11 x1 + w21 x2 + b1
+z2 = w12 x1 + w22 x2 + b2
+z3 = w13 x1 + w23 x2 + b3`,
+      note:`These nodes do not yet apply σ.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["x1","x2","z1","z2","z3"],
+      forwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{z1:"z₁",z2:"z₂",z3:"z₃"},
+      grads:{}
+    },
+    {
+      title:"Step 3: Hidden activations",
+      explain:`Now apply the activation σ to each hidden linear node.`,
+      formula:
+`a1 = σ(z1)
+a2 = σ(z2)
+a3 = σ(z3)`,
+      note:`Later, when gradient crosses from aⱼ back to zⱼ, it multiplies by σ′(zⱼ).`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["z1","z2","z3","a1","a2","a3"],
+      forwardEdges:["e_z1_a1","e_z2_a2","e_z3_a3"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{z1:"z₁",z2:"z₂",z3:"z₃",a1:"σ(z₁)",a2:"σ(z₂)",a3:"σ(z₃)"},
+      grads:{}
+    },
+    {
+      title:"Step 4: Final linear output",
+      explain:`The output layer first forms a linear combination of the hidden activations. We call that node <b>s</b>.`,
+      formula:
+`s = v1 a1 + v2 a2 + v3 a3 + c
+  = v1 σ(z1) + v2 σ(z2) + v3 σ(z3) + c`,
+      note:`This makes the output-layer gradients especially clear.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["a1","a2","a3","s"],
+      forwardEdges:["e_a1_s","e_a2_s","e_a3_s"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{a1:"a₁",a2:"a₂",a3:"a₃",s:"s"},
+      grads:{}
+    },
+    {
+      title:"Step 5: Prediction node",
+      explain:`Here the prediction is just the identity applied to the linear output, so <b>ŷ = s</b>.`,
+      formula:
+`ŷ = s`,
+      note:`Since the derivative of identity is 1, the gradient from ŷ to s passes through unchanged.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["s","yhat"],
+      forwardEdges:["e_s_yhat"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{s:"s",yhat:"ŷ"},
+      grads:{}
+    },
+    {
+      title:"Step 6: Loss",
+      explain:`Use squared error loss for one example.`,
+      formula:
+`L = 1/2 (ŷ - y)^2`,
+      note:`Now we begin backprop.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["yhat","loss"],
+      forwardEdges:["e_yhat_L"],
+      backwardNodes:[],
+      backwardEdges:[],
+      values:{yhat:"ŷ",loss:"L"},
+      grads:{}
+    },
+    {
+      title:"Step 7: Gradient at the prediction",
+      explain:`Differentiate the loss with respect to the prediction.`,
+      formula:
+`∂L/∂ŷ = ŷ - y`,
+      note:`This is the first backprop signal.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:[],
+      backwardNodes:["yhat","loss"],
+      backwardEdges:["e_yhat_L"],
+      values:{yhat:"ŷ",loss:"L"},
+      grads:{
+        g_yhat_L:"∂L/∂ŷ = ŷ - y"
+      }
+    },
+    {
+      title:"Step 8: Move from ŷ back to s",
+      explain:`Since <b>ŷ = s</b>, the local derivative is <b>∂ŷ/∂s = 1</b>. So the gradient reaching s is unchanged.`,
+      formula:
+`∂L/∂s = (∂L/∂ŷ)(∂ŷ/∂s)
+       = (ŷ - y)(1)
+       = ŷ - y`,
+      note:`Separating s and ŷ makes this identity step explicit.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:[],
+      backwardNodes:["s","yhat"],
+      backwardEdges:["e_s_yhat"],
+      values:{s:"∂L/∂s",yhat:"∂L/∂ŷ"},
+      grads:{
+        g_s_yhat:"∂L/∂s = ŷ - y"
+      }
+    },
+    {
+      title:"Step 9: Output weights and hidden activation gradients",
+      explain:`From the linear output node s, compute gradients of the output weights and the gradients arriving at the hidden activations.`,
+      formula:
+`∂L/∂v1 = (∂L/∂s)(∂s/∂v1) = (ŷ - y)a1
+∂L/∂v2 = (ŷ - y)a2
+∂L/∂v3 = (ŷ - y)a3
+
+∂L/∂c = (∂L/∂s)(∂s/∂c) = ŷ - y
+
+∂L/∂a1 = (∂L/∂s)(∂s/∂a1) = (ŷ - y)v1
+∂L/∂a2 = (ŷ - y)v2
+∂L/∂a3 = (ŷ - y)v3`,
+      note:`The hidden nodes a₁,a₂,a₃ now carry the backward messages from the output layer.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:[],
+      backwardNodes:["a1","a2","a3","s"],
+      backwardEdges:["e_a1_s","e_a2_s","e_a3_s"],
+      values:{a1:"∂L/∂a₁",a2:"∂L/∂a₂",a3:"∂L/∂a₃",s:"∂L/∂s"},
+      grads:{
+        g_a1_s:"∂L/∂a₁=(ŷ-y)v₁",
+        g_a2_s:"∂L/∂a₂=(ŷ-y)v₂",
+        g_a3_s:"∂L/∂a₃=(ŷ-y)v₃"
+      }
+    },
+    {
+      title:"Step 10: Cross the activation edges",
+      explain:`Now the gradient crosses each activation edge from aⱼ back to zⱼ. This is where σ′ appears.`,
+      formula:
+`∂L/∂z1 = (∂L/∂a1)(∂a1/∂z1) = (ŷ - y)v1 σ′(z1)
+∂L/∂z2 = (ŷ - y)v2 σ′(z2)
+∂L/∂z3 = (ŷ - y)v3 σ′(z3)`,
+      note:`This is the clearest reason for splitting z and a into different nodes.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:[],
+      backwardNodes:["z1","z2","z3","a1","a2","a3"],
+      backwardEdges:["e_z1_a1","e_z2_a2","e_z3_a3"],
+      values:{z1:"∂L/∂z₁",z2:"∂L/∂z₂",z3:"∂L/∂z₃",a1:"∂L/∂a₁",a2:"∂L/∂a₂",a3:"∂L/∂a₃"},
+      grads:{
+        g_z1_a1:"× σ′(z₁)",
+        g_z2_a2:"× σ′(z₂)",
+        g_z3_a3:"× σ′(z₃)"
+      }
+    },
+    {
+      title:"Step 11: Hidden weights and biases",
+      explain:`Each linear node zⱼ depends on its incoming weights and bias. Differentiate those affine expressions.`,
+      formula:
+`For each hidden unit j:
+
+∂L/∂w1j = (∂L/∂zj)(∂zj/∂w1j)
+        = (ŷ - y) vj σ′(zj) x1
+
+∂L/∂w2j = (ŷ - y) vj σ′(zj) x2
+
+∂L/∂bj  = (ŷ - y) vj σ′(zj)`,
+      note:`So every hidden weight gets: upstream gradient × activation derivative × input.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:[],
+      backwardNodes:["x1","x2","z1","z2","z3"],
+      backwardEdges:["e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
+      values:{z1:"z₁",z2:"z₂",z3:"z₃"},
+      grads:{
+        g_x1_z1:"∂L/∂w₁₁=(ŷ-y)v₁σ′(z₁)x₁",
+        g_x2_z1:"∂L/∂w₂₁=(ŷ-y)v₁σ′(z₁)x₂",
+        g_x1_z2:"∂L/∂w₁₂=(ŷ-y)v₂σ′(z₂)x₁",
+        g_x2_z2:"∂L/∂w₂₂=(ŷ-y)v₂σ′(z₂)x₂",
+        g_x1_z3:"∂L/∂w₁₃=(ŷ-y)v₃σ′(z₃)x₁",
+        g_x2_z3:"∂L/∂w₂₃=(ŷ-y)v₃σ′(z₃)x₂"
+      }
+    },
+    {
+      title:"Step 12: Full result",
+      explain:`Here is the full picture. The chain rule flows from the loss to ŷ, from ŷ to s, from s to aⱼ, from aⱼ through σ′(zⱼ) to zⱼ, and from zⱼ to its incoming weights and bias.`,
+      formula:
+`Output layer:
+∂L/∂ŷ = ŷ - y
+∂L/∂s = ŷ - y
+∂L/∂vj = (ŷ - y) aj = (ŷ - y)σ(zj)
+∂L/∂c  = ŷ - y
+
+Hidden layer:
+∂L/∂aj = (ŷ - y) vj
+∂L/∂zj = (ŷ - y) vj σ′(zj)
+∂L/∂w1j = (ŷ - y) vj σ′(zj) x1
+∂L/∂w2j = (ŷ - y) vj σ′(zj) x2
+∂L/∂bj  = (ŷ - y) vj σ′(zj)`,
+      note:`Because z and a are shown as separate nodes, you can visually see the exact place where the activation derivative enters.`,
+      linear:["z1","z2","z3","s"],
+      forwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
+      forwardEdges:[],
+      backwardNodes:["x1","x2","z1","z2","z3","a1","a2","a3","s","yhat","loss"],
+      backwardEdges:["e_yhat_L","e_s_yhat","e_a1_s","e_a2_s","e_a3_s","e_z1_a1","e_z2_a2","e_z3_a3","e_x1_z1","e_x1_z2","e_x1_z3","e_x2_z1","e_x2_z2","e_x2_z3"],
+      values:{z1:"z₁",z2:"z₂",z3:"z₃",a1:"a₁",a2:"a₂",a3:"a₃",s:"s",yhat:"ŷ",loss:"L"},
+      grads:{
+        g_yhat_L:"∂L/∂ŷ=ŷ-y",
+        g_s_yhat:"∂L/∂s=ŷ-y",
+        g_a1_s:"∂L/∂a₁=(ŷ-y)v₁",
+        g_a2_s:"∂L/∂a₂=(ŷ-y)v₂",
+        g_a3_s:"∂L/∂a₃=(ŷ-y)v₃",
+        g_z1_a1:"×σ′(z₁)",
+        g_z2_a2:"×σ′(z₂)",
+        g_z3_a3:"×σ′(z₃)"
+      },
+      fillSummary:true
+    }
+  ];
+
+  let step = 0;
+
+  function clearClasses(){
+    allNodes.forEach(id => $(id).className.baseVal = "node");
+    allEdges.forEach(id => $(id).setAttribute("class","edge"));
+    gradIds.forEach(id => {
+      $(id).textContent = "";
+      $(id).setAttribute("class","grad");
+    });
+  }
+
+  function setNodeValue(id, txt){
+    const map = {
+      z1:"z1v",z2:"z2v",z3:"z3v",
+      a1:"a1v",a2:"a2v",a3:"a3v",
+      s:"sv",yhat:"yhv",loss:"Lv"
+    };
+    if(map[id]) $(map[id]).textContent = txt || "";
+  }
+
+  function renderSummary(fill){
+    const tb = $("summaryTable");
+    if(!fill){
+      tb.innerHTML = '<tr><td colspan="2" class="muted">They appear gradually as you step.</td></tr>';
+      return;
+    }
+    tb.innerHTML = summaryRows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`).join("");
+  }
+
+  function render(){
+    clearClasses();
+    const s = steps[step];
+
+    $("panelTitle").innerHTML = s.title;
+    $("explain").innerHTML = s.explain;
+    $("formula").textContent = s.formula;
+    $("noteBox").innerHTML = s.note;
+    $("stepBadge").textContent = `Step ${step + 1} / ${steps.length}`;
+
+    linearNodes.forEach(id => $(id).classList.add("linear"));
+    ["z1","z2","z3","a1","a2","a3","s","yhat","loss"].forEach(id => setNodeValue(id, ""));
+    Object.entries(s.values || {}).forEach(([k,v]) => setNodeValue(k,v));
+
+    (s.forwardNodes || []).forEach(id => $(id).classList.add("forward"));
+    (s.backwardNodes || []).forEach(id => $(id).classList.add("backward"));
+    (s.linear || []).forEach(id => $(id).classList.add("linear"));
+
+    (s.forwardEdges || []).forEach(id => $(id).setAttribute("class","edge forward"));
+    (s.backwardEdges || []).forEach(id => $(id).setAttribute("class","edge backward"));
+
+    if ((s.forwardNodes || []).includes("loss") || (s.backwardNodes || []).includes("loss")) {
+      $("loss").classList.add("loss");
+    }
+
+    Object.entries(s.grads || {}).forEach(([id, txt]) => {
+      $(id).textContent = txt;
+      $(id).classList.add("show");
+    });
+
+    renderSummary(!!s.fillSummary);
+
+    $("prevBtn").disabled = step === 0;
+    $("nextBtn").disabled = step === steps.length - 1;
+    $("prevBtn").style.opacity = step === 0 ? 0.45 : 1;
+    $("nextBtn").style.opacity = step === steps.length - 1 ? 0.45 : 1;
+  }
+
+  $("nextBtn").addEventListener("click", () => {
+    if (step < steps.length - 1) {
+      step += 1;
+      render();
+    }
+  });
+  $("prevBtn").addEventListener("click", () => {
+    if (step > 0) {
+      step -= 1;
+      render();
+    }
+  });
+  $("resetBtn").addEventListener("click", () => {
+    step = 0;
+    render();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") $("nextBtn").click();
+    if (e.key === "ArrowLeft") $("prevBtn").click();
+  });
+
+  render();
+</script>
+</body>
+</html>
