@@ -92,8 +92,8 @@
   }
   .preview-scale{
     position:absolute;
-    left:50%;
-    top:50%;
+    left:0;
+    top:0;
     width:1600px;
     height:900px;
     transform-origin:top left;
@@ -151,7 +151,7 @@
   .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
   .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
   .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  .title-center{min-height:720px;display:grid;place-items:center;text-align:center;padding:3rem}
+  .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}
   .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
 
   @media (max-width:1150px){ .page{grid-template-columns:1fr} }
@@ -1330,7 +1330,11 @@ function updatePreviewScale(){
   if(!frame || !scaleEl) return;
   const baseW = 1600, baseH = 900;
   const scale = Math.min(frame.clientWidth / baseW, frame.clientHeight / baseH);
-  scaleEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  const scaledW = baseW * scale;
+  const scaledH = baseH * scale;
+  const offsetX = Math.max(0, (frame.clientWidth - scaledW) / 2);
+  const offsetY = Math.max(0, (frame.clientHeight - scaledH) / 2);
+  scaleEl.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
 function buildPreview(){
   preview.innerHTML = buildSlideMarkup(currentDraftSlide());
