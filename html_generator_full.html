@@ -1,214 +1,111 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HTML Presentation Generator</title>
+<title>Generator with pseudocode-latex preset</title>
+<script id="deck-source" type="application/json">{"deckTitle": "Generator with pseudocode-latex preset", "slides": [{"slideType": "single", "headingLevel": "h2", "bgColor": "#ffffff", "fontColor": "#111111", "title": "Example slide", "kicker": "Edit deck-source JSON and reload in your workflow", "lede": "", "leftMode": "pseudocode-latex", "leftHtml": "Input: \\(x\\)\n\n\\(z^0 \\leftarrow x\\)\nfor \\(t=1\\) to \\(T\\) do\n  \\(u^t \\leftarrow W[t]z^{t-1}+b^t\\)\n  \\(z^t \\leftarrow \\sigma(u^t)\\)\nend\n\nreturn \\(\\hat y\\)", "rightMode": "panel", "rightHtml": ""}]}</script>
 <style>
-  :root{
-    --bg:#0b1020;
-    --panel:#121933;
-    --panel-2:#0f1630;
-    --text:#eef3ff;
-    --muted:#aab7d8;
-    --line:rgba(255,255,255,.12);
-    --blue:#61b4ff;
-    --shadow:0 24px 60px rgba(0,0,0,.28);
+  :root {
+    --deck-bg:#060a16;
+    --deck-panel:rgba(10,16,32,.82);
+    --deck-text:#eef3ff;
+    --deck-muted:#b7c4e8;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%,var(--bg) 45%,#070b17 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  body{padding:1rem}
-  .page{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:520px minmax(0,1fr);gap:1rem}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:1rem}
-  .stack{display:grid;gap:.9rem}
-  h1,h2,h3{margin:0;line-height:1.08}
-  h1{font-size:2rem}
-  h2{font-size:1.2rem}
-  p,label,small{color:var(--muted)}
-  .toolbar{display:flex;flex-wrap:wrap;gap:.7rem}
-  .btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);border-radius:14px;padding:.8rem 1rem;font:inherit;font-weight:700;cursor:pointer}
-  .btn.primary{border-color:rgba(97,180,255,.45)}
-  .btn.mini{padding:.55rem .75rem;font-size:.9rem}
-  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
-  .field{display:grid;gap:.35rem}
-  .field.full{grid-column:1 / -1}
-  input,select,textarea{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--text);padding:.8rem .9rem;font:inherit}
-  textarea{resize:vertical;min-height:100px;line-height:1.45}
-  textarea.code{min-height:220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.93rem;white-space:pre}
-  .help{font-size:.86rem;line-height:1.45}
-  .smallcaps{letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--blue);font-weight:800}
-  .badge{display:inline-flex;align-items:center;padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);font-size:.82rem;color:var(--text)}
-  .deck-list{display:grid;gap:.55rem;max-height:360px;overflow:auto;padding-right:.2rem}
-  .deck-item{width:100%;text-align:left;padding:.8rem .85rem;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer}
-  .deck-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.10)}
-  .deck-item .meta{display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem}
-  .preview-wrap{display:grid;gap:.8rem}
-  .preview-header{display:flex;justify-content:space-between;gap:1rem;align-items:center}
-  .preview-viewport{overflow:auto;border-radius:24px;border:1px solid var(--line);background:rgba(0,0,0,.1);padding:1rem}
-  .slide{
-    position:relative;
-    min-height:720px;
-    border:1px dashed rgba(255,255,255,.09);
-    border-radius:28px;
-    padding:3rem 3.3rem 4.8rem;
-    background:#ffffff;
-    color:#111111;
-  }
-  .slide h1,.slide h2{margin:0;line-height:1.05}
-  .slide h1{font-size:3.4rem;max-width:15ch}
-  .slide h2{font-size:2.3rem}
-  .slide .kicker{margin-top:.6rem;color:rgba(17,17,17,.72);font-size:1rem;line-height:1.45;max-width:68ch}
-  .slide .lede{margin-top:1rem;color:rgba(17,17,17,.72);font-size:1.14rem;line-height:1.52;max-width:68ch}
-  .slide-body{margin-top:1.35rem}
-  .slide.single .slide-body{display:block}
-  .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
-  .slide .col{min-width:0}
-  .slide .rich{display:grid;gap:1rem}
-  .slide .rich p,
-  .slide .rich ul,
-  .slide .rich ol,
-  .slide .rich h3,
-  .slide .display-math,
-  .slide .bullet-card,
-  .slide .placeholder,
-  .slide .diag,
-  .slide .pseudo-block{
+  * { box-sizing:border-box; }
+  html, body {
     margin:0;
-    border:1px solid var(--line);
+    min-height:100%;
+    background:radial-gradient(circle at top left,#17214a 0%, #0b1020 45%, #070b17 100%);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  body { color:var(--deck-text); overflow:hidden; }
+  .deck { position:relative; width:100vw; height:100svh; }
+  .deck-slide {
+    display:none; position:absolute; inset:0; overflow:auto;
+    padding:3.2rem 3.5rem 5rem;
+    background:#ffffff; color:#111111;
+  }
+  .deck-slide.active { display:block; }
+  .deck-slide h1, .deck-slide h2 { margin:0; line-height:1.05; }
+  .deck-slide h2 { font-size:2.35rem; }
+  .kicker {
+    margin-top:.8rem;
+    color:rgba(17,17,17,.72);
+    font-size:1.05rem;
+    line-height:1.45;
+    max-width:70ch;
+  }
+  .lede {
+    margin-top:.9rem;
+    color:rgba(17,17,17,.72);
+    font-size:1.18rem;
+    line-height:1.5;
+    max-width:70ch;
+  }
+  .slide-body { margin-top:1.35rem; }
+  .col { min-width:0; }
+  .pseudo-block, .pseudo-latex-block, .placeholder {
+    margin:0;
+    border:1px solid rgba(17,17,17,.12);
     border-radius:22px;
     background:rgba(127,127,127,.045);
     box-shadow:0 8px 24px rgba(0,0,0,.04);
   }
-  .slide .rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
-  .slide .rich ul,.slide .rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
-  .slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
-  .slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
-  .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
-  .slide .pseudo-block{
+  .pseudo-block, .pseudo-latex-block {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 1.08rem;
-    line-height: 1.6;
+    font-size: 1.16rem;
+    line-height: 1.78;
     white-space: pre-wrap;
     tab-size: 2;
-    padding: 1rem 1.15rem;
+    padding: 1.15rem 1.3rem;
     overflow-x: auto;
-    color: rgba(17,17,17,.9);
+    color: rgba(17,17,17,.94);
   }
-  .slide .kicker{font-size:1.08rem}
-  .slide .lede{font-size:1.24rem}
-  .title-center{
-    min-height:720px;
-    display:grid;
-    place-items:center;
-    text-align:center;
-    padding:3rem;
+  .pseudo-latex-block mjx-container {
+    font-size: 100% !important;
   }
-  .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
-  .title-center .kicker{max-width:24ch;margin-left:auto;margin-right:auto}
-  .snippet-box{min-height:260px}
-  .copy-toast{position:fixed;right:1rem;bottom:1rem;background:rgba(15,22,48,.96);border:1px solid rgba(255,255,255,.16);color:var(--text);padding:.8rem 1rem;border-radius:14px;opacity:0;transform:translateY(10px);transition:opacity .25s ease,transform .25s ease;pointer-events:none;z-index:40}
-  .copy-toast.show{opacity:1;transform:translateY(0)}
-  .row{display:flex;gap:.6rem;flex-wrap:wrap}
-  .muted{color:var(--muted)}
-  details summary{cursor:pointer;color:var(--text);font-weight:700}
-  .template-list{display:grid;gap:.55rem}
-  .template-list button{width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);padding:.85rem .95rem;cursor:pointer;font:inherit}
-  .template-list button small{display:block;color:var(--muted);margin-top:.2rem}
-  @media (max-width:1150px){
-    .page{grid-template-columns:1fr}
+  .placeholder {
+    padding:1.15rem 1.3rem;
+    color:rgba(17,17,17,.65);
   }
-  .deck-slide .bullet-card{
-    padding:1rem 1.15rem;
-    background:rgba(127,127,127,.045);
+  .slides-button {
+    position:absolute; top:1.2rem; right:1.2rem;
+    border:1px solid rgba(17,17,17,.18);
+    background:rgba(255,255,255,.85); color:#111;
+    border-radius:999px; padding:.55rem .95rem;
+    font:inherit; font-weight:700; cursor:pointer;
+    backdrop-filter:blur(10px);
   }
-  .deck-slide .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
-  .deck-slide .placeholder{
-    min-height:220px;
-    display:grid;
-    place-items:center;
-    color:rgba(17,17,17,.72);
-    padding:1rem 1.15rem;
-    text-align:center;
+  .slide-number {
+    position:absolute; bottom:1.15rem; right:1.4rem;
+    font-size:1rem; color:rgba(17,17,17,.62);
   }
-  .deck-slide .diag{display:grid;place-items:center;padding:.9rem}
-  .deck-slide .diagram{width:100%;max-width:680px;height:auto}
-  .deck-slide .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
-  .deck-slide .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
-  .deck-slide .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  @media (max-width:900px){
-    .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
-    .slide.two-col .slide-body{grid-template-columns:1fr}
-    .slide h1{font-size:2.3rem}
-    .slide h2{font-size:1.9rem}
+  .deck-toolbar {
+    position:fixed; left:1rem; top:1rem; display:flex; gap:.65rem; z-index:30;
   }
-
-  .bullet-card{
-    padding:1rem 1.15rem;
-    background:rgba(127,127,127,.045);
+  .deck-toolbar button, .slide-map button, .nav-btn {
+    border:1px solid rgba(255,255,255,.14);
+    background:var(--deck-panel); color:var(--deck-text);
+    border-radius:14px; padding:.78rem .95rem;
+    font:inherit; font-weight:700; cursor:pointer;
+    box-shadow:0 18px 45px rgba(0,0,0,.25);
   }
-  .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
-  .placeholder{
-    min-height:220px;
-    display:grid;
-    place-items:center;
-    color:var(--muted);
-    padding:1rem 1.15rem;
-    text-align:center;
+  .slide-map {
+    position:fixed; top:0; right:0; height:100svh; width:min(420px,92vw);
+    background:rgba(7,11,23,.96);
+    border-left:1px solid rgba(255,255,255,.10);
+    padding:1rem; display:none; z-index:35; overflow:auto;
   }
-  .diag{display:grid;place-items:center;padding:.9rem}
-  .diagram{width:100%;max-width:680px;height:auto}
-  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
-  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
-  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-
-  .slide .bullet-card > div,
-  .deck-slide .bullet-card > div{
-    margin-top:.4rem;
+  .slide-map.open { display:block; }
+  .slide-map h3 { margin:.2rem 0 1rem 0; font-size:1.2rem; }
+  .slide-map-list { display:grid; gap:.6rem; }
+  .slide-map-item { display:flex; gap:.6rem; align-items:flex-start; text-align:left; }
+  .slide-map-item span:first-child { opacity:.7; min-width:2.2rem; }
+  @media (max-width:900px) {
+    .deck-slide { padding:1.5rem 1.2rem 4.2rem; }
+    .deck-slide h2 { font-size:1.95rem; }
   }
-  .slide .bullet-card p,
-  .slide .bullet-card ul,
-  .slide .bullet-card ol,
-  .slide .bullet-card h3,
-  .slide .bullet-card .display-math,
-  .deck-slide .bullet-card p,
-  .deck-slide .bullet-card ul,
-  .deck-slide .bullet-card ol,
-  .deck-slide .bullet-card h3,
-  .deck-slide .bullet-card .display-math{
-    border:0 !important;
-    background:transparent !important;
-    box-shadow:none !important;
-    padding:0 !important;
-    border-radius:0 !important;
-    margin:.45rem 0 0 0 !important;
-  }
-  .slide .bullet-card p:first-child,
-  .slide .bullet-card ul:first-child,
-  .slide .bullet-card ol:first-child,
-  .slide .bullet-card h3:first-child,
-  .slide .bullet-card .display-math:first-child,
-  .deck-slide .bullet-card p:first-child,
-  .deck-slide .bullet-card ul:first-child,
-  .deck-slide .bullet-card ol:first-child,
-  .deck-slide .bullet-card h3:first-child,
-  .deck-slide .bullet-card .display-math:first-child{
-    margin-top:0 !important;
-  }
-
-
-  .help code{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: .95em;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 10px;
-    padding: .1rem .4rem;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
 </style>
 <script>
 window.MathJax = {
@@ -222,226 +119,21 @@ window.MathJax = {
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body>
-<div class="page">
-  <div class="panel stack">
-    <div>
-      <div class="smallcaps">Presentation generator</div>
-      <h1>Build slides or a full deck</h1>
-      <p class="help">This version can manage multiple slides and export a full presentation with the same <b>Slides</b> button + slide-map overlay pattern as your decision-trees deck. It also still exports one-slide snippets.</p>
-    </div>
-
-    <div class="field-grid">
-      <div class="field full">
-        <label for="deckTitle">Presentation title</label>
-        <input id="deckTitle" value="My HTML Presentation" />
-      </div>
-      <div class="field">
-        <label for="slideType">Slide type</label>
-        <select id="slideType">
-          <option value="title-center">Centered title slide</option>
-          <option value="single" selected>Single-column content slide</option>
-          <option value="two-col">Two-column body, full-width title</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="headingLevel">Title size</label>
-        <select id="headingLevel">
-          <option value="h1">Large title</option>
-          <option value="h2" selected>Standard title</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="bgColor">Slide background color</label>
-        <select id="bgColor">
-          <option value="#ffffff" selected>White</option>
-          <option value="#f7f1e3">Warm cream</option>
-          <option value="#121212">Charcoal</option>
-          <option value="#0f1630">Navy</option>
-          <option value="#1d3b2a">Forest</option>
-          <option value="#3a1028">Plum</option>
-          <option value="#102a43">Slate blue</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="fontColor">Font color</label>
-        <select id="fontColor">
-          <option value="#111111" selected>Black</option>
-          <option value="#1f2937">Slate</option>
-          <option value="#ffffff">White</option>
-          <option value="#eef3ff">Soft white</option>
-          <option value="#ffe9a8">Warm gold</option>
-          <option value="#d6f5ff">Pale blue</option>
-        </select>
-      </div>
-      <div class="field full">
-        <label for="title">Slide title</label>
-        <input id="title" placeholder="Backpropagation, stage by stage" />
-      </div>
-      <div class="field full">
-        <label for="kicker">Kicker / subtitle under title</label>
-        <input id="kicker" value="" placeholder="Optional short subtitle" />
-      </div>
-      <div class="field full">
-        <label for="lede">Intro line / lead paragraph under title area</label>
-        <textarea id="lede" placeholder="Optional short framing sentence"></textarea>
-      </div>
-      <div class="field">
-        <label for="leftMode">Main body content type</label>
-        <select id="leftMode">
-          <option value="panel" selected>Panel text</option>
-          <option value="diagram">Neural-network diagram placeholder</option>
-          <option value="custom">Custom HTML block</option>
-          <option value="placeholder">Simple placeholder box</option>
-          <option value="plain">Plain text / rich content</option>
-          <option value="pseudocode">Pseudocode block</option>
-          <option value="pseudocode">Pseudocode block</option>
-        </select>
-      </div>
-      <div class="field full">
-        <label for="leftHtml">Main content</label>
-        <textarea id="leftHtml" placeholder="\paragraph{Main idea goes here.}&#10;&#10;\begin{itemize}&#10;\item First point&#10;\item Second point&#10;\end{itemize}&#10;&#10;\begin{equation}&#10;\frac{dL}{dz} = \frac{dL}{da}\frac{da}{dz}&#10;\end{equation}"></textarea>
-      </div>
-      <div class="field full" id="rightModeField">
-        <label for="rightMode">Right column content</label>
-        <select id="rightMode">
-          <option value="panel" selected>Panel text</option>
-          <option value="diagram">Neural-network diagram placeholder</option>
-          <option value="custom">Custom HTML block</option>
-          <option value="placeholder">Simple placeholder box</option>
-          <option value="plain">Plain text / rich content</option>
-        </select>
-      </div>
-      <div class="field full" id="rightHtmlField">
-        <label for="rightHtml">Right-column content text / HTML</label>
-        <textarea id="rightHtml" placeholder="Only used for two-column slides"></textarea>
-        <div class="help">If the mode is <b>panel</b> or <b>plain</b>, this uses the same line prefixes as the left column. If the mode is <b>custom</b>, paste raw HTML. Inline math like <code>$\nabla L$</code> and displayed math like <code>\( \frac{dL}{dw} = x \)</code> render in preview and export.</div>
-      </div>
-      <div class="field">
-        <label for="notesTitle">Speaker notes title</label>
-        <input id="notesTitle" value="Speaker notes" />
-      </div>
-      <div class="field">
-        <label for="notesBody">Speaker notes body</label>
-        <input id="notesBody" value="" />
-      </div>
-    </div>
-
-    <details>
-      <summary>Slide presets</summary>
-      <div class="template-list" style="margin-top:.65rem">
-        <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
-        <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
-        <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
-        <button data-preset="diagram">Diagram slide<small>Tiny-network slide with a built-in neural-net placeholder.</small></button>
-        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
-        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
-      </div>
-    </details>
-
-    <div class="toolbar">
-      <button class="btn primary" id="addSlideBtn">Add as new slide</button>
-      <button class="btn" id="updateSlideBtn">Update selected slide</button>
-      <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
-      <button class="btn" id="deleteSlideBtn">Delete selected</button>
-      <button class="btn" id="clearFormBtn">Clear form</button>
-    </div>
-
-    <div class="panel" style="padding:.9rem">
-      <div class="preview-header">
-        <h2>Deck slides</h2>
-        <span class="badge" id="deckCount">0 slides</span>
-      </div>
-      <div class="deck-list" id="deckList"></div>
-      <div class="row" style="margin-top:.75rem">
-        <button class="btn mini" id="moveUpBtn">Move up</button>
-        <button class="btn mini" id="moveDownBtn">Move down</button>
-      </div>
-    </div>
-
-    <details>
-      <summary>How to write content</summary>
-      <div class="help" style="margin-top:.55rem">
-        <p>Use LaTeX-style content blocks:</p>
-        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
-        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
-        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
-        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
-        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
-        <p>Inline math still works as <code>$x^2$</code>.</p>
-        <p>Inside <code>\begin{equation}...\end{equation}</code>, multi-line alignment with <code>&</code> and <code>\\</code> is supported automatically.</p>
-        <p>Older slides can still use the legacy shortcuts too.</p>
-        <p>For a pseudocode block, choose <code>Pseudocode block</code> as the content type and paste plain indented pseudocode text.</p>
-      </div>
-    </details>
-
-    <div class="toolbar">
-      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
-      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
-      <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
-      <button class="btn" id="resetBtn">Reset to current preset</button>
-      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
-      <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
-    </div>
-  </div>
-
-  <div class="panel preview-wrap">
-    <div class="preview-header">
-      <div>
-        <div class="smallcaps">Live preview</div>
-        <h2 id="previewTitle">Current slide</h2>
-      </div>
-      <span class="badge">Preview and export use the same renderer</span>
-    </div>
-    <div class="preview-viewport">
-      <div id="preview"></div>
-    </div>
-    <div>
-      <div class="preview-header">
-        <h2>Current slide snippet</h2>
-        <span class="muted">For pasting into a larger deck</span>
-      </div>
-      <textarea class="code snippet-box" id="snippetOutput" spellcheck="false"></textarea>
-    </div>
-  </div>
+<div class="deck-toolbar">
+  <button class="nav-btn" id="prevBtn">◀</button>
+  <button class="nav-btn" id="nextBtn">▶</button>
 </div>
-
-<div class="copy-toast" id="toast">Copied</div>
+<div class="slide-map" id="slideMap">
+  <button id="closeMapBtn" style="float:right;">Close</button>
+  <h3 id="deckTitle">Generator with pseudocode-latex preset</h3>
+  <div class="slide-map-list" id="slideMapList"></div>
+</div>
+<div class="deck" id="deck"></div>
 
 <script>
-const fields = {
-  deckTitle: document.getElementById('deckTitle'),
-  slideType: document.getElementById('slideType'),
-  headingLevel: document.getElementById('headingLevel'),
-  bgColor: document.getElementById('bgColor'),
-  fontColor: document.getElementById('fontColor'),
-  title: document.getElementById('title'),
-  kicker: document.getElementById('kicker'),
-  lede: document.getElementById('lede'),
-  leftMode: document.getElementById('leftMode'),
-  leftHtml: document.getElementById('leftHtml'),
-  rightMode: document.getElementById('rightMode'),
-  rightHtml: document.getElementById('rightHtml'),
-  notesTitle: document.getElementById('notesTitle'),
-  notesBody: document.getElementById('notesBody')
-};
-const preview = document.getElementById('preview');
-const snippetOutput = document.getElementById('snippetOutput');
-const deckList = document.getElementById('deckList');
-const deckCount = document.getElementById('deckCount');
-const previewTitle = document.getElementById('previewTitle');
-const toast = document.getElementById('toast');
-let slides = [];
-let activeIndex = -1;
+const deckPayload = JSON.parse(document.getElementById('deck-source').textContent);
 
-function showToast(message){
-  toast.textContent = message;
-  toast.classList.add('show');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>toast.classList.remove('show'), 1400);
-}
-
-function escapeHtml(str){
+function escapeHtml(str) {
   return String(str ?? '')
     .replace(/&/g,'&amp;')
     .replace(/</g,'&lt;')
@@ -450,11 +142,7 @@ function escapeHtml(str){
     .replace(/'/g,'&#39;');
 }
 
-function escapeAttr(str){
-  return escapeHtml(str).replace(/\n/g,'&#10;');
-}
-
-function preserveMathTokens(str){
+function preserveMathTokens(str) {
   const tokens = [];
   let out = String(str ?? '');
   const patterns = [
@@ -463,8 +151,8 @@ function preserveMathTokens(str){
     /\\\([\s\S]+?\\\)/g,
     /\$(?!\s)[^$\n]+?\$/g
   ];
-  patterns.forEach((pattern)=>{
-    out = out.replace(pattern, (m)=>{
+  patterns.forEach((pattern) => {
+    out = out.replace(pattern, (m) => {
       const key = `@@MATH${tokens.length}@@`;
       tokens.push(m);
       return key;
@@ -473,11 +161,11 @@ function preserveMathTokens(str){
   return { out, tokens };
 }
 
-function restoreMathTokens(str, tokens){
-  return String(str).replace(/@@MATH(\d+)@@/g, (_, i)=>tokens[Number(i)] ?? '');
+function restoreMathTokens(str, tokens) {
+  return String(str).replace(/@@MATH(\d+)@@/g, (_, i) => tokens[Number(i)] ?? '');
 }
 
-function hexToRgb(hex){
+function hexToRgb(hex) {
   const clean = String(hex || '').trim().replace('#','');
   if(!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;
   const full = clean.length === 3 ? clean.split('').map(c=>c+c).join('') : clean;
@@ -485,1037 +173,88 @@ function hexToRgb(hex){
   return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
 }
 
-function rgbaFromHex(hex, alpha){
+function rgbaFromHex(hex, alpha) {
   const rgb = hexToRgb(hex);
   if(!rgb) return `rgba(0,0,0,${alpha})`;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
-function buildSlideStyle(slide){
+function buildSlideStyle(slide) {
   const bg = slide.bgColor || '#ffffff';
   const font = slide.fontColor || '#111111';
   const muted = rgbaFromHex(font, 0.72);
-  const line = rgbaFromHex(font, 0.14);
-  return `background:${bg};color:${font};--text:${font};--muted:${muted};--line:${line};`;
+  return `background:${bg};color:${font};--text:${font};--muted:${muted};`;
 }
 
-
-function parseStructuredText(raw){
-  const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
-  if(!text) return '';
-
-  function safeWithMath(str){
-    const { out, tokens } = preserveMathTokens(str);
-    return restoreMathTokens(escapeHtml(out), tokens);
-  }
-
-  const lines = text.split('\n');
-  const parts = [];
-  let paragraph = [];
-  let listType = null;
-  let listItems = [];
-
-  function flushParagraph(){
-    if(!paragraph.length) return;
-    const joined = paragraph.join(' ').trim();
-    if(joined) parts.push(`<p>${safeWithMath(joined)}</p>`);
-    paragraph = [];
-  }
-
-  function flushList(){
-    if(!listItems.length) return;
-    const tag = listType === 'enumerate' ? 'ol' : 'ul';
-    parts.push(`<${tag}>${listItems.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</${tag}>`);
-    listItems = [];
-    listType = null;
-  }
-
-  function collectUntil(endPattern, startIndex){
-    const chunk = [];
-    let i = startIndex;
-    while(i < lines.length && !endPattern.test(lines[i].trim())){
-      chunk.push(lines[i]);
-      i += 1;
-    }
-    return { body: chunk.join('\n').trim(), endIndex: i };
-  }
-
-  function simpleCardBody(body){
-    const trimmed = body.trim();
-    if(!trimmed) return '';
-    return trimmed
-      .split(/\n\s*\n/)
-      .map(block => `<p>${safeWithMath(block.replace(/\s*\n\s*/g, ' ').trim())}</p>`)
-      .join('');
-  }
-
-  for(let i = 0; i < lines.length; i += 1){
-    const line = lines[i].trim();
-
-    if(!line){
-      flushParagraph();
-      flushList();
-      continue;
-    }
-
-    const paragraphMatch = line.match(/^\\paragraph\{([\s\S]*)\}$/);
-    if(paragraphMatch){
-      flushParagraph();
-      flushList();
-      parts.push(`<p>${safeWithMath(paragraphMatch[1].trim())}</p>`);
-      continue;
-    }
-
-    if(/^\\begin\{itemize\}$/i.test(line)){
-      flushParagraph();
-      flushList();
-      const items = [];
-      i += 1;
-      while(i < lines.length && !/^\\end\{itemize\}$/i.test(lines[i].trim())){
-        const itemLine = lines[i].trim();
-        if(itemLine){
-          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
-          if(itemMatch) items.push(itemMatch[1].trim());
-        }
-        i += 1;
-      }
-      parts.push(`<ul>${items.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ul>`);
-      continue;
-    }
-
-    if(/^\\begin\{enumerate\}$/i.test(line)){
-      flushParagraph();
-      flushList();
-      const items = [];
-      i += 1;
-      while(i < lines.length && !/^\\end\{enumerate\}$/i.test(lines[i].trim())){
-        const itemLine = lines[i].trim();
-        if(itemLine){
-          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
-          if(itemMatch) items.push(itemMatch[1].trim());
-        }
-        i += 1;
-      }
-      parts.push(`<ol>${items.map(item=>`<li>${safeWithMath(item)}</li>`).join('')}</ol>`);
-      continue;
-    }
-
-    if(/^\\begin\{equation\}$/i.test(line)){
-      flushParagraph();
-      flushList();
-      const { body, endIndex } = collectUntil(/^\\end\{equation\}$/i, i + 1);
-      const mathBody = escapeHtml(body);
-      parts.push(`<div class="display-math">\\[\\begin{aligned}${mathBody}\\end{aligned}\\]</div>`);
-      i = endIndex;
-      continue;
-    }
-
-    const cardBegin = line.match(/^\\begin\{card\}\{([\s\S]*)\}$/i);
-    if(cardBegin){
-      flushParagraph();
-      flushList();
-      const { body, endIndex } = collectUntil(/^\\end\{card\}$/i, i + 1);
-      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardBegin[1].trim())}</b><div>${simpleCardBody(body)}</div></div>`);
-      i = endIndex;
-      continue;
-    }
-
-    // Legacy syntax retained for older slides
-    if(/^UL:/i.test(line)){
-      flushParagraph();
-      if(listType && listType !== 'itemize') flushList();
-      listType = 'itemize';
-      listItems.push(line.replace(/^UL:/i, '').trim());
-      continue;
-    }
-    if(line.startsWith('- ')){
-      flushParagraph();
-      if(listType && listType !== 'itemize') flushList();
-      listType = 'itemize';
-      listItems.push(line.slice(2).trim());
-      continue;
-    }
-    flushList();
-
-    if(line.startsWith('### ')){
-      flushParagraph();
-      parts.push(`<h3>${safeWithMath(line.slice(4).trim())}</h3>`);
-      continue;
-    }
-    if(/^P:/i.test(line)){
-      flushParagraph();
-      parts.push(`<p>${safeWithMath(line.replace(/^P:/i, '').trim())}</p>`);
-      continue;
-    }
-    if(/^EQ:/i.test(line)){
-      flushParagraph();
-      const eq = line.replace(/^EQ:/i, '').trim();
-      parts.push(`<div class="display-math">${safeWithMath(eq)}</div>`);
-      continue;
-    }
-    if(/^CARD:/i.test(line)){
-      flushParagraph();
-      const payload = line.replace(/^CARD:/i, '').trim();
-      const [cardTitle, ...rest] = payload.split('|');
-      const cardBody = rest.join('|');
-      parts.push(`<div class="bullet-card"><b>${safeWithMath(cardTitle || '')}</b><div><p>${safeWithMath(cardBody || '')}</p></div></div>`);
-      continue;
-    }
-    if((/^\\\(.+\\\)$/s).test(line)){
-      flushParagraph();
-      const body = line.replace(/^\\\(/, '').replace(/\\\)$/, '');
-      parts.push(`<div class="display-math">\\[${escapeHtml(body)}\\]</div>`);
-      continue;
-    }
-    if((/^\\\[.+\\\]$/s).test(line) || (/^\$\$.+\$\$$/s).test(line)){
-      flushParagraph();
-      parts.push(`<div class="display-math">${safeWithMath(line)}</div>`);
-      continue;
-    }
-
-    paragraph.push(line);
-  }
-
-  flushParagraph();
-  flushList();
-  return parts.join('\n');
-}
-
-function diagramMarkup(){
-  return `
-  <div class="diag">
-    <svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder">
-      <line x1="145" y1="145" x2="355" y2="125" class="edge blue"/>
-      <line x1="145" y1="145" x2="355" y2="295" class="edge blue"/>
-      <line x1="145" y1="285" x2="355" y2="125" class="edge blue"/>
-      <line x1="145" y1="285" x2="355" y2="295" class="edge blue"/>
-      <line x1="405" y1="125" x2="615" y2="215" class="edge red"/>
-      <line x1="405" y1="295" x2="615" y2="215" class="edge red"/>
-      <circle cx="115" cy="145" r="34" class="node blue"/>
-      <circle cx="115" cy="285" r="34" class="node blue"/>
-      <circle cx="375" cy="125" r="38" class="node blue"/>
-      <circle cx="375" cy="295" r="38" class="node blue"/>
-      <circle cx="645" cy="215" r="42" class="node red"/>
-      <text x="100" y="151" class="label">x₁</text>
-      <text x="100" y="291" class="label">x₂</text>
-      <text x="360" y="131" class="label">h₁</text>
-      <text x="360" y="301" class="label">h₂</text>
-      <text x="628" y="221" class="label">ŷ</text>
-    </svg>
-  </div>`;
-}
-function getFormSlide(){
-  return {
-    slideType: fields.slideType.value,
-    headingLevel: fields.headingLevel.value,
-    bgColor: fields.bgColor.value,
-    fontColor: fields.fontColor.value,
-    title: fields.title.value.trim(),
-    kicker: fields.kicker.value.trim(),
-    lede: fields.lede.value.trim(),
-    leftMode: fields.leftMode.value,
-    leftHtml: fields.leftHtml.value,
-    rightMode: fields.rightMode.value,
-    rightHtml: fields.rightHtml.value,
-    notesTitle: fields.notesTitle.value.trim(),
-    notesBody: fields.notesBody.value.trim()
-  };
-}
-
-function applySlideToForm(slide){
-  fields.slideType.value = slide.slideType || 'single';
-  fields.headingLevel.value = slide.headingLevel || 'h2';
-  fields.bgColor.value = slide.bgColor || '#ffffff';
-  fields.fontColor.value = slide.fontColor || '#111111';
-  fields.title.value = slide.title || '';
-  fields.kicker.value = slide.kicker || '';
-  fields.lede.value = slide.lede || '';
-  fields.leftMode.value = slide.leftMode || 'panel';
-  fields.leftHtml.value = slide.leftHtml || '';
-  fields.rightMode.value = slide.rightMode || 'panel';
-  fields.rightHtml.value = slide.rightHtml || '';
-  fields.notesTitle.value = slide.notesTitle || 'Speaker notes';
-  fields.notesBody.value = slide.notesBody || '';
-  syncFields();
-}
-
-
-function buildModeContent(mode, raw, placeholderText){
+function buildModeContent(mode, raw, placeholderText) {
   const resolvedMode = mode || 'panel';
-  if(resolvedMode === 'diagram') return diagramMarkup();
-  if(resolvedMode === 'custom') return raw || '<div class="placeholder">Paste custom HTML here.</div>';
-  if(resolvedMode === 'placeholder'){
-    return `<div class="placeholder">${escapeHtml(raw || placeholderText || 'Placeholder')}</div>`;
+  if (resolvedMode === 'pseudocode') {
+    return `<pre class="pseudo-block">${escapeHtml(raw || '')}</pre>`;
   }
-  if(resolvedMode === 'pseudocode'){
-    return `<pre class="pseudo-block">${escapeHtml(raw || placeholderText || 'Algorithm()\n  step 1\n  step 2')}</pre>`;
+  if (resolvedMode === 'pseudocode-latex') {
+    const { out, tokens } = preserveMathTokens(raw || '');
+    return `<div class="pseudo-latex-block">${restoreMathTokens(escapeHtml(out), tokens)}</div>`;
   }
-  const rich = parseStructuredText(raw);
-  if(resolvedMode === 'plain') return `<div class="rich">${rich}</div>`;
-  return `<div class="rich">${rich}</div>`;
+  return `<div class="placeholder">${escapeHtml(placeholderText || 'Placeholder')}</div>`;
 }
 
-function buildRightContent(slide){
-  return buildModeContent(slide.rightMode, slide.rightHtml, 'Right-column placeholder');
-}
-function buildSlideInner(slide){
+function buildSlideInner(slide) {
   const heading = slide.headingLevel || 'h2';
   const titleHtml = `<${heading}>${escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>')}</${heading}>`;
   const kickerHtml = slide.kicker ? `<div class="kicker">${escapeHtml(slide.kicker)}</div>` : '';
   const ledeHtml = slide.lede ? `<div class="lede">${escapeHtml(slide.lede)}</div>` : '';
-  if(slide.slideType === 'title-center'){
-    return `<div class="title-center">${titleHtml}${kickerHtml}</div>`;
-  }
-  if(slide.slideType === 'two-col'){
-    return `
-      ${titleHtml}
-      ${kickerHtml}
-      ${ledeHtml}
-      <div class="slide-body">
-        <div class="col">${buildModeContent(slide.leftMode, slide.leftHtml, 'Left-column placeholder')}</div>
-        <div class="col">${buildRightContent(slide)}</div>
-      </div>
-    `;
-  }
-  return `
-    ${titleHtml}
-    ${kickerHtml}
-    ${ledeHtml}
-    <div class="slide-body">
-      <div class="col">${buildModeContent(slide.leftMode, slide.leftHtml, 'Main content placeholder')}</div>
-    </div>
-  `;
+  return `${titleHtml}${kickerHtml}${ledeHtml}<div class="slide-body"><div class="col">${buildModeContent(slide.leftMode, slide.leftHtml, 'Main content placeholder')}</div></div>`;
 }
 
-function buildSlideSnippet(slide){
-  const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
-  return `<section class="${cls}" style="${escapeAttr(buildSlideStyle(slide))}">
-${buildSlideInner(slide).trim()}
-</section>`;
-}
+const deck = document.getElementById('deck');
+const slideMap = document.getElementById('slideMap');
+const slideMapList = document.getElementById('slideMapList');
 
-function typesetPreview(){
-  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
-    if(typeof window.MathJax.typesetClear === 'function'){
-      window.MathJax.typesetClear([preview]);
-    }
-    window.MathJax.typesetPromise([preview]).catch(()=>{});
+deck.innerHTML = deckPayload.slides.map((slide, idx) => `
+  <section class="deck-slide single" data-index="${idx}" style="${buildSlideStyle(slide)}">
+    <button class="slides-button" type="button">Slides</button>
+    <div class="slide-number">${idx + 1} / ${deckPayload.slides.length}</div>
+    ${buildSlideInner(slide).trim()}
+  </section>
+`).join('\n');
+
+slideMapList.innerHTML = deckPayload.slides.map((slide, idx) => `
+  <button type="button" class="slide-map-item" data-go="${idx}">
+    <span>${idx + 1}.</span>
+    <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span>
+  </button>
+`).join('');
+
+let active = 0;
+const slideEls = Array.from(document.querySelectorAll('.deck-slide'));
+
+function render() {
+  slideEls.forEach((el, i) => el.classList.toggle('active', i === active));
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    if (typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear(slideEls);
+    window.MathJax.typesetPromise(slideEls.filter(el => el.classList.contains('active'))).catch(() => {});
   }
 }
 
-function buildPreview(){
-  const slide = getFormSlide();
-  preview.innerHTML = buildSlideSnippet(slide);
-  snippetOutput.value = buildSlideSnippet(slide);
-  previewTitle.textContent = activeIndex >= 0 ? ((slide.title || 'Untitled slide') + ` (editing slide ${activeIndex + 1})`) : (slide.title || 'Draft slide');
-  typesetPreview();
-}
-
-function renderDeckList(){
-  deckList.innerHTML = '';
-  slides.forEach((slide, idx)=>{
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'deck-item' + (idx === activeIndex ? ' active' : '');
-    btn.innerHTML = `<b>${idx + 1}. ${escapeHtml(slide.title || 'Untitled slide')}</b><span class="meta">${escapeHtml(slide.slideType)}</span>`;
-    btn.addEventListener('click', ()=>{
-      activeIndex = idx;
-      applySlideToForm(slides[idx]);
-      renderDeckList();
-      buildPreview();
-    });
-    deckList.appendChild(btn);
-  });
-  deckCount.textContent = `${slides.length} ${slides.length === 1 ? 'slide' : 'slides'}`;
-}
-
-function addSlide(){
-  const slide = structuredClone(getFormSlide());
-  slides = slides.concat([slide]);
-  activeIndex = -1;
-  renderDeckList();
-  buildPreview();
-  showToast('Added slide as a new deck item.');
-}
-
-function updateSlide(){
-  if(activeIndex < 0){
-    addSlide();
-    return;
-  }
-  slides[activeIndex] = structuredClone(getFormSlide());
-  renderDeckList();
-  showToast('Updated slide.');
-}
-
-function duplicateSlide(){
-  if(activeIndex < 0 || !slides[activeIndex]) return;
-  slides.splice(activeIndex + 1, 0, structuredClone(slides[activeIndex]));
-  activeIndex += 1;
-  renderDeckList();
-  showToast('Duplicated slide.');
-}
-
-function deleteSlide(){
-  if(activeIndex < 0) return;
-  slides.splice(activeIndex, 1);
-  if(!slides.length) activeIndex = -1;
-  else activeIndex = Math.min(activeIndex, slides.length - 1);
-  if(activeIndex >= 0) applySlideToForm(slides[activeIndex]);
-  renderDeckList();
-  buildPreview();
-  showToast('Deleted slide.');
-}
-
-function moveActive(delta){
-  if(activeIndex < 0) return;
-  const target = activeIndex + delta;
-  if(target < 0 || target >= slides.length) return;
-  const [item] = slides.splice(activeIndex, 1);
-  slides.splice(target, 0, item);
-  activeIndex = target;
-  renderDeckList();
-  showToast('Moved slide.');
-}
-
-function clearForm(){
-  applySlideToForm({
-    slideType:'single',
-    headingLevel:'h2',
-    bgColor:'#ffffff',
-    fontColor:'#111111',
-    title:'',
-    kicker:'',
-    lede:'',
-    leftMode:'panel',
-    leftHtml:'',
-    rightMode:'panel',
-    rightHtml:'',
-    notesTitle:'Speaker notes',
-    notesBody:''
-  });
-  activeIndex = -1;
-  buildPreview();
-  renderDeckList();
-}
-
-function syncFields(){
-  const twoCol = fields.slideType.value === 'two-col';
-  document.getElementById('rightModeField').style.display = twoCol ? 'grid' : 'none';
-  document.getElementById('rightHtmlField').style.display = twoCol ? 'grid' : 'none';
-  const leftModeLabel = document.querySelector('label[for="leftMode"]');
-  const leftHtmlLabel = document.querySelector('label[for="leftHtml"]');
-  if(leftModeLabel) leftModeLabel.textContent = twoCol ? 'Left-column content type' : 'Main body content type';
-  if(leftHtmlLabel) leftHtmlLabel.textContent = twoCol ? 'Left-column content' : 'Main content';
-}
-
-async function copyText(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    return true;
-  }catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-    return true;
-  }
-}
-
-function downloadText(filename, text){
-  const blob = new Blob([text], {type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1500);
-}
-
-
-function sanitizeHtmlFilename(name, fallback){
-  let base = String(name || '').trim();
-  if(!base) base = fallback;
-  base = base.replace(/\.html?$/i, '').trim();
-  base = base.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
-  if(!base) base = fallback;
-  return `${base}.html`;
-}
-
-function buildStandaloneSlideHtml(slide){
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${escapeHtml(slide.title || 'Slide')}</title>
-<style>
-  html,body{margin:0;min-height:100%;background:#0b1020;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{min-height:100svh;display:grid;place-items:center;padding:1rem}
-  ${document.querySelector('style').textContent}
-
-  .slide .bullet-card > div,
-  .deck-slide .bullet-card > div{
-    margin-top:.4rem;
-  }
-  .slide .bullet-card p,
-  .slide .bullet-card ul,
-  .slide .bullet-card ol,
-  .slide .bullet-card h3,
-  .slide .bullet-card .display-math,
-  .deck-slide .bullet-card p,
-  .deck-slide .bullet-card ul,
-  .deck-slide .bullet-card ol,
-  .deck-slide .bullet-card h3,
-  .deck-slide .bullet-card .display-math{
-    border:0 !important;
-    background:transparent !important;
-    box-shadow:none !important;
-    padding:0 !important;
-    border-radius:0 !important;
-    margin:.45rem 0 0 0 !important;
-  }
-  .slide .bullet-card p:first-child,
-  .slide .bullet-card ul:first-child,
-  .slide .bullet-card ol:first-child,
-  .slide .bullet-card h3:first-child,
-  .slide .bullet-card .display-math:first-child,
-  .deck-slide .bullet-card p:first-child,
-  .deck-slide .bullet-card ul:first-child,
-  .deck-slide .bullet-card ol:first-child,
-  .deck-slide .bullet-card h3:first-child,
-  .deck-slide .bullet-card .display-math:first-child{
-    margin-top:0 !important;
-  }
-
-</style>
-<script>
-window.MathJax = {
-  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
-  svg: { fontCache: 'global' }
-};
-<\/script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
-</head>
-<body>
-<div class="wrap">
-${buildSlideSnippet(slide)}
-</div>
-<script>
-window.addEventListener('load', ()=> {
-  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
-    window.MathJax.typesetPromise().catch(()=>{});
-  }
-});
-<\/script>
-</body>
-</html>`;
-}
-
-
-function encodeDeckPayload(payload){
-  return JSON.stringify(payload)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-}
-
-async function loadDeckFromFile(file){
-  const htmlText = await file.text();
-  const match = htmlText.match(/<script id="deck-source" type="application\/json">([\s\S]*?)<\/script>/i);
-  if(!match) throw new Error('This HTML file does not contain editable slide data.');
-  let payload;
-  try{
-    payload = JSON.parse(match[1]);
-  }catch(err){
-    throw new Error('Editable slide data exists but could not be parsed.');
-  }
-  if(!payload || !Array.isArray(payload.slides)) throw new Error('Editable slide data is invalid.');
-  fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
-  slides = payload.slides.map(s => structuredClone(s));
-  if(slides.length){
-    activeIndex = 0;
-    applySlideToForm(slides[0]);
-  }else{
-    activeIndex = -1;
-    clearForm();
-  }
-  renderDeckList();
-  buildPreview();
-}
-
-function buildDeckHtml(deckTitle, deckSlides){
-  const slideSections = deckSlides.map((slide, idx)=>{
-    const cls = slide.slideType === 'title-center' ? 'deck-slide title-center' : (slide.slideType === 'two-col' ? 'deck-slide two-col' : 'deck-slide single');
-    return `<section class="${cls}" data-index="${idx}" data-title="${escapeAttr(slide.title || `Slide ${idx+1}`)}" style="${escapeAttr(buildSlideStyle(slide))}">
-      <button class="slides-button" type="button">Slides</button>
-      <div class="slide-number">${idx + 1} / ${deckSlides.length}</div>
-      ${buildSlideInner(slide).trim()}
-    </section>`;
-  }).join('\n');
-
-  const slideList = deckSlides.map((slide, idx)=>`<button type="button" class="slide-map-item" data-go="${idx}"><span>${idx + 1}.</span> <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span></button>`).join('\n');
-  const deckPayload = encodeDeckPayload({ deckTitle: deckTitle || 'Presentation', slides: deckSlides });
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${escapeHtml(deckTitle || 'Presentation')}</title>
-<style>
-  :root{
-    --deck-bg:#060a16;
-    --deck-panel:rgba(10,16,32,.82);
-    --deck-line:rgba(255,255,255,.14);
-    --deck-text:#eef3ff;
-    --deck-muted:#b7c4e8;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%, #0b1020 45%, #070b17 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  body{color:var(--deck-text);overflow:hidden}
-  .deck{position:relative;width:100vw;height:100svh}
-  .deck-slide{
-    display:none;
-    position:absolute;
-    inset:0;
-    overflow:auto;
-    padding:3.2rem 3.5rem 5rem;
-    background:#fff;
-    color:#111;
-  }
-  .deck-slide.active{display:block}
-  .deck-slide h1,.deck-slide h2{margin:0;line-height:1.05}
-  .deck-slide h1{font-size:3.5rem;max-width:15ch}
-  .deck-slide h2{font-size:2.3rem}
-  .deck-slide .kicker{margin-top:.6rem;color:rgba(17,17,17,.72);font-size:1.08rem;line-height:1.5;max-width:68ch}
-  .deck-slide .lede{margin-top:1rem;color:rgba(17,17,17,.72);font-size:1.24rem;line-height:1.56;max-width:68ch}
-  .deck-slide .slide-body{margin-top:1.35rem}
-  .deck-slide.single .slide-body{display:block}
-  .deck-slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
-  .deck-slide .col{min-width:0}
-  .deck-slide .rich{display:grid;gap:1rem}
-  .deck-slide .rich p,
-  .deck-slide .rich ul,
-  .deck-slide .rich ol,
-  .deck-slide .rich h3,
-  .deck-slide .display-math,
-  .deck-slide .bullet-card,
-  .deck-slide .placeholder,
-  .deck-slide .diag,
-  .deck-slide .pseudo-block{
-    margin:0;
-    border:1px solid var(--line);
-    border-radius:22px;
-    background:rgba(127,127,127,.045);
-    box-shadow:0 8px 24px rgba(0,0,0,.04);
-  }
-  .deck-slide .rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
-  .deck-slide .rich ul,.deck-slide .rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
-  .deck-slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
-  .deck-slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
-  .deck-slide .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
-  .deck-slide .pseudo-block{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 1.08rem;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    tab-size: 2;
-    padding: 1rem 1.15rem;
-    overflow-x: auto;
-    color: rgba(17,17,17,.9);
-  }
-  .slide .pseudo-block{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 1.08rem;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    tab-size: 2;
-    padding: 1rem 1.15rem;
-    overflow-x: auto;
-    color: rgba(17,17,17,.9);
-  }
-  .deck-slide.title-center{
-    display:none;
-    place-items:center;
-    text-align:center;
-    padding:3rem;
-  }
-  .deck-slide.title-center.active{display:grid}
-  .deck-slide.title-center h1,.deck-slide.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
-  .deck-slide.title-center .kicker{max-width:24ch;margin-left:auto;margin-right:auto}
-  .slides-button,.nav-btn,.map-close{
-    border:1px solid rgba(255,255,255,.16);
-    background:rgba(9,15,31,.85);
-    color:var(--deck-text);
-    border-radius:999px;
-    padding:.72rem 1rem;
-    font:inherit;
-    font-weight:700;
-    cursor:pointer;
-    backdrop-filter:blur(12px);
-  }
-  .slides-button{position:fixed;left:1rem;top:1rem;z-index:12}
-  .slide-number{
-    position:fixed;right:1rem;top:1rem;z-index:12;
-    border:1px solid rgba(255,255,255,.14);
-    background:rgba(9,15,31,.72);
-    color:var(--deck-text);
-    border-radius:999px;
-    padding:.62rem .85rem;
-    font-size:.92rem;
-    backdrop-filter:blur(12px);
-  }
-  .deck-controls{
-    position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);
-    z-index:12;display:flex;gap:.65rem
-  }
-  .slide-map{
-    position:fixed;inset:0;z-index:20;display:none;
-    background:rgba(4,8,18,.72);backdrop-filter:blur(12px);
-    padding:1rem;
-  }
-  .slide-map.open{display:block}
-  .slide-map-panel{
-    max-width:980px;
-    margin:0 auto;
-    height:calc(100svh - 2rem);
-    background:rgba(9,15,31,.92);
-    color:var(--deck-text);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:28px;
-    overflow:auto;
-    padding:1rem;
-  }
-  .slide-map-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:1rem}
-  .slide-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.85rem}
-  .slide-map-item{
-    text-align:left;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--deck-text);
-    border-radius:18px;padding:1rem;font:inherit;cursor:pointer;display:grid;gap:.3rem
-  }
-  .slide-map-item span:first-child{color:var(--deck-muted);font-size:.9rem}
-  .bullet-card{
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:.85rem .95rem;
-    margin:.9rem 0;
-    background:rgba(127,127,127,.04);
-  }
-  .bullet-card b{display:block;margin-bottom:.3rem}
-  .placeholder{
-    min-height:220px;border:1px dashed var(--line);border-radius:24px;display:grid;place-items:center;color:rgba(17,17,17,.55);padding:1rem;text-align:center;
-  }
-  .diag{display:grid;place-items:center;padding:.5rem 0}
-  .diagram{width:100%;max-width:680px;height:auto}
-  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
-  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
-  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  @media (max-width: 900px){
-    .deck-slide{padding:4.4rem 1.15rem 5rem}
-    .deck-slide.two-col .slide-body{grid-template-columns:1fr}
-    .deck-slide h1{font-size:2.5rem}
-    .deck-slide h2{font-size:1.8rem}
-  }
-
-  .slide .bullet-card > div,
-  .deck-slide .bullet-card > div{
-    margin-top:.4rem;
-  }
-  .slide .bullet-card p,
-  .slide .bullet-card ul,
-  .slide .bullet-card ol,
-  .slide .bullet-card h3,
-  .slide .bullet-card .display-math,
-  .deck-slide .bullet-card p,
-  .deck-slide .bullet-card ul,
-  .deck-slide .bullet-card ol,
-  .deck-slide .bullet-card h3,
-  .deck-slide .bullet-card .display-math{
-    border:0 !important;
-    background:transparent !important;
-    box-shadow:none !important;
-    padding:0 !important;
-    border-radius:0 !important;
-    margin:.45rem 0 0 0 !important;
-  }
-  .slide .bullet-card p:first-child,
-  .slide .bullet-card ul:first-child,
-  .slide .bullet-card ol:first-child,
-  .slide .bullet-card h3:first-child,
-  .slide .bullet-card .display-math:first-child,
-  .deck-slide .bullet-card p:first-child,
-  .deck-slide .bullet-card ul:first-child,
-  .deck-slide .bullet-card ol:first-child,
-  .deck-slide .bullet-card h3:first-child,
-  .deck-slide .bullet-card .display-math:first-child{
-    margin-top:0 !important;
-  }
-
-</style>
-<script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$','$'], ['\\\\(','\\\\)']],
-    displayMath: [['$$','$$'], ['\\\\[','\\\\]']]
-  },
-  svg: { fontCache: 'global' }
-};
-<\/script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
-</head>
-<body>
-<div class="deck">
-  ${slideSections}
-  <div class="deck-controls">
-    <button class="nav-btn" id="prevBtn" type="button">Previous</button>
-    <button class="nav-btn" id="nextBtn" type="button">Next</button>
-  </div>
-
-  <div class="slide-map" id="slideMap" aria-hidden="true">
-    <div class="slide-map-panel">
-      <div class="slide-map-head">
-        <div>
-          <div style="letter-spacing:.12em;text-transform:uppercase;color:var(--deck-muted);font-size:.76rem">Slide list</div>
-          <h2 style="margin:.2rem 0 0 0;font-size:1.45rem">${escapeHtml(deckTitle || 'Presentation')}</h2>
-        </div>
-        <button class="map-close" id="mapClose" type="button">Close</button>
-      </div>
-      <div class="slide-map-grid">${slideList}</div>
-      <p style="color:var(--deck-muted);margin-top:1rem">Keyboard: ←/→ navigate, T open slide list, F fullscreen, Esc close.</p>
-    </div>
-  </div>
-</div>
-<script id="deck-source" type="application/json">${deckPayload}<\/script>
-<script>
-const slides = Array.from(document.querySelectorAll('.deck-slide'));
-const map = document.getElementById('slideMap');
-const mapItems = Array.from(document.querySelectorAll('.slide-map-item'));
-let index = 0;
-function render(){
-  slides.forEach((slide,i)=>slide.classList.toggle('active', i === index));
-  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
-    window.MathJax.typesetPromise([slides[index]]).catch(()=>{});
-  }
-}
-function go(n){
-  index = (n + slides.length) % slides.length;
+function go(i) {
+  if (i < 0 || i >= slideEls.length) return;
+  active = i;
   render();
+  slideMap.classList.remove('open');
 }
-function next(){ go(index + 1); }
-function prev(){ go(index - 1); }
-function openMap(){ map.classList.add('open'); map.setAttribute('aria-hidden','false'); }
-function closeMap(){ map.classList.remove('open'); map.setAttribute('aria-hidden','true'); }
 
-document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click', openMap));
-document.getElementById('mapClose').addEventListener('click', closeMap);
-document.getElementById('nextBtn').addEventListener('click', next);
-document.getElementById('prevBtn').addEventListener('click', prev);
-mapItems.forEach(item=>item.addEventListener('click', ()=>go(Number(item.dataset.go))));
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
-  else if(e.key === 'ArrowLeft'){ e.preventDefault(); prev(); }
-  else if(e.key.toLowerCase() === 't'){ openMap(); }
-  else if(e.key === 'Escape'){ closeMap(); }
-  else if(e.key.toLowerCase() === 'f'){
-    if(document.fullscreenElement) document.exitFullscreen();
-    else document.documentElement.requestFullscreen?.();
-  }
+document.getElementById('prevBtn').addEventListener('click', () => go(active - 1));
+document.getElementById('nextBtn').addEventListener('click', () => go(active + 1));
+document.getElementById('closeMapBtn').addEventListener('click', () => slideMap.classList.remove('open'));
+document.querySelectorAll('.slides-button').forEach(btn => btn.addEventListener('click', () => slideMap.classList.add('open')));
+document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => go(Number(btn.dataset.go))));
+window.addEventListener('keydown', (e) => {
+  if (['ArrowRight','PageDown',' '].includes(e.key)) { e.preventDefault(); go(active + 1); }
+  if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); go(active - 1); }
+  if (e.key === 'Escape') slideMap.classList.remove('open');
 });
-let touchStartX = null;
-document.addEventListener('touchstart', e=>{ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
-document.addEventListener('touchend', e=>{
-  if(touchStartX == null) return;
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  if(Math.abs(dx) > 50){ if(dx < 0) next(); else prev(); }
-  touchStartX = null;
-}, {passive:true});
-window.addEventListener('load', ()=> {
-  render();
-  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
-    window.MathJax.typesetPromise().catch(()=>{});
-  }
-});
-<\/script>
-</body>
-</html>`;
-}
-function mathJaxHelper(){
-  return `<script>
-window.MathJax = {
-  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },
-  svg: { fontCache: 'global' }
-};
-<\/script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>`;
-}
 
-async function copyMathJaxHelper(){
-  await copyText(mathJaxHelper());
-  showToast('Copied MathJax helper.');
-}
-
-async function copyCurrentSnippet(){
-  const ok = await copyText(snippetOutput.value);
-  if(ok) showToast('Copied current slide snippet.');
-}
-
-function downloadStandalone(){
-  downloadText('slide-standalone.html', buildStandaloneSlideHtml(getFormSlide()));
-  showToast('Downloaded standalone slide.');
-}
-
-function downloadDeck(){
-  const deckSlides = slides.length ? slides : [getFormSlide()];
-  const suggestedBase = (fields.deckTitle.value || 'presentation').trim() || 'presentation';
-  const requested = window.prompt('Save full presentation as:', sanitizeHtmlFilename(suggestedBase, 'presentation'));
-  if(requested === null) return;
-  const filename = sanitizeHtmlFilename(requested, 'presentation');
-  downloadText(filename, buildDeckHtml(fields.deckTitle.value.trim(), deckSlides));
-  showToast(`Downloaded ${filename}`);
-}
-
-
-function applyPreset(name){
-  const presets = {
-    title: {
-      slideType:'title-center',
-      headingLevel:'h1',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'Lecture title',
-      kicker:'',
-      lede:'',
-      leftMode:'panel',
-      leftHtml:'',
-      rightMode:'panel',
-      rightHtml:'',
-      notesTitle:'Speaker notes',
-      notesBody:'Open the lecture with the central question before showing any formulas.'
-    },
-    concept: {
-      slideType:'single',
-      headingLevel:'h2',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'Main concept',
-      kicker:'',
-      lede:'One sentence to frame the slide.',
-      leftMode:'panel',
-      leftHtml:'\paragraph{Teach the pattern before teaching every symbol.}\n\n\begin{itemize}\n\item First key point\n\item Second key point\n\item Third key point\n\end{itemize}\n\n\begin{equation}\n\nabla_w L = \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\n\end{equation}\n\n\begin{card}{Key idea}\nEach neuron turns an incoming sensitivity into an outgoing sensitivity.\n\end{card}',
-      rightMode:'panel',
-      rightHtml:'',
-      notesTitle:'Speaker notes',
-      notesBody:'State the pattern first, then connect it to the symbols.'
-    },
-    twocol: {
-      slideType:'two-col',
-      headingLevel:'h2',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'Two-column lecture slide',
-      kicker:'Title spans the full width',
-      lede:'Use the left side for bullets and the right side for a figure, derivation, or demo.',
-      leftMode:'panel',
-      leftHtml:'\paragraph{Put the main story in the left column.}\n\n\begin{itemize}\n\item Left-column point one\n\item Left-column point two\n\end{itemize}\n\n\begin{equation}\nI_T(S)=\frac{|S_L|}{|S|}I(S_L)+\frac{|S_R|}{|S|}I(S_R)\n\end{equation}',
-      rightMode:'panel',
-      rightHtml:'\paragraph{Use the right column for examples.}\n\n\begin{itemize}\n\item Figure description\n\item Example\n\item Mini derivation\n\end{itemize}',
-      notesTitle:'Speaker notes',
-      notesBody:'Pause before moving from the left column to the right.'
-    },
-    diagram: {
-      slideType:'two-col',
-      headingLevel:'h2',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'A tiny 2–2–1 network',
-      kicker:'',
-      lede:'Keep the network small enough that every activation and derivative can stay visible on screen.',
-      leftMode:'panel',
-      leftHtml:'\paragraph{This slide introduces the toy model used throughout the lecture.}\n\n\begin{card}{Why this network}\nIt is the smallest network that still has a hidden layer, so every stage of backprop is visible.\n\end{card}',
-      rightMode:'diagram',
-      rightHtml:'Diagram',
-      notesTitle:'Speaker notes',
-      notesBody:'Name the variables once here so you can reference them quickly later.'
-    },
-    appendix: {
-      slideType:'single',
-      headingLevel:'h2',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'Backprop recipe',
-      kicker:'',
-      lede:'This makes a clean end-of-lecture summary slide.',
-      leftMode:'panel',
-      leftHtml:'\paragraph{A concise recipe is often more memorable than full notation.}\n\n\begin{enumerate}\n\item run forward and cache activations\n\item compute the loss\n\item start at the output gradient\n\item move backward via local derivatives\n\item update the parameters\n\end{enumerate}',
-      rightMode:'panel',
-      rightHtml:'',
-      notesTitle:'Speaker notes',
-      notesBody:'Deliver this slide briskly as the recap.'
-    },
-    pseudocode: {
-      slideType:'single',
-      headingLevel:'h2',
-      bgColor:'#ffffff',
-      fontColor:'#111111',
-      title:'Training procedure',
-      kicker:'',
-      lede:'',
-      leftMode:'pseudocode',
-      leftHtml:'Initialize parameters W, b\nfor epoch = 1 to T\n  for each minibatch B\n    compute predictions on B\n    compute loss L\n    compute gradients ∇W L, ∇b L\n    update parameters\n  end\nend',
-      rightMode:'panel',
-      rightHtml:'',
-      notesTitle:'Speaker notes',
-      notesBody:'Walk through the algorithm top to bottom before discussing each step in detail.'
-    }
-  };
-  applySlideToForm(presets[name]);
-  buildPreview();
-}
-document.querySelectorAll('input,select,textarea').forEach(el=>{
-  el.addEventListener('input', ()=>{
-    syncFields();
-    buildPreview();
-  });
-  el.addEventListener('change', ()=>{
-    syncFields();
-    buildPreview();
-  });
-});
-document.getElementById('addSlideBtn').addEventListener('click', addSlide);
-document.getElementById('updateSlideBtn').addEventListener('click', updateSlide);
-document.getElementById('duplicateSlideBtn').addEventListener('click', duplicateSlide);
-document.getElementById('deleteSlideBtn').addEventListener('click', deleteSlide);
-document.getElementById('moveUpBtn').addEventListener('click', ()=>moveActive(-1));
-document.getElementById('moveDownBtn').addEventListener('click', ()=>moveActive(1));
-document.getElementById('clearFormBtn').addEventListener('click', clearForm);
-document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentSnippet);
-document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
-document.getElementById('resetBtn').addEventListener('click', ()=>clearForm());
-document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
-document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
-document.getElementById('loadDeckBtn').addEventListener('click', ()=>document.getElementById('loadDeckInput').click());
-document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
-  if(!file) return;
-  try{
-    await loadDeckFromFile(file);
-    showToast('Loaded editable presentation.');
-  }catch(err){
-    alert(err.message || 'Could not load this HTML file.');
-  }finally{
-    e.target.value = '';
-  }
-});
-document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
-
-syncFields();
-applyPreset('concept');
-buildPreview();
-renderDeckList();
+render();
 </script>
 </body>
 </html>
