@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pseudocode LaTeX Preset Demo</title>
+<script id="deck-source" type="application/json">{"deckTitle": "Pseudocode LaTeX Preset Demo", "slides": [{"slideType": "single", "headingLevel": "h2", "bgColor": "#ffffff", "fontColor": "#111111", "title": "Forward Pass", "kicker": "Using the new pseudocode-latex preset", "lede": "", "leftMode": "pseudocode-latex", "leftHtml": "Input: \\(x\\), parameters \\(W[1], \\dots, W[T], b^1, \\dots, b^T, \\alpha, b\\)\n\n\\(z^0 \\leftarrow x\\)\nfor \\(t = 1\\) to \\(T\\) do\n  \\(u^t \\leftarrow W[t] z^{t-1} + b^t\\)\n  \\(z^t \\leftarrow \\sigma(u^t)\\)\nend\n\n\\(\\hat y \\leftarrow \\alpha^\\top z^T + b\\)\nreturn \\(\\hat y\\)", "rightMode": "panel", "rightHtml": ""}, {"slideType": "single", "headingLevel": "h2", "bgColor": "#ffffff", "fontColor": "#111111", "title": "Backward Pass", "kicker": "Math stays typeset inside the pseudocode block", "lede": "", "leftMode": "pseudocode-latex", "leftHtml": "Input: stored forward-pass values, target \\(y\\)\n\n\\(\\nabla_\\alpha \\ell \\leftarrow \\ell'(\\hat y, y)\\, z^T\\)\n\\(\\nabla_b \\ell \\leftarrow \\ell'(\\hat y, y)\\)\n\\(\\delta^T \\leftarrow \\ell'(\\hat y, y)\\, \\alpha \\odot \\sigma'(u^T)\\)\n\nfor \\(t = T\\) down to \\(1\\) do\n  \\(\\nabla_{W[t]} \\ell \\leftarrow \\delta^t (z^{t-1})^\\top\\)\n  \\(\\nabla_{b^t} \\ell \\leftarrow \\delta^t\\)\n  if \\(t > 1\\) then\n    \\(\\delta^{t-1} \\leftarrow \\sigma'(u^{t-1}) \\odot (W[t])^\\top \\delta^t\\)\n  end\nend\n\nreturn all gradients", "rightMode": "panel", "rightHtml": ""}, {"slideType": "single", "headingLevel": "h2", "bgColor": "#ffffff", "fontColor": "#111111", "title": "Mini-batch Stochastic Gradient Descent", "kicker": "Same preset works for optimization algorithms too", "lede": "", "leftMode": "pseudocode-latex", "leftHtml": "Input: dataset \\(D = \\{(x_i,y_i)\\}_{i=1}^n\\), batch size \\(B\\), epochs \\(E\\), step size \\(\\eta\\)\nParameters: \\(\\theta = [W[1], W[2], \\alpha, b]\\)\n\nfor \\(e = 1\\) to \\(E\\) do\n  randomly shuffle the dataset\n  split the shuffled data into \\(n/B\\) mini-batches \\(\\mathcal{D}_1, \\dots, \\mathcal{D}_{n/B}\\)\n\n  for \\(j = 1\\) to \\(n/B\\) do\n    \\(g \\leftarrow \\frac{1}{B}\\sum_{(x,y)\\in\\mathcal{D}_j}\\nabla_\\theta \\ell(h_\\theta(x), y)\\)\n    \\(\\theta \\leftarrow \\theta - \\eta g\\)\n  end\nend\n\nreturn \\(\\theta\\)", "rightMode": "panel", "rightHtml": ""}]}</script>
+<style>
+  :root {
+    --deck-bg:#060a16;
+    --deck-panel:rgba(10,16,32,.82);
+    --deck-text:#eef3ff;
+    --deck-muted:#b7c4e8;
+  }
+  * { box-sizing:border-box; }
+  html, body {
+    margin:0;
+    min-height:100%;
+    background:radial-gradient(circle at top left,#17214a 0%, #0b1020 45%, #070b17 100%);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  body { color:var(--deck-text); overflow:hidden; }
+  .deck { position:relative; width:100vw; height:100svh; }
+  .deck-slide {
+    display:none; position:absolute; inset:0; overflow:auto;
+    padding:3.2rem 3.5rem 5rem;
+    background:#ffffff; color:#111111;
+  }
+  .deck-slide.active { display:block; }
+  .deck-slide h1, .deck-slide h2 { margin:0; line-height:1.05; }
+  .deck-slide h2 { font-size:2.35rem; }
+  .kicker {
+    margin-top:.8rem;
+    color:rgba(17,17,17,.72);
+    font-size:1.05rem;
+    line-height:1.45;
+    max-width:70ch;
+  }
+  .lede {
+    margin-top:.9rem;
+    color:rgba(17,17,17,.72);
+    font-size:1.18rem;
+    line-height:1.5;
+    max-width:70ch;
+  }
+  .slide-body { margin-top:1.35rem; }
+  .col { min-width:0; }
+  .pseudo-block, .pseudo-latex-block, .placeholder {
+    margin:0;
+    border:1px solid rgba(17,17,17,.12);
+    border-radius:22px;
+    background:rgba(127,127,127,.045);
+    box-shadow:0 8px 24px rgba(0,0,0,.04);
+  }
+  .pseudo-block, .pseudo-latex-block {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 1.16rem;
+    line-height: 1.78;
+    white-space: pre-wrap;
+    tab-size: 2;
+    padding: 1.15rem 1.3rem;
+    overflow-x: auto;
+    color: rgba(17,17,17,.94);
+  }
+  .pseudo-latex-block {
+    font-size: 1.15rem;
+  }
+  .pseudo-latex-block mjx-container {
+    font-size: 100% !important;
+  }
+  .slides-button {
+    position:absolute; top:1.2rem; right:1.2rem;
+    border:1px solid rgba(17,17,17,.18);
+    background:rgba(255,255,255,.85); color:#111;
+    border-radius:999px; padding:.55rem .95rem;
+    font:inherit; font-weight:700; cursor:pointer;
+    backdrop-filter:blur(10px);
+  }
+  .slide-number {
+    position:absolute; bottom:1.15rem; right:1.4rem;
+    font-size:1rem; color:rgba(17,17,17,.62);
+  }
+  .deck-toolbar {
+    position:fixed; left:1rem; top:1rem; display:flex; gap:.65rem; z-index:30;
+  }
+  .deck-toolbar button, .slide-map button, .nav-btn {
+    border:1px solid rgba(255,255,255,.14);
+    background:var(--deck-panel); color:var(--deck-text);
+    border-radius:14px; padding:.78rem .95rem;
+    font:inherit; font-weight:700; cursor:pointer;
+    box-shadow:0 18px 45px rgba(0,0,0,.25);
+  }
+  .slide-map {
+    position:fixed; top:0; right:0; height:100svh; width:min(420px,92vw);
+    background:rgba(7,11,23,.96);
+    border-left:1px solid rgba(255,255,255,.10);
+    padding:1rem; display:none; z-index:35; overflow:auto;
+  }
+  .slide-map.open { display:block; }
+  .slide-map h3 { margin:.2rem 0 1rem 0; font-size:1.2rem; }
+  .slide-map-list { display:grid; gap:.6rem; }
+  .slide-map-item { display:flex; gap:.6rem; align-items:flex-start; text-align:left; }
+  .slide-map-item span:first-child { opacity:.7; min-width:2.2rem; }
+
+  @media (max-width:900px) {
+    .deck-slide { padding:1.5rem 1.2rem 4.2rem; }
+    .deck-slide h2 { font-size:1.95rem; }
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    displayMath: [['$$','$$'], ['\\[','\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="deck-toolbar">
+  <button class="nav-btn" id="prevBtn">◀</button>
+  <button class="nav-btn" id="nextBtn">▶</button>
+</div>
+<div class="slide-map" id="slideMap">
+  <button id="closeMapBtn" style="float:right;">Close</button>
+  <h3 id="deckTitle">Pseudocode LaTeX Preset Demo</h3>
+  <div class="slide-map-list" id="slideMapList"></div>
+</div>
+<div class="deck" id="deck"></div>
+
+<script>
+const deckPayload = JSON.parse(document.getElementById('deck-source').textContent);
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function preserveMathTokens(str) {
+  const tokens = [];
+  let out = String(str ?? '');
+  const patterns = [
+    /\$\$[\s\S]+?\$\$/g,
+    /\\\[[\s\S]+?\\\]/g,
+    /\\\([\s\S]+?\\\)/g,
+    /\$(?!\s)[^$\n]+?\$/g
+  ];
+  patterns.forEach((pattern) => {
+    out = out.replace(pattern, (m) => {
+      const key = `@@MATH${tokens.length}@@`;
+      tokens.push(m);
+      return key;
+    });
+  });
+  return { out, tokens };
+}
+
+function restoreMathTokens(str, tokens) {
+  return String(str).replace(/@@MATH(\d+)@@/g, (_, i) => tokens[Number(i)] ?? '');
+}
+
+function hexToRgb(hex) {
+  const clean = String(hex || '').trim().replace('#','');
+  if(!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  const full = clean.length === 3 ? clean.split('').map(c=>c+c).join('') : clean;
+  const num = parseInt(full, 16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+
+function rgbaFromHex(hex, alpha) {
+  const rgb = hexToRgb(hex);
+  if(!rgb) return `rgba(0,0,0,${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function buildSlideStyle(slide) {
+  const bg = slide.bgColor || '#ffffff';
+  const font = slide.fontColor || '#111111';
+  const muted = rgbaFromHex(font, 0.72);
+  return `background:${bg};color:${font};--text:${font};--muted:${muted};`;
+}
+
+function buildModeContent(mode, raw, placeholderText) {
+  const resolvedMode = mode || 'panel';
+  if (resolvedMode === 'pseudocode') {
+    return `<pre class="pseudo-block">${escapeHtml(raw || '')}</pre>`;
+  }
+  if (resolvedMode === 'pseudocode-latex') {
+    const { out, tokens } = preserveMathTokens(raw || '');
+    return `<div class="pseudo-latex-block">${restoreMathTokens(escapeHtml(out), tokens)}</div>`;
+  }
+  return `<div class="placeholder">${escapeHtml(placeholderText || 'Placeholder')}</div>`;
+}
+
+function buildSlideInner(slide) {
+  const heading = slide.headingLevel || 'h2';
+  const titleHtml = `<${heading}>${escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>')}</${heading}>`;
+  const kickerHtml = slide.kicker ? `<div class="kicker">${escapeHtml(slide.kicker)}</div>` : '';
+  const ledeHtml = slide.lede ? `<div class="lede">${escapeHtml(slide.lede)}</div>` : '';
+  return `${titleHtml}${kickerHtml}${ledeHtml}<div class="slide-body"><div class="col">${buildModeContent(slide.leftMode, slide.leftHtml, 'Main content placeholder')}</div></div>`;
+}
+
+const deck = document.getElementById('deck');
+const slideMap = document.getElementById('slideMap');
+const slideMapList = document.getElementById('slideMapList');
+
+deck.innerHTML = deckPayload.slides.map((slide, idx) => `
+  <section class="deck-slide single" data-index="${idx}" style="${buildSlideStyle(slide)}">
+    <button class="slides-button" type="button">Slides</button>
+    <div class="slide-number">${idx + 1} / ${deckPayload.slides.length}</div>
+    ${buildSlideInner(slide).trim()}
+  </section>
+`).join('\n');
+
+slideMapList.innerHTML = deckPayload.slides.map((slide, idx) => `
+  <button type="button" class="slide-map-item" data-go="${idx}">
+    <span>${idx + 1}.</span>
+    <span>${escapeHtml(slide.title || `Slide ${idx+1}`)}</span>
+  </button>
+`).join('');
+
+let active = 0;
+const slideEls = Array.from(document.querySelectorAll('.deck-slide'));
+
+function render() {
+  slideEls.forEach((el, i) => el.classList.toggle('active', i === active));
+  if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+    if (typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear(slideEls);
+    window.MathJax.typesetPromise(slideEls.filter(el => el.classList.contains('active'))).catch(() => {});
+  }
+}
+
+function go(i) {
+  if (i < 0 || i >= slideEls.length) return;
+  active = i;
+  render();
+  slideMap.classList.remove('open');
+}
+
+document.getElementById('prevBtn').addEventListener('click', () => go(active - 1));
+document.getElementById('nextBtn').addEventListener('click', () => go(active + 1));
+document.getElementById('closeMapBtn').addEventListener('click', () => slideMap.classList.remove('open'));
+document.querySelectorAll('.slides-button').forEach(btn => btn.addEventListener('click', () => slideMap.classList.add('open')));
+document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => go(Number(btn.dataset.go))));
+window.addEventListener('keydown', (e) => {
+  if (['ArrowRight','PageDown',' '].includes(e.key)) { e.preventDefault(); go(active + 1); }
+  if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); go(active - 1); }
+  if (e.key === 'Escape') slideMap.classList.remove('open');
+});
+
+render();
+</script>
+</body>
+</html>
