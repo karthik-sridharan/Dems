@@ -262,7 +262,7 @@ window.MathJax = {
   svg: { fontCache: 'global' }
 };
 </script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
 </head>
 <body>
 <div class="page">
@@ -934,7 +934,7 @@ function standaloneDeckHTML(payload){
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(payload.deckTitle || 'HTML Presentation')}</title>
-<script id="deck-source" type="application/json">${deckJson}</script>
+<script id="deck-source" type="application/json">${deckJson}<\/script>
 <style>
   :root{
     --deck-bg:#060a16;
