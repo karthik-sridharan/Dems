@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HTML Presentation Generator</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#121933;
+    --text:#eef3ff;
+    --muted:#aab7d8;
+    --line:rgba(255,255,255,.12);
+    --blue:#61b4ff;
+    --shadow:0 24px 60px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;min-height:100%;
+    background:radial-gradient(circle at top left,#17214a 0%,var(--bg) 45%,#070b17 100%);
+    color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  body{padding:1rem}
+  .page{max-width:1680px;margin:0 auto;display:grid;grid-template-columns:560px minmax(0,1fr);gap:1rem}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:1rem}
+  .stack{display:grid;gap:.9rem}
+  h1,h2,h3{margin:0;line-height:1.08}
+  h1{font-size:2rem}
+  h2{font-size:1.2rem}
+  p,label,small{color:var(--muted)}
+  .smallcaps{letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--blue);font-weight:800}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .field{display:grid;gap:.35rem}
+  .field.full{grid-column:1 / -1}
+  input,select,textarea{
+    width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);color:var(--text);padding:.8rem .9rem;font:inherit
+  }
+  textarea{resize:vertical;min-height:100px;line-height:1.45}
+  textarea.code{
+    min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:.93rem;white-space:pre
+  }
+  .help{font-size:.86rem;line-height:1.45}
+  .toolbar,.row{display:flex;flex-wrap:wrap;gap:.7rem}
+  .btn{
+    border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);
+    border-radius:14px;padding:.8rem 1rem;font:inherit;font-weight:700;cursor:pointer
+  }
+  .btn.primary{border-color:rgba(97,180,255,.45)}
+  .btn.mini{padding:.55rem .75rem;font-size:.9rem}
+  .badge{
+    display:inline-flex;align-items:center;padding:.3rem .6rem;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);font-size:.82rem;color:var(--text)
+  }
+  .deck-list,.block-list{display:grid;gap:.55rem;max-height:320px;overflow:auto;padding-right:.2rem}
+  .deck-item,.block-item{
+    width:100%;text-align:left;padding:.8rem .85rem;border-radius:16px;border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.03);color:var(--text);cursor:pointer
+  }
+  .deck-item.active,.block-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.10)}
+  .deck-item .meta,.block-item .meta{display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem}
+  details summary{cursor:pointer;color:var(--text);font-weight:700}
+  .template-list{display:grid;gap:.55rem}
+  .template-list button{
+    width:100%;text-align:left;border-radius:16px;border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.03);color:var(--text);padding:.85rem .95rem;cursor:pointer;font:inherit
+  }
+  .template-list button small{display:block;color:var(--muted);margin-top:.2rem}
+  .preview-wrap{display:grid;gap:.8rem}
+  .preview-header{display:flex;justify-content:space-between;gap:1rem;align-items:center}
+  .preview-viewport{overflow:auto;border-radius:24px;border:1px solid var(--line);background:rgba(0,0,0,.1);padding:1rem}
+  .copy-toast{
+    position:fixed;right:1rem;bottom:1rem;background:rgba(15,22,48,.96);border:1px solid rgba(255,255,255,.16);
+    color:var(--text);padding:.8rem 1rem;border-radius:14px;opacity:0;transform:translateY(10px);
+    transition:opacity .25s ease,transform .25s ease;pointer-events:none;z-index:40
+  }
+  .copy-toast.show{opacity:1;transform:translateY(0)}
+  .muted{color:var(--muted)}
+  .section-head{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
+
+  .slide{
+    position:relative;min-height:720px;border:1px dashed rgba(255,255,255,.09);border-radius:28px;
+    padding:3rem 3.3rem 4.8rem;background:#ffffff;color:#111111;
+  }
+  .slide h1,.slide h2{margin:0;line-height:1.05}
+  .slide h1{font-size:3.4rem;max-width:15ch}
+  .slide h2{font-size:2.3rem}
+  .slide .kicker{margin-top:.6rem;color:rgba(17,17,17,.72);font-size:1rem;line-height:1.45;max-width:68ch}
+  .slide .lede{margin-top:1rem;color:rgba(17,17,17,.72);font-size:1.14rem;line-height:1.52;max-width:68ch}
+  .slide-body{margin-top:1.35rem}
+  .slide.single .slide-body{display:block}
+  .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
+  .slide .col{min-width:0}
+  .slide .col-stack{display:grid;gap:1rem}
+  .slide .rich{display:grid;gap:1rem}
+  .slide .rich p,.slide .rich ul,.slide .rich ol,.slide .rich h3,.slide .display-math,.slide .bullet-card,.slide .placeholder,.slide .diag,.slide .pseudo-block,.slide .pseudo-latex-block,.slide .custom-frame-wrap,.slide .figure-embed{
+    margin:0;border:1px solid rgba(17,17,17,.12);border-radius:22px;background:rgba(127,127,127,.045);box-shadow:0 8px 24px rgba(0,0,0,.04)
+  }
+  .slide .rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
+  .slide .rich ul,.slide .rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
+  .slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
+  .slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
+  .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
+  .slide .pseudo-block,.slide .pseudo-latex-block{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow-x:auto;color:rgba(17,17,17,.9)
+  }
+  .slide .pseudo-latex-block mjx-container{font-size:100% !important}
+  .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}
+  .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
+  .placeholder{min-height:220px;display:grid;place-items:center;color:rgba(17,17,17,.72);padding:1rem 1.15rem;text-align:center}
+  .figure-embed{padding:.8rem;background:#fff;overflow:auto}
+  .figure-embed figure{margin:0}
+  .figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;height:auto;margin:0 auto}
+  .custom-frame-wrap{overflow:hidden;background:#fff}
+  .custom-frame{width:100%;height:720px;border:0;display:block;background:#fff}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:1rem;z-index:80}
+  .modal-backdrop[hidden]{display:none}
+  .modal-card{width:min(700px,96vw);background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:1rem}
+  .diag{display:grid;place-items:center;padding:.9rem}
+  .diagram{width:100%;max-width:680px;height:auto}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
+  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+  .title-center{min-height:720px;display:grid;place-items:center;text-align:center;padding:3rem}
+  .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+
+  @media (max-width:1150px){ .page{grid-template-columns:1fr} }
+  @media (max-width:900px){
+    .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
+    .slide.two-col .slide-body{grid-template-columns:1fr}
+    .slide h1{font-size:2.3rem}
+    .slide h2{font-size:1.9rem}
+  }
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+  <div class="panel stack">
+    <div>
+      <div class="smallcaps">Presentation generator</div>
+      <h1>Build slides or a full deck</h1>
+      <p class="help">Full editor with dropdowns, presets, live preview, slide list, <b>Load generated HTML</b>, custom HTML isolation, and <code>pseudocode-latex</code>. New: each column can now contain <b>multiple stacked content boxes</b>.</p>
+    </div>
+
+    <div class="field-grid">
+      <div class="field full">
+        <label for="deckTitle">Presentation title</label>
+        <input id="deckTitle" value="My HTML Presentation" />
+      </div>
+      <div class="field">
+        <label for="slideType">Slide type</label>
+        <select id="slideType">
+          <option value="title-center">Centered title slide</option>
+          <option value="single" selected>Single-column content slide</option>
+          <option value="two-col">Two-column body, full-width title</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="headingLevel">Title size</label>
+        <select id="headingLevel">
+          <option value="h1">Large title</option>
+          <option value="h2" selected>Standard title</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bgColor">Slide background color</label>
+        <select id="bgColor">
+          <option value="#ffffff" selected>White</option>
+          <option value="#f7f1e3">Warm cream</option>
+          <option value="#121212">Charcoal</option>
+          <option value="#0f1630">Navy</option>
+          <option value="#1d3b2a">Forest</option>
+          <option value="#3a1028">Plum</option>
+          <option value="#102a43">Slate blue</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fontColor">Font color</label>
+        <select id="fontColor">
+          <option value="#111111" selected>Black</option>
+          <option value="#1f2937">Slate</option>
+          <option value="#ffffff">White</option>
+          <option value="#eef3ff">Soft white</option>
+          <option value="#ffe9a8">Warm gold</option>
+          <option value="#d6f5ff">Pale blue</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="title">Slide title</label>
+        <input id="title" placeholder="Backpropagation, stage by stage" />
+      </div>
+      <div class="field full">
+        <label for="kicker">Kicker / subtitle under title</label>
+        <input id="kicker" value="" placeholder="Optional short subtitle" />
+      </div>
+      <div class="field full">
+        <label for="lede">Intro line / lead paragraph under title area</label>
+        <textarea id="lede" placeholder="Optional short framing sentence"></textarea>
+      </div>
+      <div class="field">
+        <label for="notesTitle">Speaker notes title</label>
+        <input id="notesTitle" value="Speaker notes" />
+      </div>
+      <div class="field">
+        <label for="notesBody">Speaker notes body</label>
+        <input id="notesBody" value="" />
+      </div>
+    </div>
+
+    <div class="panel stack" style="padding:.9rem">
+      <div class="section-head">
+        <h2>Column content blocks</h2>
+        <span class="badge" id="columnModeBadge">Single-column slide</span>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="blockColumn">Editing column</label>
+          <select id="blockColumn">
+            <option value="left" selected>Left / main column</option>
+            <option value="right">Right column</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="blockMode">Block preset / content type</label>
+          <select id="blockMode">
+            <option value="panel" selected>Panel text</option>
+                        <option value="custom">Custom HTML block</option>
+            <option value="placeholder">Simple placeholder box</option>
+            <option value="plain">Plain text / rich content</option>
+            <option value="pseudocode">Pseudocode block</option>
+            <option value="pseudocode-latex">Pseudocode block with LaTeX</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="blockTitle">Block label (for the editor list only)</label>
+          <input id="blockTitle" placeholder="Optional label like Example, Figure, Proof sketch" />
+        </div>
+        <div class="field full">
+          <label for="blockContent">Block content</label>
+          <textarea id="blockContent" placeholder="\paragraph{Main idea goes here}&#10;&#10;\begin{itemize}&#10;\item First point&#10;\item Second point&#10;\end{itemize}"></textarea>
+          <div class="help">Pick a preset from the dropdown, then click <b>Add block</b>. For <b>custom</b>, paste raw HTML. For <b>pseudocode-latex</b>, indentation is preserved and math like <code>\(z^t = \sigma(u^t)\)</code> is typeset inside the block.</div>
+          <div class="row" style="margin-top:.6rem">
+            <button class="btn mini" id="addFigureBtn">Add figure</button>
+          </div>
+          <div class="help" style="margin-top:.45rem">Use <b>Add figure</b> to insert an image or diagram at the current cursor position in the block editor. For text blocks, the generator inserts a <code>\begin{figurehtml} ... \end{figurehtml}</code> wrapper. For block types that do not support inline figures, it creates a new custom HTML block below the current one.</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="addBlockBtn">Add block</button>
+        <button class="btn" id="updateBlockBtn">Update selected block</button>
+        <button class="btn" id="duplicateBlockBtn">Duplicate block</button>
+        <button class="btn" id="deleteBlockBtn">Delete block</button>
+        <button class="btn" id="clearBlockBtn">Clear block editor</button>
+      </div>
+
+      <div class="field">
+        <label>Blocks in selected column</label>
+        <div class="block-list" id="blockList"></div>
+        <div class="row" style="margin-top:.55rem">
+          <button class="btn mini" id="moveBlockUpBtn">Move block up</button>
+          <button class="btn mini" id="moveBlockDownBtn">Move block down</button>
+        </div>
+      </div>
+    </div>
+
+    <details>
+      <summary>Slide presets</summary>
+      <div class="template-list" style="margin-top:.65rem">
+        <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
+        <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
+        <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
+        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
+        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
+        <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn primary" id="addSlideBtn">Add as new slide</button>
+      <button class="btn" id="updateSlideBtn">Update selected slide</button>
+      <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
+      <button class="btn" id="deleteSlideBtn">Delete selected</button>
+      <button class="btn" id="clearFormBtn">Clear form</button>
+    </div>
+
+    <div class="panel" style="padding:.9rem">
+      <div class="preview-header">
+        <h2>Deck slides</h2>
+        <span class="badge" id="deckCount">0 slides</span>
+      </div>
+      <div class="deck-list" id="deckList"></div>
+      <div class="row" style="margin-top:.75rem">
+        <button class="btn mini" id="moveUpBtn">Move up</button>
+        <button class="btn mini" id="moveDownBtn">Move down</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>How to write content</summary>
+      <div class="help" style="margin-top:.55rem">
+        <p>For panel/plain modes, you can use:</p>
+        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
+        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
+        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
+        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
+        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
+        <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
+        <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
+      <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
+      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
+      <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label for="printSlidesPerPage">Slides per printable page</label>
+        <select id="printSlidesPerPage">
+          <option value="1" selected>1 slide per page</option>
+          <option value="2">2 slides per page</option>
+          <option value="4">4 slides per page</option>
+          <option value="6">6 slides per page</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="printSlideSelection">Slides to include</label>
+        <input id="printSlideSelection" placeholder="all or 1-3,5,8" value="all" />
+      </div>
+      <div class="field full help">
+        Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
+      </div>
+      <div class="field full" style="align-content:end">
+        <button class="btn" id="printPdfBtn">Printable PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel preview-wrap">
+    <div class="preview-header">
+      <div>
+        <div class="smallcaps">Live preview</div>
+        <h2 id="previewTitle">Current slide</h2>
+      </div>
+      <span class="badge">Preview and export use the same renderer</span>
+    </div>
+    <div class="preview-viewport"><div id="preview"></div></div>
+    <div>
+      <div class="preview-header">
+        <h2>Current slide snippet</h2>
+        <span class="muted">Editable JSON for this slide</span>
+      </div>
+      <textarea class="code" id="snippetOutput" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:.65rem">
+        <button class="btn mini" id="loadSnippetToEditorBtn">Load snippet into editor</button>
+        <button class="btn mini" id="replaceSlideFromSnippetBtn">Replace selected slide</button>
+        <button class="btn mini" id="addSlideFromSnippetBtn">Add slide from snippet</button>
+        <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
+      </div>
+      <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-backdrop" id="figureModal" hidden>
+  <div class="modal-card">
+    <div class="section-head">
+      <h2>Add figure</h2>
+      <button class="btn mini" id="closeFigureModalBtn">Close</button>
+    </div>
+    <div class="help">Choose how to add a figure into the current block.</div>
+    <div class="row" style="margin-top:.45rem">
+      <button class="btn mini primary" id="figureSourceImageBtn">Image from link or file</button>
+      <button class="btn mini" id="figureSourceEditorBtn">Open simple diagram editor</button>
+    </div>
+    <div id="figureImagePanel" style="margin-top:.8rem;display:grid;gap:.7rem">
+      <div class="field">
+        <label for="figureUrlInput">Image URL</label>
+        <input id="figureUrlInput" placeholder="https://example.com/figure.png" />
+      </div>
+      <div class="field">
+        <label for="figureAltInput">Alt text / caption</label>
+        <input id="figureAltInput" placeholder="Optional description" />
+      </div>
+      <div class="row">
+        <button class="btn mini" id="insertFigureUrlBtn">Insert image from URL</button>
+      </div>
+      <div class="field">
+        <label for="figureFileInput">Or choose an image file</label>
+        <input id="figureFileInput" type="file" accept="image/*,.svg" />
+      </div>
+      <div class="row">
+        <button class="btn mini" id="insertFigureFileBtn">Insert selected image file</button>
+      </div>
+    </div>
+    <div id="figureEditorPanel" style="display:none;margin-top:.8rem" class="help">
+      Open a popup editor where you can draw a simple SVG diagram using your mouse, trackpad, or touchscreen. When you click <b>Insert into slide</b> in that editor, the SVG will be inserted back into the current block.
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied</div>
+
+<script>
+const fields = {
+  deckTitle: document.getElementById('deckTitle'),
+  slideType: document.getElementById('slideType'),
+  headingLevel: document.getElementById('headingLevel'),
+  bgColor: document.getElementById('bgColor'),
+  fontColor: document.getElementById('fontColor'),
+  title: document.getElementById('title'),
+  kicker: document.getElementById('kicker'),
+  lede: document.getElementById('lede'),
+  notesTitle: document.getElementById('notesTitle'),
+  notesBody: document.getElementById('notesBody')
+};
+const blockFields = {
+  column: document.getElementById('blockColumn'),
+  mode: document.getElementById('blockMode'),
+  title: document.getElementById('blockTitle'),
+  content: document.getElementById('blockContent')
+};
+const preview = document.getElementById('preview');
+const snippetOutput = document.getElementById('snippetOutput');
+const deckList = document.getElementById('deckList');
+const blockList = document.getElementById('blockList');
+const deckCount = document.getElementById('deckCount');
+const previewTitle = document.getElementById('previewTitle');
+const toast = document.getElementById('toast');
+const columnModeBadge = document.getElementById('columnModeBadge');
+const expandDiagramSnippet = document.getElementById('expandDiagramSnippet');
+const figureModal = document.getElementById('figureModal');
+const figureUrlInput = document.getElementById('figureUrlInput');
+const figureAltInput = document.getElementById('figureAltInput');
+const figureFileInput = document.getElementById('figureFileInput');
+const figureImagePanel = document.getElementById('figureImagePanel');
+const figureEditorPanel = document.getElementById('figureEditorPanel');
+
+let slides = [];
+let activeIndex = -1;
+let draftBlocks = { left: [], right: [] };
+let selectedBlock = { left: -1, right: -1 };
+
+function showToast(message){
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toast.classList.remove('show'), 1400);
+}
+function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+function escapeHtml(str){
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escapeAttr(str){ return escapeHtml(str).replace(/\n/g,'&#10;'); }
+function preserveMathTokens(str){
+  const tokens = [];
+  let out = String(str ?? '');
+  const patterns = [/\$\$[\s\S]+?\$\$/g,/\\\[[\s\S]+?\\\]/g,/\\\([\s\S]+?\\\)/g,/\$(?!\s)[^$\n]+?\$/g];
+  patterns.forEach((pattern)=>{
+    out = out.replace(pattern, (m)=>{
+      const key = '@@MATH' + tokens.length + '@@';
+      tokens.push(m);
+      return key;
+    });
+  });
+  return { out, tokens };
+}
+function restoreMathTokens(str, tokens){
+  return String(str).replace(/@@MATH(\d+)@@/g, (_, i)=>tokens[Number(i)] ?? '');
+}
+function hexToRgb(hex){
+  const clean = String(hex || '').trim().replace('#','');
+  if(!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  const full = clean.length === 3 ? clean.split('').map(c=>c+c).join('') : clean;
+  const num = parseInt(full, 16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+function rgbaFromHex(hex, alpha){
+  const rgb = hexToRgb(hex);
+  if(!rgb) return 'rgba(0,0,0,' + alpha + ')';
+  return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
+}
+function buildSlideStyle(slide){
+  const bg = slide.bgColor || '#ffffff';
+  const font = slide.fontColor || '#111111';
+  const muted = rgbaFromHex(font, 0.72);
+  const line = rgbaFromHex(font, 0.14);
+  return 'background:' + bg + ';color:' + font + ';--text:' + font + ';--muted:' + muted + ';--line:' + line + ';';
+}
+
+function parseStructuredText(raw){
+  const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
+  if(!text) return '';
+  function safeWithMath(str){
+    const p = preserveMathTokens(str);
+    return restoreMathTokens(escapeHtml(p.out), p.tokens);
+  }
+  const lines = text.split('\n');
+  const parts = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+  function flushParagraph(){
+    if(!paragraph.length) return;
+    const joined = paragraph.join(' ').trim();
+    if(joined) parts.push('<p>' + safeWithMath(joined) + '</p>');
+    paragraph = [];
+  }
+  function flushList(){
+    if(!listItems.length) return;
+    const tag = listType === 'enumerate' ? 'ol' : 'ul';
+    parts.push('<' + tag + '>' + listItems.map(item=>'<li>' + safeWithMath(item) + '</li>').join('') + '</' + tag + '>');
+    listItems = [];
+    listType = null;
+  }
+  function collectUntil(endPattern, startIndex){
+    const chunk = [];
+    let i = startIndex;
+    while(i < lines.length && !endPattern.test(lines[i].trim())){
+      chunk.push(lines[i]);
+      i += 1;
+    }
+    return { body: chunk.join('\n').trim(), endIndex: i };
+  }
+  function simpleCardBody(body){
+    const trimmed = body.trim();
+    if(!trimmed) return '';
+    return trimmed.split(/\n\s*\n/).map(block => '<p>' + safeWithMath(block.replace(/\s*\n\s*/g, ' ').trim()) + '</p>').join('');
+  }
+
+  for(let i = 0; i < lines.length; i += 1){
+    const line = lines[i].trim();
+    if(!line){ flushParagraph(); flushList(); continue; }
+    const paragraphMatch = line.match(/^\\paragraph\{([\s\S]*)\}$/);
+    if(paragraphMatch){ flushParagraph(); flushList(); parts.push('<p>' + safeWithMath(paragraphMatch[1].trim()) + '</p>'); continue; }
+    if(/^\\begin\{itemize\}$/i.test(line)){
+      flushParagraph(); flushList();
+      const items = [];
+      i += 1;
+      while(i < lines.length && !/^\\end\{itemize\}$/i.test(lines[i].trim())){
+        const itemLine = lines[i].trim();
+        if(itemLine){
+          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
+          if(itemMatch) items.push(itemMatch[1].trim());
+        }
+        i += 1;
+      }
+      parts.push('<ul>' + items.map(item=>'<li>' + safeWithMath(item) + '</li>').join('') + '</ul>');
+      continue;
+    }
+    if(/^\\begin\{enumerate\}$/i.test(line)){
+      flushParagraph(); flushList();
+      const items = [];
+      i += 1;
+      while(i < lines.length && !/^\\end\{enumerate\}$/i.test(lines[i].trim())){
+        const itemLine = lines[i].trim();
+        if(itemLine){
+          const itemMatch = itemLine.match(/^\\item\s+([\s\S]*)$/);
+          if(itemMatch) items.push(itemMatch[1].trim());
+        }
+        i += 1;
+      }
+      parts.push('<ol>' + items.map(item=>'<li>' + safeWithMath(item) + '</li>').join('') + '</ol>');
+      continue;
+    }
+    if(/^\\begin\{equation\}$/i.test(line)){
+      flushParagraph(); flushList();
+      const collected = collectUntil(/^\\end\{equation\}$/i, i + 1);
+      parts.push('<div class="display-math">\\[\\begin{aligned}' + escapeHtml(collected.body) + '\\end{aligned}\\]</div>');
+      i = collected.endIndex;
+      continue;
+    }
+    const cardBegin = line.match(/^\\begin\{card\}\{([\s\S]*)\}$/i);
+    if(cardBegin){
+      flushParagraph(); flushList();
+      const collected = collectUntil(/^\\end\{card\}$/i, i + 1);
+      parts.push('<div class="bullet-card"><b>' + safeWithMath(cardBegin[1].trim()) + '</b><div>' + simpleCardBody(collected.body) + '</div></div>');
+      i = collected.endIndex;
+      continue;
+    }
+    if(/^\\begin\{figurehtml\}$/i.test(line)){
+      flushParagraph(); flushList();
+      const collected = collectUntil(/^\\end\{figurehtml\}$/i, i + 1);
+      parts.push('<div class="figure-embed">' + collected.body + '</div>');
+      i = collected.endIndex;
+      continue;
+    }
+    if(/^UL:/i.test(line)){ flushParagraph(); if(listType && listType !== 'itemize') flushList(); listType = 'itemize'; listItems.push(line.replace(/^UL:/i, '').trim()); continue; }
+    if(line.startsWith('- ')){ flushParagraph(); if(listType && listType !== 'itemize') flushList(); listType = 'itemize'; listItems.push(line.slice(2).trim()); continue; }
+    flushList();
+    if(line.startsWith('### ')){ flushParagraph(); parts.push('<h3>' + safeWithMath(line.slice(4).trim()) + '</h3>'); continue; }
+    if(/^P:/i.test(line)){ flushParagraph(); parts.push('<p>' + safeWithMath(line.replace(/^P:/i, '').trim()) + '</p>'); continue; }
+    if(/^EQ:/i.test(line)){ flushParagraph(); parts.push('<div class="display-math">' + safeWithMath(line.replace(/^EQ:/i, '').trim()) + '</div>'); continue; }
+    if(/^CARD:/i.test(line)){
+      flushParagraph();
+      const payload = line.replace(/^CARD:/i, '').trim();
+      const pieces = payload.split('|');
+      const cardTitle = pieces.shift() || '';
+      const cardBody = pieces.join('|');
+      parts.push('<div class="bullet-card"><b>' + safeWithMath(cardTitle) + '</b><div><p>' + safeWithMath(cardBody) + '</p></div></div>');
+      continue;
+    }
+    if((/^\\\(.+\\\)$/s).test(line)){ flushParagraph(); parts.push('<div class="display-math">\\[' + escapeHtml(line.replace(/^\\\(/, '').replace(/\\\)$/, '')) + '\\]</div>'); continue; }
+    if((/^\\\[.+\\\]$/s).test(line) || (/^\$\$.+\$\$$/s).test(line)){ flushParagraph(); parts.push('<div class="display-math">' + safeWithMath(line) + '</div>'); continue; }
+    paragraph.push(line);
+  }
+  flushParagraph(); flushList();
+  return parts.join('\n');
+}
+
+function diagramMarkup(){
+  return '<div class="diag"><svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder"><line x1="145" y1="145" x2="355" y2="125" class="edge"/><line x1="145" y1="145" x2="355" y2="295" class="edge"/><line x1="145" y1="285" x2="355" y2="125" class="edge"/><line x1="145" y1="285" x2="355" y2="295" class="edge"/><line x1="405" y1="125" x2="615" y2="215" class="edge"/><line x1="405" y1="295" x2="615" y2="215" class="edge"/><circle cx="115" cy="145" r="34" class="node"/><circle cx="115" cy="285" r="34" class="node"/><circle cx="375" cy="125" r="34" class="node"/><circle cx="375" cy="295" r="34" class="node"/><circle cx="645" cy="215" r="34" class="node"/><text x="88" y="153" class="label">x₁</text><text x="88" y="293" class="label">x₂</text><text x="350" y="133" class="label">h₁</text><text x="350" y="303" class="label">h₂</text><text x="632" y="223" class="label">ŷ</text></svg></div>';
+}
+function customFrameMarkup(raw){
+  const html = String(raw || '').trim();
+  if(!html) return '<div class="placeholder">Paste custom HTML here.</div>';
+  return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="' + escapeAttr(html) + '"></iframe></div>';
+}
+function diagramStandaloneDocument(innerHtml){
+  const body = String(innerHtml || '').trim() || diagramMarkup();
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><style>html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}</style></head><body>' + body + '</body></html>';
+}
+function expandDiagramBlocksForSnippet(slide){
+  const s = normalizeSlide(slide);
+  const convert = (block)=>{
+    if((block.mode || 'panel') !== 'diagram') return clone(block);
+    return {
+      mode: 'custom',
+      title: block.title || '',
+      content: diagramStandaloneDocument(block.content || diagramMarkup())
+    };
+  };
+  s.leftBlocks = (s.leftBlocks || []).map(convert);
+  s.rightBlocks = (s.rightBlocks || []).map(convert);
+  return s;
+}
+function slideForSnippet(slide){
+  return expandDiagramSnippet && expandDiagramSnippet.checked ? expandDiagramBlocksForSnippet(slide) : normalizeSlide(slide);
+}
+function normalizeBlock(block){
+  const mode = block.mode || 'panel';
+  if(mode === 'diagram'){
+    return {
+      mode: 'custom',
+      title: block.title || 'Legacy diagram',
+      content: diagramStandaloneDocument(block.content || diagramMarkup())
+    };
+  }
+  return {
+    mode: mode,
+    title: block.title || '',
+    content: block.content || ''
+  };
+}
+function normalizeSlide(slide){
+  const out = clone(slide || {});
+  let leftBlocks = Array.isArray(out.leftBlocks) ? out.leftBlocks.map(normalizeBlock) : null;
+  let rightBlocks = Array.isArray(out.rightBlocks) ? out.rightBlocks.map(normalizeBlock) : null;
+  if(!leftBlocks){
+    leftBlocks = [{ mode: out.leftMode || 'panel', title: '', content: out.leftHtml || '' }];
+  }
+  if(!rightBlocks){
+    rightBlocks = out.slideType === 'two-col'
+      ? [{ mode: out.rightMode || 'panel', title: '', content: out.rightHtml || '' }]
+      : [];
+  }
+  out.leftBlocks = leftBlocks;
+  out.rightBlocks = rightBlocks;
+  return out;
+}
+function renderBlock(block, placeholderText){
+  const resolvedMode = block.mode || 'panel';
+  const raw = block.content || '';
+  if(resolvedMode === 'diagram') return diagramMarkup();
+  if(resolvedMode === 'custom') return customFrameMarkup(raw);
+  if(resolvedMode === 'placeholder') return '<div class="placeholder">' + escapeHtml(raw || placeholderText || 'Placeholder') + '</div>';
+  if(resolvedMode === 'pseudocode') return '<pre class="pseudo-block">' + escapeHtml(raw) + '</pre>';
+  if(resolvedMode === 'pseudocode-latex'){
+    const p = preserveMathTokens(raw);
+    return '<div class="pseudo-latex-block">' + restoreMathTokens(escapeHtml(p.out), p.tokens) + '</div>';
+  }
+  return '<div class="rich">' + parseStructuredText(raw) + '</div>';
+}
+function renderBlocks(blocks, placeholder){
+  const list = blocks && blocks.length ? blocks : [{ mode:'placeholder', content: placeholder || 'Add a block' }];
+  return '<div class="col-stack">' + list.map(block => renderBlock(block, placeholder)).join('') + '</div>';
+}
+function buildSlideInner(slide){
+  const heading = slide.headingLevel || 'h2';
+  const titleHtml = '<' + heading + '>' + escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>') + '</' + heading + '>';
+  const kickerHtml = slide.kicker ? '<div class="kicker">' + escapeHtml(slide.kicker) + '</div>' : '';
+  const ledeHtml = slide.lede ? '<div class="lede">' + escapeHtml(slide.lede) + '</div>' : '';
+  const s = normalizeSlide(slide);
+  if(s.slideType === 'title-center') return '<div class="title-center">' + titleHtml + kickerHtml + '</div>';
+  if(s.slideType === 'two-col'){
+    return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Left column') + '</div><div class="col">' + renderBlocks(s.rightBlocks, 'Right column') + '</div></div>';
+  }
+  return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Main content') + '</div></div>';
+}
+function buildSlideMarkup(slide){
+  const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
+  return '<section class="' + cls + '" style="' + buildSlideStyle(slide) + '">' + buildSlideInner(slide).trim() + '</section>';
+}
+
+function blankBlock(mode='panel'){
+  return { mode, title:'', content:'' };
+}
+function currentDraftSlide(){
+  const leftBlocks = clone(draftBlocks.left);
+  const rightBlocks = clone(draftBlocks.right);
+  const name = currentColumnName();
+  const idx = selectedIndex(name);
+  const edited = currentBlockFromEditor();
+  const target = name === 'right' ? rightBlocks : leftBlocks;
+  if(idx >= 0 && idx < target.length){
+    target[idx] = edited;
+  }
+  return {
+    slideType: fields.slideType.value,
+    headingLevel: fields.headingLevel.value,
+    bgColor: fields.bgColor.value,
+    fontColor: fields.fontColor.value,
+    title: fields.title.value,
+    kicker: fields.kicker.value,
+    lede: fields.lede.value,
+    leftBlocks: leftBlocks,
+    rightBlocks: fields.slideType.value === 'two-col' ? rightBlocks : [],
+    notesTitle: fields.notesTitle.value,
+    notesBody: fields.notesBody.value
+  };
+}
+function applySlideToForm(slide){
+  const s = normalizeSlide(slide);
+  fields.slideType.value = s.slideType || 'single';
+  fields.headingLevel.value = s.headingLevel || 'h2';
+  fields.bgColor.value = s.bgColor || '#ffffff';
+  fields.fontColor.value = s.fontColor || '#111111';
+  fields.title.value = s.title || '';
+  fields.kicker.value = s.kicker || '';
+  fields.lede.value = s.lede || '';
+  fields.notesTitle.value = s.notesTitle || 'Speaker notes';
+  fields.notesBody.value = s.notesBody || '';
+  draftBlocks = { left: clone(s.leftBlocks || []), right: clone(s.rightBlocks || []) };
+  selectedBlock = { left: draftBlocks.left.length ? 0 : -1, right: draftBlocks.right.length ? 0 : -1 };
+  if(fields.slideType.value !== 'two-col') selectedBlock.right = -1;
+  if(blockFields.column.value === 'right' && fields.slideType.value !== 'two-col') blockFields.column.value = 'left';
+  syncFields();
+  loadSelectedBlockIntoEditor();
+}
+function syncFields(){
+  const twoCol = fields.slideType.value === 'two-col';
+  columnModeBadge.textContent = twoCol ? 'Two-column slide' : 'Single-column slide';
+  blockFields.column.querySelector('option[value="right"]').disabled = !twoCol;
+  if(!twoCol && blockFields.column.value === 'right') blockFields.column.value = 'left';
+  previewTitle.textContent = fields.title.value || 'Current slide';
+}
+function currentColumnName(){ return blockFields.column.value === 'right' ? 'right' : 'left'; }
+function blockArray(name){ return name === 'right' ? draftBlocks.right : draftBlocks.left; }
+function selectedIndex(name){ return selectedBlock[name]; }
+function setSelectedIndex(name, idx){ selectedBlock[name] = idx; }
+function loadSelectedBlockIntoEditor(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  const block = arr[idx];
+  if(!block){
+    blockFields.mode.value = 'panel';
+    blockFields.title.value = '';
+    blockFields.content.value = '';
+  } else {
+    blockFields.mode.value = block.mode || 'panel';
+    blockFields.title.value = block.title || '';
+    blockFields.content.value = block.content || '';
+  }
+  renderBlockList();
+}
+function currentBlockFromEditor(){
+  return {
+    mode: blockFields.mode.value,
+    title: blockFields.title.value,
+    content: blockFields.content.value
+  };
+}
+function renderBlockList(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  blockList.innerHTML = arr.map((block, idx)=>`
+    <button class="block-item ${idx === selectedIndex(name) ? 'active' : ''}" data-index="${idx}">
+      ${escapeHtml(block.title || ('Block ' + (idx + 1)))}
+      <span class="meta">${idx + 1}. ${escapeHtml(block.mode || 'panel')}</span>
+    </button>
+  `).join('');
+  if(!arr.length){
+    blockList.innerHTML = '<div class="placeholder" style="min-height:110px">No blocks in this column yet.</div>';
+  } else {
+    blockList.querySelectorAll('.block-item').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        setSelectedIndex(name, Number(btn.dataset.index));
+        loadSelectedBlockIntoEditor();
+        buildPreview();
+      });
+    });
+  }
+}
+function addBlock(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  arr.push(currentBlockFromEditor());
+  setSelectedIndex(name, arr.length - 1);
+  renderBlockList();
+  buildPreview();
+  showToast('Added block.');
+}
+function updateBlock(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  if(idx < 0 || idx >= arr.length){ showToast('Select a block first.'); return; }
+  arr[idx] = currentBlockFromEditor();
+  renderBlockList();
+  buildPreview();
+  showToast('Updated block.');
+}
+function duplicateBlock(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  if(idx < 0 || idx >= arr.length){ showToast('Select a block first.'); return; }
+  arr.splice(idx + 1, 0, clone(arr[idx]));
+  setSelectedIndex(name, idx + 1);
+  renderBlockList();
+  buildPreview();
+  showToast('Duplicated block.');
+}
+function deleteBlock(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  if(idx < 0 || idx >= arr.length){ showToast('Select a block first.'); return; }
+  arr.splice(idx, 1);
+  setSelectedIndex(name, arr.length ? Math.min(idx, arr.length - 1) : -1);
+  loadSelectedBlockIntoEditor();
+  buildPreview();
+  showToast('Deleted block.');
+}
+function moveBlock(dir){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  const next = idx + dir;
+  if(idx < 0 || idx >= arr.length || next < 0 || next >= arr.length) return;
+  const tmp = arr[idx]; arr[idx] = arr[next]; arr[next] = tmp;
+  setSelectedIndex(name, next);
+  renderBlockList();
+  buildPreview();
+}
+function clearBlockEditor(){
+  blockFields.mode.value = 'panel';
+  blockFields.title.value = '';
+  blockFields.content.value = '';
+}
+
+function insertTextAtCursor(textarea, snippet){
+  const value = textarea.value || '';
+  const start = typeof textarea.selectionStart === 'number' ? textarea.selectionStart : value.length;
+  const end = typeof textarea.selectionEnd === 'number' ? textarea.selectionEnd : value.length;
+  textarea.value = value.slice(0, start) + snippet + value.slice(end);
+  const pos = start + snippet.length;
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd = pos;
+}
+function currentFigureMode(){
+  return blockFields.mode.value || 'panel';
+}
+function wrapFigureHtml(html){
+  return '\n\\begin{figurehtml}\n' + html + '\n\\end{figurehtml}\n';
+}
+function insertFigureAsNewCustomBlock(html){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  const block = { mode:'custom', title:'Figure', content: html };
+  const insertAt = idx >= 0 ? idx + 1 : arr.length;
+  arr.splice(insertAt, 0, block);
+  setSelectedIndex(name, insertAt);
+  loadSelectedBlockIntoEditor();
+  buildPreview();
+  showToast('Added figure as a new custom block.');
+}
+function insertFigureHtml(html){
+  const clean = String(html || '').trim();
+  if(!clean) return;
+  const mode = currentFigureMode();
+  if(mode === 'custom'){
+    insertTextAtCursor(blockFields.content, (blockFields.content.value && !blockFields.content.value.endsWith('\n') ? '\n' : '') + clean + '\n');
+    buildPreview();
+    showToast('Inserted figure into custom HTML block.');
+    return;
+  }
+  if(mode === 'panel' || mode === 'plain'){
+    insertTextAtCursor(blockFields.content, wrapFigureHtml(clean));
+    buildPreview();
+    showToast('Inserted figure into the current block.');
+    return;
+  }
+  insertFigureAsNewCustomBlock(clean);
+}
+window.insertFigureHtmlFromEditor = insertFigureHtml;
+function buildImageFigureHtml(src, alt){
+  const safeSrc = escapeAttr(src || '');
+  const safeAlt = escapeAttr(alt || '');
+  return '<figure><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
+}
+function openFigureModal(){
+  figureImagePanel.style.display = '';
+  figureEditorPanel.style.display = 'none';
+  figureModal.hidden = false;
+}
+function closeFigureModal(){
+  figureModal.hidden = true;
+}
+function openSimpleDiagramEditor(){
+  const popup = window.open('', '_blank', 'width=1200,height=860');
+  if(!popup){
+    alert('Popup blocked. Please allow popups for this page.');
+    return;
+  }
+  const editorHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Simple diagram editor</title>
+<style>
+  :root{--bg:#0f1630;--panel:#121933;--text:#eef3ff;--line:rgba(255,255,255,.12)}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Inter,Arial,sans-serif;background:#f5f7fb}
+  body{display:grid;grid-template-rows:auto 1fr}
+  .bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.9rem;background:#111827;color:#fff}
+  .bar button,.bar select{font:inherit;padding:.55rem .75rem;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+  .bar input[type="text"]{font:inherit;padding:.55rem .75rem;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#111;min-width:180px}
+  .canvas-wrap{padding:1rem;height:100%}
+  svg{width:100%;height:100%;display:block;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:18px;touch-action:none}
+  .hint{margin-left:auto;opacity:.8;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="bar">
+  <select id="tool">
+    <option value="select">Select / move</option>
+    <option value="pen">Pen</option>
+    <option value="line">Line / arrow</option>
+    <option value="rect">Rectangle</option>
+    <option value="ellipse">Ellipse</option>
+    <option value="text">Text</option>
+  </select>
+  <input id="textInput" type="text" placeholder="Text for text tool" value="Label" />
+  <button id="undoBtn">Undo</button>
+  <button id="clearBtn">Clear</button>
+  <button id="insertBtn">Insert into slide</button>
+  <span class="hint">Draw with mouse, trackpad, or touch.</span>
+</div>
+<div class="canvas-wrap">
+  <svg id="svg" viewBox="0 0 1000 700"></svg>
+</div>
+<script>
+const svg = document.getElementById('svg');
+const toolEl = document.getElementById('tool');
+const textInput = document.getElementById('textInput');
+let drawing = null;
+let selected = null;
+let dragOffset = null;
+const made = [];
+function pt(evt){
+  const r = svg.getBoundingClientRect();
+  const x = (evt.clientX - r.left) * 1000 / r.width;
+  const y = (evt.clientY - r.top) * 700 / r.height;
+  return {x,y};
+}
+function baseStyle(el){
+  el.setAttribute('stroke', '#111');
+  el.setAttribute('stroke-width', '3');
+  el.setAttribute('fill', 'none');
+}
+function add(el){
+  svg.appendChild(el);
+  made.push(el);
+}
+svg.addEventListener('pointerdown', (evt)=>{
+  const tool = toolEl.value;
+  const p = pt(evt);
+  if(tool === 'select'){
+    if(evt.target && evt.target !== svg){
+      selected = evt.target;
+      dragOffset = {x:p.x, y:p.y};
+    }
+    return;
+  }
+  if(tool === 'pen'){
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    baseStyle(poly);
+    poly.setAttribute('points', p.x + ',' + p.y);
+    drawing = {tool, el: poly};
+    add(poly);
+  } else if(tool === 'line'){
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    baseStyle(line);
+    line.setAttribute('x1', p.x); line.setAttribute('y1', p.y); line.setAttribute('x2', p.x); line.setAttribute('y2', p.y);
+    drawing = {tool, el: line, start: p};
+    add(line);
+  } else if(tool === 'rect'){
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    baseStyle(rect);
+    rect.setAttribute('x', p.x); rect.setAttribute('y', p.y); rect.setAttribute('width', 1); rect.setAttribute('height', 1);
+    drawing = {tool, el: rect, start: p};
+    add(rect);
+  } else if(tool === 'ellipse'){
+    const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    baseStyle(e);
+    e.setAttribute('cx', p.x); e.setAttribute('cy', p.y); e.setAttribute('rx', 1); e.setAttribute('ry', 1);
+    drawing = {tool, el: e, start: p};
+    add(e);
+  } else if(tool === 'text'){
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', p.x);
+    t.setAttribute('y', p.y);
+    t.setAttribute('fill', '#111');
+    t.setAttribute('font-size', '28');
+    t.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+    t.textContent = textInput.value || 'Text';
+    add(t);
+  }
+  svg.setPointerCapture(evt.pointerId);
+});
+svg.addEventListener('pointermove', (evt)=>{
+  const p = pt(evt);
+  if(selected && dragOffset){
+    const dx = p.x - dragOffset.x, dy = p.y - dragOffset.y;
+    dragOffset = p;
+    const tag = selected.tagName.toLowerCase();
+    if(tag === 'rect'){
+      selected.setAttribute('x', parseFloat(selected.getAttribute('x')) + dx);
+      selected.setAttribute('y', parseFloat(selected.getAttribute('y')) + dy);
+    } else if(tag === 'ellipse'){
+      selected.setAttribute('cx', parseFloat(selected.getAttribute('cx')) + dx);
+      selected.setAttribute('cy', parseFloat(selected.getAttribute('cy')) + dy);
+    } else if(tag === 'line'){
+      ['x1','x2'].forEach(k=>selected.setAttribute(k, parseFloat(selected.getAttribute(k)) + dx));
+      ['y1','y2'].forEach(k=>selected.setAttribute(k, parseFloat(selected.getAttribute(k)) + dy));
+    } else if(tag === 'polyline'){
+      const pts = selected.getAttribute('points').trim().split(/\s+/).map(pair=>pair.split(',').map(Number));
+      selected.setAttribute('points', pts.map(([x,y]) => (x+dx)+','+(y+dy)).join(' '));
+    } else if(tag === 'text'){
+      selected.setAttribute('x', parseFloat(selected.getAttribute('x')) + dx);
+      selected.setAttribute('y', parseFloat(selected.getAttribute('y')) + dy);
+    }
+    return;
+  }
+  if(!drawing) return;
+  if(drawing.tool === 'pen'){
+    const pts = drawing.el.getAttribute('points');
+    drawing.el.setAttribute('points', pts + ' ' + p.x + ',' + p.y);
+  } else if(drawing.tool === 'line'){
+    drawing.el.setAttribute('x2', p.x); drawing.el.setAttribute('y2', p.y);
+  } else if(drawing.tool === 'rect'){
+    const x = Math.min(drawing.start.x, p.x), y = Math.min(drawing.start.y, p.y);
+    const w = Math.abs(p.x - drawing.start.x), h = Math.abs(p.y - drawing.start.y);
+    drawing.el.setAttribute('x', x); drawing.el.setAttribute('y', y); drawing.el.setAttribute('width', w); drawing.el.setAttribute('height', h);
+  } else if(drawing.tool === 'ellipse'){
+    drawing.el.setAttribute('cx', (drawing.start.x + p.x) / 2);
+    drawing.el.setAttribute('cy', (drawing.start.y + p.y) / 2);
+    drawing.el.setAttribute('rx', Math.abs(p.x - drawing.start.x) / 2);
+    drawing.el.setAttribute('ry', Math.abs(p.y - drawing.start.y) / 2);
+  }
+});
+svg.addEventListener('pointerup', ()=>{
+  drawing = null;
+  selected = null;
+  dragOffset = null;
+});
+document.getElementById('undoBtn').addEventListener('click', ()=>{
+  const el = made.pop();
+  if(el) el.remove();
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  made.length = 0;
+});
+document.getElementById('insertBtn').addEventListener('click', ()=>{
+  const svgMarkup = svg.outerHTML;
+  if(window.opener && !window.opener.closed && typeof window.opener.insertFigureHtmlFromEditor === 'function'){
+    window.opener.insertFigureHtmlFromEditor('<figure>' + svgMarkup + '</figure>');
+    window.close();
+  } else {
+    alert('Could not send the diagram back to the generator.');
+  }
+});
+<\/script>
+</body>
+</html>`;
+  popup.document.open();
+  popup.document.write(editorHtml);
+  popup.document.close();
+  closeFigureModal();
+}
+
+function buildPreview(){
+  preview.innerHTML = buildSlideMarkup(currentDraftSlide());
+  snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
+    window.MathJax.typesetPromise([preview]).catch(()=>{});
+  }
+}
+
+function parseSnippetSlide(){
+  const raw = snippetOutput.value.trim();
+  if(!raw) throw new Error('The snippet box is empty.');
+  const parsed = JSON.parse(raw);
+  return normalizeSlide(parsed);
+}
+function loadSnippetIntoEditor(){
+  const slide = parseSnippetSlide();
+  applySlideToForm(slide);
+  buildPreview();
+  showToast('Loaded snippet into editor.');
+}
+function replaceSelectedSlideFromSnippet(){
+  if(activeIndex < 0 || activeIndex >= slides.length){
+    throw new Error('Select a slide first.');
+  }
+  slides[activeIndex] = parseSnippetSlide();
+  applySlideToForm(slides[activeIndex]);
+  buildPreview();
+  renderDeckList();
+  showToast('Replaced selected slide from snippet.');
+}
+function addSlideFromSnippet(){
+  const slide = parseSnippetSlide();
+  slides.push(slide);
+  activeIndex = slides.length - 1;
+  applySlideToForm(slide);
+  buildPreview();
+  renderDeckList();
+  showToast('Added slide from snippet.');
+}
+function formatSnippet(){
+  const slide = parseSnippetSlide();
+  snippetOutput.value = JSON.stringify(slideForSnippet(slide), null, 2);
+  showToast('Formatted snippet.');
+}
+function renderDeckList(){
+  deckCount.textContent = slides.length + ' slide' + (slides.length === 1 ? '' : 's');
+  deckList.innerHTML = slides.map((slide, idx)=>`
+    <button class="deck-item ${idx === activeIndex ? 'active' : ''}" data-index="${idx}">
+      ${escapeHtml(slide.title || ('Untitled slide ' + (idx + 1)))}
+      <span class="meta">${idx + 1}. ${escapeHtml(slide.slideType || 'single')} · ${normalizeSlide(slide).leftBlocks.length} left block(s)${slide.slideType === 'two-col' ? ' · ' + normalizeSlide(slide).rightBlocks.length + ' right block(s)' : ''}</span>
+    </button>
+  `).join('');
+  deckList.querySelectorAll('.deck-item').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeIndex = Number(btn.dataset.index);
+      applySlideToForm(slides[activeIndex]);
+      buildPreview();
+      renderDeckList();
+    });
+  });
+}
+function addSlide(){
+  slides.push(currentDraftSlide());
+  activeIndex = slides.length - 1;
+  renderDeckList();
+  showToast('Added slide.');
+}
+function updateSlide(){
+  if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
+  slides[activeIndex] = currentDraftSlide();
+  renderDeckList();
+  showToast('Updated slide.');
+}
+function duplicateSlide(){
+  if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
+  slides.splice(activeIndex + 1, 0, clone(slides[activeIndex]));
+  activeIndex += 1;
+  renderDeckList();
+  showToast('Duplicated slide.');
+}
+function deleteSlide(){
+  if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
+  slides.splice(activeIndex, 1);
+  if(activeIndex >= slides.length) activeIndex = slides.length - 1;
+  if(activeIndex >= 0) applySlideToForm(slides[activeIndex]); else clearForm(false);
+  buildPreview();
+  renderDeckList();
+  showToast('Deleted slide.');
+}
+function moveSlide(dir){
+  if(activeIndex < 0 || activeIndex >= slides.length) return;
+  const next = activeIndex + dir;
+  if(next < 0 || next >= slides.length) return;
+  const tmp = slides[activeIndex];
+  slides[activeIndex] = slides[next];
+  slides[next] = tmp;
+  activeIndex = next;
+  renderDeckList();
+}
+function clearForm(resetPreview = true){
+  applySlideToForm({
+    slideType:'single',
+    headingLevel:'h2',
+    bgColor:'#ffffff',
+    fontColor:'#111111',
+    title:'',
+    kicker:'',
+    lede:'',
+    leftBlocks:[],
+    rightBlocks:[],
+    notesTitle:'Speaker notes',
+    notesBody:''
+  });
+  if(resetPreview) buildPreview();
+}
+async function copyText(text, success){
+  await navigator.clipboard.writeText(text);
+  showToast(success);
+}
+function copyCurrentSnippet(){ copyText(snippetOutput.value, 'Copied snippet.'); }
+function copyMathJaxHelper(){
+  copyText(String.raw`Inline: \( a^t = \sigma(u^t) \)
+Display:
+\[
+\nabla_{W[t]} \ell = \delta^t (z^{t-1})^\top
+\]`, 'Copied MathJax helper.');
+}
+
+function buildStandaloneViewer(payload){
+  const deckJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(payload.deckTitle || 'HTML Presentation')}</title>
+<script id="deck-source" type="application/json">${deckJson}</scr` + `ipt>
+<style>
+:root{--deck-bg:#060a16;--deck-panel:rgba(10,16,32,.82);--deck-text:#eef3ff}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at top left,#17214a 0%,var(--deck-bg) 45%,#070b17 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+body{color:var(--deck-text);overflow:hidden}
+.deck{position:relative;width:100vw;height:100svh}
+.deck-slide{display:none;position:absolute;inset:0;overflow:auto;padding:3.2rem 3.5rem 5rem;background:#fff;color:#111}
+.deck-slide.active{display:block}
+.deck-slide h1,.deck-slide h2{margin:0;line-height:1.05}
+.deck-slide h1{font-size:3.4rem;max-width:15ch}.deck-slide h2{font-size:2.3rem}
+.kicker{margin-top:.8rem;color:rgba(17,17,17,.72);font-size:1.05rem;line-height:1.45;max-width:70ch}
+.lede{margin-top:.9rem;color:rgba(17,17,17,.72);font-size:1.18rem;line-height:1.5;max-width:70ch}
+.slide-body{margin-top:1.35rem}.deck-slide.single .slide-body{display:block}.deck-slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
+.col{min-width:0}.col-stack{display:grid;gap:1rem}
+.rich{display:grid;gap:1rem}
+.rich p,.rich ul,.rich ol,.rich h3,.display-math,.bullet-card,.placeholder,.diag,.pseudo-block,.pseudo-latex-block,.custom-frame-wrap,.figure-embed{margin:0;border:1px solid rgba(17,17,17,.12);border-radius:22px;background:rgba(127,127,127,.045);box-shadow:0 8px 24px rgba(0,0,0,.04)}
+.rich p{color:rgba(17,17,17,.85);font-size:1.26rem;line-height:1.62;padding:1rem 1.15rem}
+.rich ul,.rich ol{color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58;padding:1rem 1.2rem 1rem 2.3rem}
+.rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
+.rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
+.display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
+.pseudo-block,.pseudo-latex-block{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow-x:auto;color:rgba(17,17,17,.9)}
+.pseudo-latex-block mjx-container{font-size:100% !important}
+.bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}.bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
+.placeholder{min-height:220px;display:grid;place-items:center;color:rgba(17,17,17,.72);padding:1rem 1.15rem;text-align:center}
+.figure-embed{padding:.8rem;background:#fff;overflow:auto}.figure-embed figure{margin:0}.figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;height:auto;margin:0 auto}
+.custom-frame-wrap{overflow:hidden;background:#fff}.custom-frame{width:100%;height:720px;border:0;display:block;background:#fff}
+.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+.title-center{min-height:720px;display:grid;place-items:center;text-align:center;padding:3rem}.title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+.slides-button{position:absolute;top:1.2rem;right:1.2rem;border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.85);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
+.slide-number{position:absolute;bottom:1.15rem;right:1.4rem;font-size:1rem;color:rgba(17,17,17,.62)}
+.deck-toolbar{position:fixed;left:1rem;top:1rem;display:flex;gap:.65rem;z-index:30}
+.deck-toolbar button,.slide-map button,.nav-btn{border:1px solid rgba(255,255,255,.14);background:rgba(10,16,32,.82);color:#eef3ff;border-radius:14px;padding:.78rem .95rem;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 18px 45px rgba(0,0,0,.25)}
+.slide-map{position:fixed;top:0;right:0;height:100svh;width:min(420px,92vw);background:rgba(7,11,23,.96);border-left:1px solid rgba(255,255,255,.10);padding:1rem;display:none;z-index:35;overflow:auto}
+.slide-map.open{display:block}.slide-map h3{margin:.2rem 0 1rem 0;font-size:1.2rem}.slide-map-list{display:grid;gap:.6rem}.slide-map-item{display:flex;gap:.6rem;align-items:flex-start;text-align:left}.slide-map-item span:first-child{opacity:.7;min-width:2.2rem}
+@media (max-width:900px){.deck-slide{padding:1.5rem 1.2rem 4.2rem}.deck-slide.two-col .slide-body{grid-template-columns:1fr}.deck-slide h1{font-size:2.3rem}.deck-slide h2{font-size:1.9rem}}
+</style>
+<script>
+window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},svg:{fontCache:'global'}};
+</scr` + `ipt>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
+</head>
+<body>
+<div class="deck-toolbar"><button class="nav-btn" id="prevBtn">◀</button><button class="nav-btn" id="nextBtn">▶</button></div>
+<div class="slide-map" id="slideMap"><button id="closeMapBtn" style="float:right;">Close</button><h3 id="deckTitle"></h3><div class="slide-map-list" id="slideMapList"></div></div>
+<div class="deck" id="deck"></div>
+<script>
+const deckPayload=JSON.parse(document.getElementById('deck-source').textContent);
+function escapeHtml(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function escapeAttr(str){return escapeHtml(str).replace(/\\n/g,'&#10;');}
+function preserveMathTokens(str){const tokens=[];let out=String(str??'');const patterns=[/\\$\\$[\\s\\S]+?\\$\\$/g,/\\\\\\[[\\s\\S]+?\\\\\\]/g,/\\\\\\([\\s\\S]+?\\\\\\)/g,/\\$(?!\\s)[^$\\n]+?\\$/g];patterns.forEach(pattern=>{out=out.replace(pattern,m=>{const key='@@MATH'+tokens.length+'@@';tokens.push(m);return key;});});return {out,tokens};}
+function restoreMathTokens(str,tokens){return String(str).replace(/@@MATH(\\d+)@@/g,(_,i)=>tokens[Number(i)]??'');}
+function hexToRgb(hex){const clean=String(hex||'').trim().replace('#','');if(!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(clean)) return null;const full=clean.length===3?clean.split('').map(c=>c+c).join(''):clean;const num=parseInt(full,16);return {r:(num>>16)&255,g:(num>>8)&255,b:num&255};}
+function rgbaFromHex(hex,alpha){const rgb=hexToRgb(hex);if(!rgb) return 'rgba(0,0,0,'+alpha+')';return 'rgba('+rgb.r+','+rgb.g+','+rgb.b+','+alpha+')';}
+function buildSlideStyle(slide){const bg=slide.bgColor||'#ffffff';const font=slide.fontColor||'#111111';const muted=rgbaFromHex(font,0.72);const line=rgbaFromHex(font,0.14);return 'background:'+bg+';color:'+font+';--text:'+font+';--muted:'+muted+';--line:'+line+';';}
+function parseStructuredText(raw){const text=String(raw??'').replace(/\\r\\n/g,'\\n').trim();if(!text)return '';function safeWithMath(str){const p=preserveMathTokens(str);return restoreMathTokens(escapeHtml(p.out),p.tokens);}const lines=text.split('\\n');const parts=[];let paragraph=[];let listType=null;let listItems=[];function flushParagraph(){if(!paragraph.length)return;const joined=paragraph.join(' ').trim();if(joined)parts.push('<p>'+safeWithMath(joined)+'</p>');paragraph=[];}function flushList(){if(!listItems.length)return;const tag=listType==='enumerate'?'ol':'ul';parts.push('<'+tag+'>'+listItems.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</'+tag+'>');listItems=[];listType=null;}function collectUntil(endPattern,startIndex){const chunk=[];let i=startIndex;while(i<lines.length&&!endPattern.test(lines[i].trim())){chunk.push(lines[i]);i+=1;}return {body:chunk.join('\\n').trim(),endIndex:i};}function simpleCardBody(body){const trimmed=body.trim();if(!trimmed)return '';return trimmed.split(/\\n\\s*\\n/).map(block=>'<p>'+safeWithMath(block.replace(/\\s*\\n\\s*/g,' ').trim())+'</p>').join('');}
+for(let i=0;i<lines.length;i+=1){const line=lines[i].trim();if(!line){flushParagraph();flushList();continue;}const paragraphMatch=line.match(/^\\\\paragraph\\{([\\s\\S]*)\\}$/);if(paragraphMatch){flushParagraph();flushList();parts.push('<p>'+safeWithMath(paragraphMatch[1].trim())+'</p>');continue;}if(/^\\\\begin\\{itemize\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{itemize\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ul>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ul>');continue;}if(/^\\\\begin\\{enumerate\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{enumerate\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ol>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ol>');continue;}if(/^\\\\begin\\{equation\\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{equation\\}$/i,i+1);parts.push('<div class="display-math">\\\\[\\\\begin{aligned}'+escapeHtml(collected.body)+'\\\\end{aligned}\\\\]</div>');i=collected.endIndex;continue;}const cardBegin=line.match(/^\\\\begin\\{card\\}\\{([\\s\\S]*)\\}$/i);if(cardBegin){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{card\\}$/i,i+1);parts.push('<div class="bullet-card"><b>'+safeWithMath(cardBegin[1].trim())+'</b><div>'+simpleCardBody(collected.body)+'</div></div>');i=collected.endIndex;continue;}if(/^UL:/i.test(line)){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.replace(/^UL:/i,'').trim());continue;}if(line.startsWith('- ')){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.slice(2).trim());continue;}flushList();if(line.startsWith('### ')){flushParagraph();parts.push('<h3>'+safeWithMath(line.slice(4).trim())+'</h3>');continue;}if(/^P:/i.test(line)){flushParagraph();parts.push('<p>'+safeWithMath(line.replace(/^P:/i,'').trim())+'</p>');continue;}if(/^EQ:/i.test(line)){flushParagraph();parts.push('<div class="display-math">'+safeWithMath(line.replace(/^EQ:/i,'').trim())+'</div>');continue;}if(/^CARD:/i.test(line)){flushParagraph();const payload=line.replace(/^CARD:/i,'').trim();const pieces=payload.split('|');const cardTitle=pieces.shift()||'';const cardBody=pieces.join('|');parts.push('<div class="bullet-card"><b>'+safeWithMath(cardTitle)+'</b><div><p>'+safeWithMath(cardBody)+'</p></div></div>');continue;}paragraph.push(line);}flushParagraph();flushList();return parts.join('\\n');}
+function diagramMarkup(){return '<div class="diag"><svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder"><line x1="145" y1="145" x2="355" y2="125" class="edge"/><line x1="145" y1="145" x2="355" y2="295" class="edge"/><line x1="145" y1="285" x2="355" y2="125" class="edge"/><line x1="145" y1="285" x2="355" y2="295" class="edge"/><line x1="405" y1="125" x2="615" y2="215" class="edge"/><line x1="405" y1="295" x2="615" y2="215" class="edge"/><circle cx="115" cy="145" r="34" class="node"/><circle cx="115" cy="285" r="34" class="node"/><circle cx="375" cy="125" r="34" class="node"/><circle cx="375" cy="295" r="34" class="node"/><circle cx="645" cy="215" r="34" class="node"/><text x="88" y="153" class="label">x₁</text><text x="88" y="293" class="label">x₂</text><text x="350" y="133" class="label">h₁</text><text x="350" y="303" class="label">h₂</text><text x="632" y="223" class="label">ŷ</text></svg></div>';}
+function customFrameMarkup(raw){const html=String(raw||'').trim();if(!html)return '<div class="placeholder">Paste custom HTML here.</div>';return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="'+escapeAttr(html)+'"></iframe></div>';}
+function normalizeBlock(block){const mode=block.mode||'panel';if(mode==='diagram'){return {mode:'custom',title:block.title||'Legacy diagram',content:'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><style>html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}</style></head><body>'+(block.content||diagramMarkup())+'</body></html>'};}return {mode:mode,title:block.title||'',content:block.content||''};}
+function normalizeSlide(slide){const out=JSON.parse(JSON.stringify(slide||{}));let leftBlocks=Array.isArray(out.leftBlocks)?out.leftBlocks.map(normalizeBlock):null;let rightBlocks=Array.isArray(out.rightBlocks)?out.rightBlocks.map(normalizeBlock):null;if(!leftBlocks){leftBlocks=[{mode:out.leftMode||'panel',title:'',content:out.leftHtml||''}];}if(!rightBlocks){rightBlocks=out.slideType==='two-col'?[{mode:out.rightMode||'panel',title:'',content:out.rightHtml||''}]:[];}out.leftBlocks=leftBlocks;out.rightBlocks=rightBlocks;return out;}
+function renderBlock(block,placeholderText){const resolvedMode=block.mode||'panel';const raw=block.content||'';if(resolvedMode==='diagram')return diagramMarkup();if(resolvedMode==='custom')return customFrameMarkup(raw);if(resolvedMode==='placeholder')return '<div class="placeholder">'+escapeHtml(raw||placeholderText||'Placeholder')+'</div>';if(resolvedMode==='pseudocode')return '<pre class="pseudo-block">'+escapeHtml(raw)+'</pre>';if(resolvedMode==='pseudocode-latex'){const p=preserveMathTokens(raw);return '<div class="pseudo-latex-block">'+restoreMathTokens(escapeHtml(p.out),p.tokens)+'</div>';}return '<div class="rich">'+parseStructuredText(raw)+'</div>';}
+function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
+function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\\n/g,'<br>')+'</'+heading+'>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='two-col'){return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
+const deck=document.getElementById('deck');const slideMap=document.getElementById('slideMap');const slideMapList=document.getElementById('slideMapList');document.getElementById('deckTitle').textContent=deckPayload.deckTitle||'Slides';
+deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');return '<section class="'+cls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'"><button class="slides-button" type="button">Slides</button><div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'</section>';}).join('\\n');
+slideMapList.innerHTML=deckPayload.slides.map((slide,idx)=>'<button type="button" class="slide-map-item" data-go="'+idx+'"><span>'+(idx+1)+'.</span><span>'+escapeHtml(slide.title||('Slide '+(idx+1)))+'</span></button>').join('');
+let active=0;const slideEls=Array.from(document.querySelectorAll('.deck-slide'));
+function render(){slideEls.forEach((el,i)=>el.classList.toggle('active',i===active));if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).catch(()=>{});}}
+function go(i){if(i<0||i>=slideEls.length)return;active=i;render();slideMap.classList.remove('open');}
+document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));window.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape')slideMap.classList.remove('open');});render();
+<\/script>
+</body>
+</html>`;
+}
+function downloadTextFile(filename, text){
+  const blob = new Blob([text], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+function currentPayload(){
+  return { deckTitle: fields.deckTitle.value || 'My HTML Presentation', slides: slides.length ? slides : [currentDraftSlide()] };
+}
+
+function getPrintLayout(slidesPerPage){
+  const n = Number(slidesPerPage) || 1;
+  if(n === 2) return { rows: 2, cols: 1, className: 'layout-2' };
+  if(n === 4) return { rows: 2, cols: 2, className: 'layout-4' };
+  if(n === 6) return { rows: 3, cols: 2, className: 'layout-6' };
+  return { rows: 1, cols: 1, className: 'layout-1' };
+}
+function buildPrintableViewer(payload, slidesPerPage){
+  const deckJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');
+  const layout = getPrintLayout(slidesPerPage);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(payload.deckTitle || 'Printable presentation')}</title>
+<script id="deck-source" type="application/json">${deckJson}</scr` + `ipt>
+<style>
+  :root{
+    --paper:#ffffff;
+    --sheet:#f1f1f1;
+    --ink:#111111;
+    --line:rgba(17,17,17,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--sheet);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-toolbar{
+    position:sticky;top:0;z-index:20;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(17,17,17,.10);padding:.75rem 1rem;display:flex;justify-content:space-between;gap:1rem;align-items:center
+  }
+  .print-toolbar button{
+    border:1px solid rgba(17,17,17,.16);background:#fff;color:#111;border-radius:12px;padding:.7rem .95rem;font:inherit;font-weight:700;cursor:pointer
+  }
+  .print-deck{padding:.25in}
+  .print-page{
+    display:grid;
+    grid-template-columns:repeat(var(--cols), minmax(0,1fr));
+    grid-template-rows:repeat(var(--rows), minmax(0,1fr));
+    gap:.18in;
+    padding:0;
+    min-height:calc(11in - .5in);
+    page-break-after:always;
+    break-after:page;
+  }
+  .print-page:last-child{page-break-after:auto;break-after:auto}
+  .print-cell{min-width:0;min-height:0}
+  .print-cell.empty{visibility:hidden}
+  .slide{
+    position:relative;
+    height:100%;
+    min-height:0;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:.22in .24in .32in;
+    background:var(--paper);
+    color:#111111;
+    overflow:visible;
+  }
+  .slide h1,.slide h2{margin:0;line-height:1.05}
+  .slide h1{font-size:var(--h1)}
+  .slide h2{font-size:var(--h2)}
+  .kicker{margin-top:.08in;color:rgba(17,17,17,.72);font-size:var(--kicker);line-height:1.35;max-width:100%}
+  .lede{margin-top:.10in;color:rgba(17,17,17,.72);font-size:var(--lede);line-height:1.45;max-width:100%}
+  .slide-body{margin-top:.14in}
+  .slide.single .slide-body{display:block;height:calc(100% - .95in)}
+  .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.14in;align-items:start;height:calc(100% - .95in)}
+  .col{min-width:0;height:100%}
+  .col-stack{display:grid;gap:.12in;height:100%;align-content:start}
+  .col-stack > .custom-frame-wrap:only-child{height:100%}
+  .rich{display:grid;gap:.12in}
+  .rich p,.rich ul,.rich ol,.rich h3,.display-math,.bullet-card,.placeholder,.diag,.pseudo-block,.pseudo-latex-block,.custom-frame-wrap{
+    margin:0;border:1px solid rgba(17,17,17,.10);border-radius:12px;background:rgba(127,127,127,.04)
+  }
+  .rich p{color:rgba(17,17,17,.86);font-size:var(--body);line-height:1.42;padding:.10in .12in}
+  .rich ul,.rich ol{color:rgba(17,17,17,.86);font-size:var(--body);line-height:1.4;padding:.10in .12in .10in .26in}
+  .rich li{margin:.03in 0;color:rgba(17,17,17,.86);font-size:var(--body);line-height:1.4}
+  .rich h3{font-size:var(--subhead);padding:.10in .12in}
+  .display-math{font-size:var(--math);padding:.10in .12in;overflow:hidden}
+  .pseudo-block,.pseudo-latex-block{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:var(--code);line-height:1.35;white-space:pre-wrap;tab-size:2;padding:.10in .12in;overflow:hidden;color:rgba(17,17,17,.92)
+  }
+  .pseudo-latex-block mjx-container{font-size:100% !important}
+  .bullet-card{padding:.10in .12in}
+  .bullet-card b{display:block;margin-bottom:.04in;font-size:var(--subhead)}
+  .placeholder{display:grid;place-items:center;min-height:1.2in;color:rgba(17,17,17,.65);padding:.10in .12in;text-align:center}
+  .custom-frame-wrap{
+    overflow:hidden;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .custom-frame-wrap:only-child{
+    flex:1 1 auto;
+  }
+  .custom-frame{
+    width:100%;
+    height:100%;
+    min-height:0;
+    border:0;
+    display:block;
+    background:#fff;
+    flex:1 1 auto;
+  }
+  .layout-1 .custom-frame{min-height:6.6in}
+  .layout-2 .custom-frame{min-height:3.9in}
+  .layout-4 .custom-frame{min-height:2.9in}
+  .layout-6 .custom-frame{min-height:1.85in}
+  .diag{display:grid;place-items:center;padding:.08in}
+  .diagram{width:100%;max-width:none;height:auto;max-height:100%}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:4;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:4}
+  .diagram .label{fill:currentColor;font:700 var(--diag-label) Inter,system-ui,sans-serif}
+  .title-center{min-height:100%;display:grid;place-items:center;text-align:center;padding:.2in}
+  .title-center h1,.title-center h2{max-width:14ch}
+  .layout-1{--h1:2.2rem;--h2:1.75rem;--kicker:.95rem;--lede:1rem;--body:.95rem;--subhead:1rem;--math:1rem;--code:.92rem;--diag-label:22px}
+  .layout-2{--h1:1.6rem;--h2:1.25rem;--kicker:.75rem;--lede:.8rem;--body:.72rem;--subhead:.8rem;--math:.8rem;--code:.72rem;--diag-label:16px}
+  .layout-4{--h1:1.1rem;--h2:.95rem;--kicker:.58rem;--lede:.62rem;--body:.54rem;--subhead:.62rem;--math:.62rem;--code:.53rem;--diag-label:11px}
+  .layout-6{--h1:.9rem;--h2:.78rem;--kicker:.48rem;--lede:.5rem;--body:.42rem;--subhead:.48rem;--math:.48rem;--code:.40rem;--diag-label:9px}
+  .layout-4 .slide,.layout-6 .slide{padding:.14in .16in .18in}
+  @page{size:landscape;margin:.35in}
+  @media print{
+    body{background:#fff}
+    .print-toolbar{display:none}
+    .print-deck{padding:0}
+  }
+</style>
+<script>
+window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},svg:{fontCache:'global'}};
+</scr` + `ipt>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
+</head>
+<body>
+<div class="print-toolbar">
+  <div><strong>${escapeHtml(payload.deckTitle || 'Printable presentation')}</strong> · ${Number(slidesPerPage) || 1} slide(s) per page</div>
+  <button id="printNowBtn">Print / Save as PDF</button>
+</div>
+<div class="print-deck" id="printDeck"></div>
+<script>
+const deckPayload=JSON.parse(document.getElementById('deck-source').textContent);
+const layout=${JSON.stringify(layout)};
+function escapeHtml(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function escapeAttr(str){return escapeHtml(str).replace(/\\n/g,'&#10;');}
+function preserveMathTokens(str){const tokens=[];let out=String(str??'');const patterns=[/\\$\\$[\\s\\S]+?\\$\\$/g,/\\\\\\[[\\s\\S]+?\\\\\\]/g,/\\\\\\([\\s\\S]+?\\\\\\)/g,/\\$(?!\\s)[^$\\n]+?\\$/g];patterns.forEach(pattern=>{out=out.replace(pattern,m=>{const key='@@MATH'+tokens.length+'@@';tokens.push(m);return key;});});return {out,tokens};}
+function restoreMathTokens(str,tokens){return String(str).replace(/@@MATH(\\d+)@@/g,(_,i)=>tokens[Number(i)]??'');}
+function parseStructuredText(raw){const text=String(raw??'').replace(/\\r\\n/g,'\\n').trim();if(!text)return '';function safeWithMath(str){const p=preserveMathTokens(str);return restoreMathTokens(escapeHtml(p.out),p.tokens);}const lines=text.split('\\n');const parts=[];let paragraph=[];let listType=null;let listItems=[];function flushParagraph(){if(!paragraph.length)return;const joined=paragraph.join(' ').trim();if(joined)parts.push('<p>'+safeWithMath(joined)+'</p>');paragraph=[];}function flushList(){if(!listItems.length)return;const tag=listType==='enumerate'?'ol':'ul';parts.push('<'+tag+'>'+listItems.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</'+tag+'>');listItems=[];listType=null;}function collectUntil(endPattern,startIndex){const chunk=[];let i=startIndex;while(i<lines.length&&!endPattern.test(lines[i].trim())){chunk.push(lines[i]);i+=1;}return {body:chunk.join('\\n').trim(),endIndex:i};}function simpleCardBody(body){const trimmed=body.trim();if(!trimmed)return '';return trimmed.split(/\\n\\s*\\n/).map(block=>'<p>'+safeWithMath(block.replace(/\\s*\\n\\s*/g,' ').trim())+'</p>').join('');}
+for(let i=0;i<lines.length;i+=1){const line=lines[i].trim();if(!line){flushParagraph();flushList();continue;}const paragraphMatch=line.match(/^\\\\paragraph\\{([\\s\\S]*)\\}$/);if(paragraphMatch){flushParagraph();flushList();parts.push('<p>'+safeWithMath(paragraphMatch[1].trim())+'</p>');continue;}if(/^\\\\begin\\{itemize\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{itemize\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ul>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ul>');continue;}if(/^\\\\begin\\{enumerate\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{enumerate\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ol>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ol>');continue;}if(/^\\\\begin\\{equation\\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{equation\\}$/i,i+1);parts.push('<div class="display-math">\\\\[\\\\begin{aligned}'+escapeHtml(collected.body)+'\\\\end{aligned}\\\\]</div>');i=collected.endIndex;continue;}const cardBegin=line.match(/^\\\\begin\\{card\\}\\{([\\s\\S]*)\\}$/i);if(cardBegin){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{card\\}$/i,i+1);parts.push('<div class="bullet-card"><b>'+safeWithMath(cardBegin[1].trim())+'</b><div>'+simpleCardBody(collected.body)+'</div></div>');i=collected.endIndex;continue;}if(/^UL:/i.test(line)){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.replace(/^UL:/i,'').trim());continue;}if(line.startsWith('- ')){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.slice(2).trim());continue;}flushList();if(line.startsWith('### ')){flushParagraph();parts.push('<h3>'+safeWithMath(line.slice(4).trim())+'</h3>');continue;}if(/^P:/i.test(line)){flushParagraph();parts.push('<p>'+safeWithMath(line.replace(/^P:/i,'').trim())+'</p>');continue;}if(/^EQ:/i.test(line)){flushParagraph();parts.push('<div class="display-math">'+safeWithMath(line.replace(/^EQ:/i,'').trim())+'</div>');continue;}if(/^CARD:/i.test(line)){flushParagraph();const payload=line.replace(/^CARD:/i,'').trim();const pieces=payload.split('|');const cardTitle=pieces.shift()||'';const cardBody=pieces.join('|');parts.push('<div class="bullet-card"><b>'+safeWithMath(cardTitle)+'</b><div><p>'+safeWithMath(cardBody)+'</p></div></div>');continue;}paragraph.push(line);}flushParagraph();flushList();return parts.join('\\n');}
+function diagramMarkup(){return '<div class="diag"><svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder"><line x1="145" y1="145" x2="355" y2="125" class="edge"/><line x1="145" y1="145" x2="355" y2="295" class="edge"/><line x1="145" y1="285" x2="355" y2="125" class="edge"/><line x1="145" y1="285" x2="355" y2="295" class="edge"/><line x1="405" y1="125" x2="615" y2="215" class="edge"/><line x1="405" y1="295" x2="615" y2="215" class="edge"/><circle cx="115" cy="145" r="34" class="node"/><circle cx="115" cy="285" r="34" class="node"/><circle cx="375" cy="125" r="34" class="node"/><circle cx="375" cy="295" r="34" class="node"/><circle cx="645" cy="215" r="34" class="node"/><text x="88" y="153" class="label">x₁</text><text x="88" y="293" class="label">x₂</text><text x="350" y="133" class="label">h₁</text><text x="350" y="303" class="label">h₂</text><text x="632" y="223" class="label">ŷ</text></svg></div>';}
+function customFrameMarkup(raw){const html=String(raw||'').trim();if(!html)return '<div class="placeholder">Paste custom HTML here.</div>';return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="'+escapeAttr(html)+'"></iframe></div>';}
+function normalizeBlock(block){return {mode:block.mode||'panel',title:block.title||'',content:block.content||''};}
+function normalizeSlide(slide){const out=JSON.parse(JSON.stringify(slide||{}));let leftBlocks=Array.isArray(out.leftBlocks)?out.leftBlocks.map(normalizeBlock):null;let rightBlocks=Array.isArray(out.rightBlocks)?out.rightBlocks.map(normalizeBlock):null;if(!leftBlocks){leftBlocks=[{mode:out.leftMode||'panel',title:'',content:out.leftHtml||''}];}if(!rightBlocks){rightBlocks=out.slideType==='two-col'?[{mode:out.rightMode||'panel',title:'',content:out.rightHtml||''}]:[];}out.leftBlocks=leftBlocks;out.rightBlocks=rightBlocks;return out;}
+function renderBlock(block,placeholderText){const resolvedMode=block.mode||'panel';const raw=block.content||'';if(resolvedMode==='diagram')return diagramMarkup();if(resolvedMode==='custom')return customFrameMarkup(raw);if(resolvedMode==='placeholder')return '<div class="placeholder">'+escapeHtml(raw||placeholderText||'Placeholder')+'</div>';if(resolvedMode==='pseudocode')return '<pre class="pseudo-block">'+escapeHtml(raw)+'</pre>';if(resolvedMode==='pseudocode-latex'){const p=preserveMathTokens(raw);return '<div class="pseudo-latex-block">'+restoreMathTokens(escapeHtml(p.out),p.tokens)+'</div>';}return '<div class="rich">'+parseStructuredText(raw)+'</div>';}
+function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
+function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\\n/g,'<br>')+'</'+heading+'>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='two-col'){return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
+const slides=deckPayload.slides.map(normalizeSlide);
+const deck=document.getElementById('printDeck');
+function buildPages(){
+  const pages=[];
+  for(let i=0;i<slides.length;i+=${Number(slidesPerPage) || 1}){
+    const chunk=slides.slice(i, i+${Number(slidesPerPage) || 1});
+    const cells=chunk.map(slide=>'<div class="print-cell">'+('<section class="slide '+(slide.slideType==='title-center'?'title-center':(slide.slideType==='two-col'?'two-col':'single'))+'" style="'+('background:'+(slide.bgColor||'#ffffff')+';color:'+(slide.fontColor||'#111111')+';')+'">'+buildSlideInner(slide).trim()+'</section>')+'</div>');
+    while(cells.length < ${Number(slidesPerPage) || 1}) cells.push('<div class="print-cell empty"></div>');
+    pages.push('<section class="print-page '+layout.className+'" style="--cols:'+layout.cols+';--rows:'+layout.rows+'">'+cells.join('')+'</section>');
+  }
+  deck.innerHTML=pages.join('');
+}
+buildPages();
+function afterTypeset(){setTimeout(()=>window.print(), 250);}
+if(window.MathJax && typeof window.MathJax.typesetPromise==='function'){
+  window.MathJax.typesetPromise([deck]).then(afterTypeset).catch(afterTypeset);
+}else{
+  window.addEventListener('load', afterTypeset);
+}
+document.getElementById('printNowBtn').addEventListener('click', ()=>window.print());
+</scr` + `ipt>
+</body>
+</html>`;
+}
+function parseSlideSelection(selectionText, total){
+  const raw = String(selectionText || '').trim();
+  if(!raw || raw.toLowerCase() === 'all') return Array.from({length: total}, (_, i) => i);
+  const picks = new Set();
+  raw.split(',').map(s => s.trim()).filter(Boolean).forEach(part => {
+    const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if(m){
+      let a = Number(m[1]), b = Number(m[2]);
+      if(!Number.isFinite(a) || !Number.isFinite(b)) return;
+      if(a > b){ const t = a; a = b; b = t; }
+      for(let i = a; i <= b; i += 1){
+        if(i >= 1 && i <= total) picks.add(i - 1);
+      }
+      return;
+    }
+    if(/^\d+$/.test(part)){
+      const i = Number(part);
+      if(i >= 1 && i <= total) picks.add(i - 1);
+    }
+  });
+  return Array.from(picks).sort((a,b) => a - b);
+}
+function openPrintablePdf(){
+  const payload = currentPayload();
+  const perPage = document.getElementById('printSlidesPerPage').value || '1';
+  const selectionText = (document.getElementById('printSlideSelection') || {}).value || 'all';
+  const selected = parseSlideSelection(selectionText, payload.slides.length);
+  if(!selected.length){
+    alert('No slides matched the selected range. Use all or a range like 1-3,5,8-10.');
+    return;
+  }
+  const filteredPayload = {
+    deckTitle: payload.deckTitle,
+    slides: selected.map(i => payload.slides[i])
+  };
+  const win = window.open('', '_blank');
+  if(!win){
+    alert('Please allow pop-ups to open the printable PDF view.');
+    return;
+  }
+  win.document.open();
+  win.document.write(buildPrintableViewer(filteredPayload, perPage));
+  win.document.close();
+}
+function downloadStandalone(){
+  const slide = currentDraftSlide();
+  const payload = { deckTitle: slide.title || 'Standalone slide', slides:[slide] };
+  downloadTextFile((slide.title || 'slide').replace(/[^\w\-]+/g,'_') + '.html', buildStandaloneViewer(payload));
+}
+function downloadDeck(){
+  const payload = currentPayload();
+  downloadTextFile((payload.deckTitle || 'presentation').replace(/[^\w\-]+/g,'_') + '.html', buildStandaloneViewer(payload));
+}
+async function loadDeckFromFile(file){
+  const text = await file.text();
+  const match = text.match(/<script id=["']deck-source["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i);
+  if(!match) throw new Error('This HTML file does not contain an editable deck-source block.');
+  const payload = JSON.parse(match[1]);
+  if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this HTML file.');
+  fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
+  slides = payload.slides.map(normalizeSlide);
+  activeIndex = slides.length ? 0 : -1;
+  if(activeIndex >= 0) applySlideToForm(slides[0]); else clearForm(false);
+  buildPreview();
+  renderDeckList();
+}
+
+const presets = {
+  title: {
+    slideType:'title-center', headingLevel:'h1', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Lecture title', kicker:'Course / subtitle', lede:'', leftBlocks:[], rightBlocks:[],
+    notesTitle:'Speaker notes', notesBody:''
+  },
+  concept: {
+    slideType:'single', headingLevel:'h2', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Concept slide', kicker:'', lede:'Introduce the main idea in one short sentence.',
+    leftBlocks:[{mode:'panel', title:'Main points', content:'\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}'}],
+    rightBlocks:[], notesTitle:'Speaker notes', notesBody:''
+  },
+  twocol: {
+    slideType:'two-col', headingLevel:'h2', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Two-column slide', kicker:'', lede:'',
+    leftBlocks:[{mode:'panel', title:'Left column', content:'\\paragraph{Left column}\n\n\\begin{itemize}\n\\item Point A\n\\item Point B\n\\end{itemize}'}],
+    rightBlocks:[{mode:'panel', title:'Right column', content:'\\paragraph{Right column}\n\n\\begin{itemize}\n\\item Detail 1\n\\item Detail 2\n\\end{itemize}'}],
+    notesTitle:'Speaker notes', notesBody:''
+  },
+  appendix: {
+    slideType:'single', headingLevel:'h2', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Summary / appendix', kicker:'', lede:'',
+    leftBlocks:[{mode:'panel', title:'Summary', content:'\\begin{enumerate}\n\\item First takeaway\n\\item Second takeaway\n\\item Third takeaway\n\\end{enumerate}'}],
+    rightBlocks:[], notesTitle:'Speaker notes', notesBody:''
+  },
+  pseudocode: {
+    slideType:'single', headingLevel:'h2', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Pseudocode', kicker:'', lede:'',
+    leftBlocks:[{mode:'pseudocode', title:'Algorithm', content:'Input: x\n\nfor t = 1 to T do\n  u^t <- W[t] z^(t-1) + b^t\n  z^t <- sigma(u^t)\nend\n\nreturn yhat'}],
+    rightBlocks:[], notesTitle:'Speaker notes', notesBody:''
+  },
+  pseudocodeLatex: {
+    slideType:'single', headingLevel:'h2', bgColor:'#ffffff', fontColor:'#111111',
+    title:'Pseudocode with LaTeX', kicker:'', lede:'',
+    leftBlocks:[{mode:'pseudocode-latex', title:'Algorithm', content:'Input: \\(x\\)\n\n\\(z^0 \\leftarrow x\\)\nfor \\(t = 1\\) to \\(T\\) do\n  \\(u^t \\leftarrow W[t] z^{t-1} + b^t\\)\n  \\(z^t \\leftarrow \\sigma(u^t)\\)\nend\n\nreturn \\(\\hat y\\)'}],
+    rightBlocks:[], notesTitle:'Speaker notes', notesBody:''
+  }
+};
+function applyPreset(name){
+  applySlideToForm(presets[name]);
+  buildPreview();
+}
+
+Object.values(fields).forEach(el=>{
+  el.addEventListener('input', ()=>{ syncFields(); buildPreview(); });
+  el.addEventListener('change', ()=>{ syncFields(); buildPreview(); });
+});
+blockFields.column.addEventListener('change', ()=>loadSelectedBlockIntoEditor());
+blockFields.mode.addEventListener('change', ()=>buildPreview());
+blockFields.title.addEventListener('input', ()=>buildPreview());
+blockFields.content.addEventListener('input', ()=>buildPreview());
+
+document.getElementById('addBlockBtn').addEventListener('click', addBlock);
+document.getElementById('updateBlockBtn').addEventListener('click', updateBlock);
+document.getElementById('duplicateBlockBtn').addEventListener('click', duplicateBlock);
+document.getElementById('deleteBlockBtn').addEventListener('click', deleteBlock);
+document.getElementById('clearBlockBtn').addEventListener('click', clearBlockEditor);
+document.getElementById('addFigureBtn').addEventListener('click', openFigureModal);
+document.getElementById('closeFigureModalBtn').addEventListener('click', closeFigureModal);
+document.getElementById('figureSourceImageBtn').addEventListener('click', ()=>{
+  figureImagePanel.style.display = '';
+  figureEditorPanel.style.display = 'none';
+});
+document.getElementById('figureSourceEditorBtn').addEventListener('click', ()=>{
+  figureImagePanel.style.display = 'none';
+  figureEditorPanel.style.display = '';
+  openSimpleDiagramEditor();
+});
+document.getElementById('insertFigureUrlBtn').addEventListener('click', ()=>{
+  const src = (figureUrlInput.value || '').trim();
+  if(!src){ alert('Enter an image URL first.'); return; }
+  insertFigureHtml(buildImageFigureHtml(src, (figureAltInput.value || '').trim()));
+  closeFigureModal();
+});
+document.getElementById('insertFigureFileBtn').addEventListener('click', ()=>{
+  const file = figureFileInput.files && figureFileInput.files[0];
+  if(!file){ alert('Choose an image file first.'); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    insertFigureHtml(buildImageFigureHtml(String(reader.result || ''), (figureAltInput.value || file.name || '').trim()));
+    closeFigureModal();
+    figureFileInput.value = '';
+  };
+  reader.readAsDataURL(file);
+});
+figureModal.addEventListener('click', (e)=>{
+  if(e.target === figureModal) closeFigureModal();
+});
+document.getElementById('moveBlockUpBtn').addEventListener('click', ()=>moveBlock(-1));
+document.getElementById('moveBlockDownBtn').addEventListener('click', ()=>moveBlock(1));
+
+document.getElementById('addSlideBtn').addEventListener('click', addSlide);
+document.getElementById('updateSlideBtn').addEventListener('click', updateSlide);
+document.getElementById('duplicateSlideBtn').addEventListener('click', duplicateSlide);
+document.getElementById('deleteSlideBtn').addEventListener('click', deleteSlide);
+document.getElementById('moveUpBtn').addEventListener('click', ()=>moveSlide(-1));
+document.getElementById('moveDownBtn').addEventListener('click', ()=>moveSlide(1));
+document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentSnippet);
+document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
+document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
+document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
+document.getElementById('loadSnippetToEditorBtn').addEventListener('click', ()=>{
+  try{ loadSnippetIntoEditor(); }catch(err){ alert(err.message || 'Could not load snippet.'); }
+});
+document.getElementById('replaceSlideFromSnippetBtn').addEventListener('click', ()=>{
+  try{ replaceSelectedSlideFromSnippet(); }catch(err){ alert(err.message || 'Could not replace slide from snippet.'); }
+});
+document.getElementById('addSlideFromSnippetBtn').addEventListener('click', ()=>{
+  try{ addSlideFromSnippet(); }catch(err){ alert(err.message || 'Could not add slide from snippet.'); }
+});
+document.getElementById('formatSnippetBtn').addEventListener('click', ()=>{
+  try{ formatSnippet(); }catch(err){ alert(err.message || 'Could not format snippet.'); }
+});
+document.getElementById('printPdfBtn').addEventListener('click', openPrintablePdf);
+document.getElementById('loadDeckBtn').addEventListener('click', ()=>document.getElementById('loadDeckInput').click());
+document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    await loadDeckFromFile(file);
+    showToast('Loaded editable presentation.');
+  }catch(err){
+    alert(err.message || 'Could not load this HTML file.');
+  }finally{
+    e.target.value = '';
+  }
+});
+document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
+if(expandDiagramSnippet){ expandDiagramSnippet.addEventListener('change', buildPreview); }
+
+applyPreset('concept');
+buildPreview();
+renderDeckList();
+</script>
+</body>
+</html>
