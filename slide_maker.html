@@ -827,7 +827,7 @@ function saveCurrentSlideToDeck(){
 function currentDeckData(){
   return {
     deckTitle: fields.deckTitle.value || 'My HTML Presentation',
-    slides: (slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()]
+    slides: slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()]
   };
 }
 function persistAutosaveNow(reason='Autosaved.'){
