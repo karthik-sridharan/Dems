@@ -1565,6 +1565,37 @@ function downloadTextFile(filename, text){
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
+async function saveBlobWithDialog(defaultName, blob){
+  if(window.showSaveFilePicker){
+    const parts = String(defaultName || 'file.txt').split('.');
+    const ext = parts.length > 1 ? parts.pop() : 'txt';
+    const handle = await window.showSaveFilePicker({
+      suggestedName: defaultName || ('file.' + ext),
+      types: [{
+        description: ext.toUpperCase() + ' file',
+        accept: {
+          [blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'application/octet-stream']: ['.' + ext]
+        }
+      }]
+    });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return;
+  }
+  const suggested = defaultName || 'file.txt';
+  const filename = prompt('Save as', suggested) || suggested;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+async function saveTextFileAs(defaultName, text, mime='text/plain;charset=utf-8'){
+  const blob = new Blob([text], {type:mime});
+  await saveBlobWithDialog(defaultName, blob);
+}
+
 function currentPayload(){
   return { deckTitle: fields.deckTitle.value || 'My HTML Presentation', slides: slides.length ? slides : [currentDraftSlide()] };
 }
@@ -1793,7 +1824,7 @@ function openPrintablePdf(){
   win.document.write(buildPrintableViewer(filteredPayload, perPage));
   win.document.close();
 }
-async function downloadStandalone(){
+async async function downloadStandalone(){
   const slide = currentDraftSlide();
   const payload = { deckTitle: slide.title || 'Standalone slide', slides:[slide] };
   await saveTextFileAs(((slide.title || 'slide').replace(/[^\w\-]+/g,'_') || 'slide') + '.html', buildStandaloneViewer(payload), 'text/html;charset=utf-8');
