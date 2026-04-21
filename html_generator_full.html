@@ -366,7 +366,7 @@ window.MathJax = {
         <button class="btn mini" id="addSlideFromSnippetBtn">Add slide from snippet</button>
         <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
       </div>
-      <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
+      <div class="row" style="margin-top:.45rem;align-items:center"><label style="display:flex;align-items:center;gap:.5rem;color:var(--text);font-size:.92rem"><input id="expandDiagramSnippet" type="checkbox" style="width:auto;accent-color:#61b4ff" /> Expand diagram blocks into editable self-contained HTML</label></div><div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide. When the checkbox is on, diagram placeholders are written into the snippet as editable custom HTML blocks.</div>
     </div>
   </div>
 </div>
@@ -400,6 +400,7 @@ const deckCount = document.getElementById('deckCount');
 const previewTitle = document.getElementById('previewTitle');
 const toast = document.getElementById('toast');
 const columnModeBadge = document.getElementById('columnModeBadge');
+const expandDiagramSnippet = document.getElementById('expandDiagramSnippet');
 
 let slides = [];
 let activeIndex = -1;
@@ -575,6 +576,27 @@ function customFrameMarkup(raw){
   const html = String(raw || '').trim();
   if(!html) return '<div class="placeholder">Paste custom HTML here.</div>';
   return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="' + escapeAttr(html) + '"></iframe></div>';
+}
+function diagramStandaloneDocument(innerHtml){
+  const body = String(innerHtml || '').trim() || diagramMarkup();
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><style>html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}</style></head><body>' + body + '</body></html>';
+}
+function expandDiagramBlocksForSnippet(slide){
+  const s = normalizeSlide(slide);
+  const convert = (block)=>{
+    if((block.mode || 'panel') !== 'diagram') return clone(block);
+    return {
+      mode: 'custom',
+      title: block.title || '',
+      content: diagramStandaloneDocument(block.content || diagramMarkup())
+    };
+  };
+  s.leftBlocks = (s.leftBlocks || []).map(convert);
+  s.rightBlocks = (s.rightBlocks || []).map(convert);
+  return s;
+}
+function slideForSnippet(slide){
+  return expandDiagramSnippet && expandDiagramSnippet.checked ? expandDiagramBlocksForSnippet(slide) : normalizeSlide(slide);
 }
 function normalizeBlock(block){
   return {
@@ -783,7 +805,7 @@ function clearBlockEditor(){
 }
 function buildPreview(){
   preview.innerHTML = buildSlideMarkup(currentDraftSlide());
-  snippetOutput.value = JSON.stringify(currentDraftSlide(), null, 2);
+  snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
   if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
     if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
     window.MathJax.typesetPromise([preview]).catch(()=>{});
@@ -823,7 +845,7 @@ function addSlideFromSnippet(){
 }
 function formatSnippet(){
   const slide = parseSnippetSlide();
-  snippetOutput.value = JSON.stringify(slide, null, 2);
+  snippetOutput.value = JSON.stringify(slideForSnippet(slide), null, 2);
   showToast('Formatted snippet.');
 }
 function renderDeckList(){
@@ -1357,6 +1379,7 @@ document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
   }
 });
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
+if(expandDiagramSnippet){ expandDiagramSnippet.addEventListener('change', buildPreview); }
 
 applyPreset('concept');
 buildPreview();
