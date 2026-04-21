@@ -1824,7 +1824,7 @@ function openPrintablePdf(){
   win.document.write(buildPrintableViewer(filteredPayload, perPage));
   win.document.close();
 }
-async async function downloadStandalone(){
+async function downloadStandalone(){
   const slide = currentDraftSlide();
   const payload = { deckTitle: slide.title || 'Standalone slide', slides:[slide] };
   await saveTextFileAs(((slide.title || 'slide').replace(/[^\w\-]+/g,'_') || 'slide') + '.html', buildStandaloneViewer(payload), 'text/html;charset=utf-8');
