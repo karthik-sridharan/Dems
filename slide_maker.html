@@ -324,10 +324,12 @@ window.MathJax = {
     <div class="toolbar">
       <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
-      <button class="btn" id="downloadStandaloneBtn">Download current slide standalone</button>
+      <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
+      <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
       <button class="btn" id="loadDeckBtn">Load generated HTML</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
-      <button class="btn primary" id="downloadDeckBtn">Download full presentation</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
+      <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
+      <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
     </div>
 
     <div class="field-grid">
@@ -375,6 +377,7 @@ window.MathJax = {
         <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
       </div>
       <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
+      <div class="help" style="margin-top:.35rem" id="autosaveStatus">Autosave ready.</div>
     </div>
   </div>
 </div>
@@ -458,12 +461,19 @@ let slides = [];
 let activeIndex = -1;
 let draftBlocks = { left: [], right: [] };
 let selectedBlock = { left: -1, right: -1 };
+const AUTOSAVE_KEY = 'html-presentation-generator-autosave-v5';
+let autosaveTimer = null;
+let autosaveDirtyCount = 0;
 
 function showToast(message){
   toast.textContent = message;
   toast.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=>toast.classList.remove('show'), 1400);
+}
+function setAutosaveStatus(msg){
+  const el = document.getElementById('autosaveStatus');
+  if(el) el.textContent = msg;
 }
 function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
 function escapeHtml(str){
@@ -801,6 +811,80 @@ function currentBlockFromEditor(){
     content: blockFields.content.value
   };
 }
+function saveCurrentBlockToDraft(){
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  if(idx >= 0 && idx < arr.length){
+    arr[idx] = currentBlockFromEditor();
+  }
+}
+function saveCurrentSlideToDeck(){
+  if(activeIndex >= 0 && activeIndex < slides.length){
+    slides[activeIndex] = currentDraftSlide();
+  }
+}
+function currentDeckData(){
+  return {
+    deckTitle: fields.deckTitle.value || 'My HTML Presentation',
+    slides: (slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()]
+  };
+}
+function persistAutosaveNow(reason='Autosaved.'){
+  try{
+    saveCurrentBlockToDraft();
+    saveCurrentSlideToDeck();
+    const payload = {
+      deckTitle: fields.deckTitle.value || 'My HTML Presentation',
+      slides: slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()],
+      activeIndex,
+      draftSlide: currentDraftSlide(),
+      selectedBlock,
+      blockColumn: blockFields.column.value,
+      ts: Date.now()
+    };
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+    autosaveDirtyCount = 0;
+    setAutosaveStatus(reason);
+  }catch(err){
+    console.error(err);
+    setAutosaveStatus('Autosave failed.');
+  }
+}
+function scheduleAutosave(reason='Autosaved.'){
+  autosaveDirtyCount += 1;
+  setAutosaveStatus('Unsaved changes…');
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>persistAutosaveNow(reason), 1200);
+}
+function restoreAutosave(){
+  try{
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if(!raw) return false;
+    const payload = JSON.parse(raw);
+    if(payload.deckTitle) fields.deckTitle.value = payload.deckTitle;
+    slides = Array.isArray(payload.slides) ? payload.slides.map(normalizeSlide) : [];
+    activeIndex = typeof payload.activeIndex === 'number' ? payload.activeIndex : (slides.length ? 0 : -1);
+    if(activeIndex >= 0 && activeIndex < slides.length){
+      applySlideToForm(slides[activeIndex]);
+    }else if(payload.draftSlide){
+      applySlideToForm(normalizeSlide(payload.draftSlide));
+      activeIndex = -1;
+    }
+    if(payload.selectedBlock && typeof payload.selectedBlock === 'object'){
+      selectedBlock = { left: payload.selectedBlock.left ?? -1, right: payload.selectedBlock.right ?? -1 };
+    }
+    if(payload.blockColumn) blockFields.column.value = payload.blockColumn;
+    renderDeckList();
+    buildPreview();
+    setAutosaveStatus('Restored autosave.');
+    return true;
+  }catch(err){
+    console.error(err);
+    setAutosaveStatus('Could not restore autosave.');
+    return false;
+  }
+}
 function renderBlockList(){
   const name = currentColumnName();
   const arr = blockArray(name);
@@ -830,6 +914,7 @@ function addBlock(){
   renderBlockList();
   buildPreview();
   showToast('Added block.');
+  scheduleAutosave('Autosaved after block add.');
 }
 function updateBlock(){
   const name = currentColumnName();
@@ -840,6 +925,7 @@ function updateBlock(){
   renderBlockList();
   buildPreview();
   showToast('Updated block.');
+  scheduleAutosave('Autosaved after block update.');
 }
 function duplicateBlock(){
   const name = currentColumnName();
@@ -851,6 +937,7 @@ function duplicateBlock(){
   renderBlockList();
   buildPreview();
   showToast('Duplicated block.');
+  scheduleAutosave('Autosaved after block duplicate.');
 }
 function deleteBlock(){
   const name = currentColumnName();
@@ -862,6 +949,7 @@ function deleteBlock(){
   loadSelectedBlockIntoEditor();
   buildPreview();
   showToast('Deleted block.');
+  scheduleAutosave('Autosaved after block delete.');
 }
 function moveBlock(dir){
   const name = currentColumnName();
@@ -873,6 +961,7 @@ function moveBlock(dir){
   setSelectedIndex(name, next);
   renderBlockList();
   buildPreview();
+  scheduleAutosave('Autosaved after block move.');
 }
 function clearBlockEditor(){
   blockFields.mode.value = 'panel';
@@ -1228,6 +1317,7 @@ function loadSnippetIntoEditor(){
   applySlideToForm(slide);
   buildPreview();
   showToast('Loaded snippet into editor.');
+  scheduleAutosave('Autosaved after loading snippet.');
 }
 function replaceSelectedSlideFromSnippet(){
   if(activeIndex < 0 || activeIndex >= slides.length){
@@ -1238,6 +1328,7 @@ function replaceSelectedSlideFromSnippet(){
   buildPreview();
   renderDeckList();
   showToast('Replaced selected slide from snippet.');
+  scheduleAutosave('Autosaved after replacing slide from snippet.');
 }
 function addSlideFromSnippet(){
   const slide = parseSnippetSlide();
@@ -1247,6 +1338,7 @@ function addSlideFromSnippet(){
   buildPreview();
   renderDeckList();
   showToast('Added slide from snippet.');
+  scheduleAutosave('Autosaved after adding slide from snippet.');
 }
 function formatSnippet(){
   const slide = parseSnippetSlide();
@@ -1263,10 +1355,13 @@ function renderDeckList(){
   `).join('');
   deckList.querySelectorAll('.deck-item').forEach(btn=>{
     btn.addEventListener('click', ()=>{
+      saveCurrentBlockToDraft();
+      saveCurrentSlideToDeck();
       activeIndex = Number(btn.dataset.index);
       applySlideToForm(slides[activeIndex]);
       buildPreview();
       renderDeckList();
+      scheduleAutosave('Autosaved after slide switch.');
     });
   });
 }
@@ -1275,12 +1370,14 @@ function addSlide(){
   activeIndex = slides.length - 1;
   renderDeckList();
   showToast('Added slide.');
+  scheduleAutosave('Autosaved after slide add.');
 }
 function updateSlide(){
   if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
   slides[activeIndex] = currentDraftSlide();
   renderDeckList();
   showToast('Updated slide.');
+  scheduleAutosave('Autosaved after slide update.');
 }
 function duplicateSlide(){
   if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
@@ -1288,6 +1385,7 @@ function duplicateSlide(){
   activeIndex += 1;
   renderDeckList();
   showToast('Duplicated slide.');
+  scheduleAutosave('Autosaved after slide duplicate.');
 }
 function deleteSlide(){
   if(activeIndex < 0 || activeIndex >= slides.length){ showToast('Select a slide first.'); return; }
@@ -1297,6 +1395,7 @@ function deleteSlide(){
   buildPreview();
   renderDeckList();
   showToast('Deleted slide.');
+  scheduleAutosave('Autosaved after slide delete.');
 }
 function moveSlide(dir){
   if(activeIndex < 0 || activeIndex >= slides.length) return;
@@ -1307,6 +1406,7 @@ function moveSlide(dir){
   slides[next] = tmp;
   activeIndex = next;
   renderDeckList();
+  scheduleAutosave('Autosaved after slide move.');
 }
 function clearForm(resetPreview = true){
   applySlideToForm({
@@ -1657,20 +1757,37 @@ function openPrintablePdf(){
   win.document.write(buildPrintableViewer(filteredPayload, perPage));
   win.document.close();
 }
-function downloadStandalone(){
+async function downloadStandalone(){
   const slide = currentDraftSlide();
   const payload = { deckTitle: slide.title || 'Standalone slide', slides:[slide] };
-  downloadTextFile((slide.title || 'slide').replace(/[^\w\-]+/g,'_') + '.html', buildStandaloneViewer(payload));
+  await saveTextFileAs(((slide.title || 'slide').replace(/[^\w\-]+/g,'_') || 'slide') + '.html', buildStandaloneViewer(payload), 'text/html;charset=utf-8');
+  showToast('Saved current slide.');
 }
-function downloadDeck(){
+async function downloadDeck(){
   const payload = currentPayload();
-  downloadTextFile((payload.deckTitle || 'presentation').replace(/[^\w\-]+/g,'_') + '.html', buildStandaloneViewer(payload));
+  await saveTextFileAs(((payload.deckTitle || 'presentation').replace(/[^\w\-]+/g,'_') || 'presentation') + '.html', buildStandaloneViewer(payload), 'text/html;charset=utf-8');
+  showToast('Saved full presentation.');
+}
+async function saveCurrentSlideJson(){
+  const slide = slideForSnippet(currentDraftSlide());
+  await saveTextFileAs(((slide.title || 'slide').replace(/[^\w\-]+/g,'_') || 'slide') + '.json', JSON.stringify(slide, null, 2), 'application/json;charset=utf-8');
+  showToast('Saved current slide JSON.');
+}
+async function savePresentationJson(){
+  const payload = currentPayload();
+  await saveTextFileAs(((payload.deckTitle || 'presentation').replace(/[^\w\-]+/g,'_') || 'presentation') + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+  showToast('Saved presentation JSON.');
 }
 async function loadDeckFromFile(file){
   const text = await file.text();
-  const match = text.match(/<script id=["']deck-source["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i);
-  if(!match) throw new Error('This HTML file does not contain an editable deck-source block.');
-  const payload = JSON.parse(match[1]);
+  let payload;
+  if(/\.json$/i.test(file.name) || String(text).trim().startsWith('{')){
+    payload = JSON.parse(text);
+  }else{
+    const match = text.match(/<script id=["']deck-source["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i);
+    if(!match) throw new Error('This file does not contain an editable deck-source block.');
+    payload = JSON.parse(match[1]);
+  }
   if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this HTML file.');
   fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   slides = payload.slides.map(normalizeSlide);
@@ -1724,13 +1841,18 @@ function applyPreset(name){
 }
 
 Object.values(fields).forEach(el=>{
-  el.addEventListener('input', ()=>{ syncFields(); buildPreview(); });
-  el.addEventListener('change', ()=>{ syncFields(); buildPreview(); });
+  el.addEventListener('input', ()=>{ syncFields(); buildPreview(); scheduleAutosave(); });
+  el.addEventListener('change', ()=>{ syncFields(); buildPreview(); scheduleAutosave(); });
 });
-blockFields.column.addEventListener('change', ()=>loadSelectedBlockIntoEditor());
-blockFields.mode.addEventListener('change', ()=>buildPreview());
-blockFields.title.addEventListener('input', ()=>buildPreview());
-blockFields.content.addEventListener('input', ()=>buildPreview());
+blockFields.column.addEventListener('change', ()=>{
+  saveCurrentBlockToDraft();
+  loadSelectedBlockIntoEditor();
+  buildPreview();
+  scheduleAutosave('Autosaved after block switch.');
+});
+blockFields.mode.addEventListener('change', ()=>{ saveCurrentBlockToDraft(); buildPreview(); scheduleAutosave(); });
+blockFields.title.addEventListener('input', ()=>{ saveCurrentBlockToDraft(); buildPreview(); scheduleAutosave(); });
+blockFields.content.addEventListener('input', ()=>{ saveCurrentBlockToDraft(); buildPreview(); scheduleAutosave(); });
 
 document.getElementById('addBlockBtn').addEventListener('click', addBlock);
 document.getElementById('updateBlockBtn').addEventListener('click', updateBlock);
@@ -1780,8 +1902,10 @@ document.getElementById('moveDownBtn').addEventListener('click', ()=>moveSlide(1
 document.getElementById('clearFormBtn').addEventListener('click', clearForm);
 document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentSnippet);
 document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
-document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
-document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
+document.getElementById('downloadStandaloneBtn').addEventListener('click', ()=>downloadStandalone().catch(err=>alert(err.message || 'Could not save current slide.')));
+document.getElementById('downloadDeckBtn').addEventListener('click', ()=>downloadDeck().catch(err=>alert(err.message || 'Could not save presentation.')));
+document.getElementById('saveCurrentSlideJsonBtn').addEventListener('click', ()=>saveCurrentSlideJson().catch(err=>alert(err.message || 'Could not save current slide JSON.')));
+document.getElementById('savePresentationJsonBtn').addEventListener('click', ()=>savePresentationJson().catch(err=>alert(err.message || 'Could not save presentation JSON.')));
 document.getElementById('loadSnippetToEditorBtn').addEventListener('click', ()=>{
   try{ loadSnippetIntoEditor(); }catch(err){ alert(err.message || 'Could not load snippet.'); }
 });
@@ -1811,9 +1935,12 @@ document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
 if(expandDiagramSnippet){ expandDiagramSnippet.addEventListener('change', buildPreview); }
 
-applyPreset('concept');
-buildPreview();
-renderDeckList();
+if(!restoreAutosave()){
+  applyPreset('concept');
+  buildPreview();
+  renderDeckList();
+}
+window.addEventListener('beforeunload', ()=>{ try{ persistAutosaveNow('Autosaved.'); }catch(e){} });
 </script>
 </body>
 </html>
