@@ -72,7 +72,8 @@
   .slide .display-math,
   .slide .bullet-card,
   .slide .placeholder,
-  .slide .diag{
+  .slide .diag,
+  .slide .pseudo-block{
     margin:0;
     border:1px solid var(--line);
     border-radius:22px;
@@ -84,6 +85,16 @@
   .slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
   .slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
   .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
+  .slide .pseudo-block{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    tab-size: 2;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    color: rgba(17,17,17,.9);
+  }
   .slide .kicker{font-size:1.08rem}
   .slide .lede{font-size:1.24rem}
   .title-center{
@@ -282,6 +293,8 @@ window.MathJax = {
           <option value="custom">Custom HTML block</option>
           <option value="placeholder">Simple placeholder box</option>
           <option value="plain">Plain text / rich content</option>
+          <option value="pseudocode">Pseudocode block</option>
+          <option value="pseudocode">Pseudocode block</option>
         </select>
       </div>
       <div class="field full">
@@ -321,6 +334,7 @@ window.MathJax = {
         <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
         <button data-preset="diagram">Diagram slide<small>Tiny-network slide with a built-in neural-net placeholder.</small></button>
         <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
+        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
       </div>
     </details>
 
@@ -356,6 +370,7 @@ window.MathJax = {
         <p>Inline math still works as <code>$x^2$</code>.</p>
         <p>Inside <code>\begin{equation}...\end{equation}</code>, multi-line alignment with <code>&</code> and <code>\\</code> is supported automatically.</p>
         <p>Older slides can still use the legacy shortcuts too.</p>
+        <p>For a pseudocode block, choose <code>Pseudocode block</code> as the content type and paste plain indented pseudocode text.</p>
       </div>
     </details>
 
@@ -732,6 +747,9 @@ function buildModeContent(mode, raw, placeholderText){
   if(resolvedMode === 'placeholder'){
     return `<div class="placeholder">${escapeHtml(raw || placeholderText || 'Placeholder')}</div>`;
   }
+  if(resolvedMode === 'pseudocode'){
+    return `<pre class="pseudo-block">${escapeHtml(raw || placeholderText || 'Algorithm()\n  step 1\n  step 2')}</pre>`;
+  }
   const rich = parseStructuredText(raw);
   if(resolvedMode === 'plain') return `<div class="rich">${rich}</div>`;
   return `<div class="rich">${rich}</div>`;
@@ -1088,7 +1106,8 @@ function buildDeckHtml(deckTitle, deckSlides){
   .deck-slide .display-math,
   .deck-slide .bullet-card,
   .deck-slide .placeholder,
-  .deck-slide .diag{
+  .deck-slide .diag,
+  .deck-slide .pseudo-block{
     margin:0;
     border:1px solid var(--line);
     border-radius:22px;
@@ -1100,6 +1119,26 @@ function buildDeckHtml(deckTitle, deckSlides){
   .deck-slide .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
   .deck-slide .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
   .deck-slide .display-math{font-size:1.2rem;padding:1rem 1.15rem;overflow-x:auto}
+  .deck-slide .pseudo-block{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    tab-size: 2;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    color: rgba(17,17,17,.9);
+  }
+  .slide .pseudo-block{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    tab-size: 2;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    color: rgba(17,17,17,.9);
+  }
   .deck-slide.title-center{
     display:none;
     place-items:center;
@@ -1416,6 +1455,21 @@ function applyPreset(name){
       rightHtml:'',
       notesTitle:'Speaker notes',
       notesBody:'Deliver this slide briskly as the recap.'
+    },
+    pseudocode: {
+      slideType:'single',
+      headingLevel:'h2',
+      bgColor:'#ffffff',
+      fontColor:'#111111',
+      title:'Training procedure',
+      kicker:'',
+      lede:'',
+      leftMode:'pseudocode',
+      leftHtml:'Initialize parameters W, b\nfor epoch = 1 to T\n  for each minibatch B\n    compute predictions on B\n    compute loss L\n    compute gradients ∇W L, ∇b L\n    update parameters\n  end\nend',
+      rightMode:'panel',
+      rightHtml:'',
+      notesTitle:'Speaker notes',
+      notesBody:'Walk through the algorithm top to bottom before discussing each step in detail.'
     }
   };
   applySlideToForm(presets[name]);
