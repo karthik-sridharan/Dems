@@ -360,6 +360,13 @@ window.MathJax = {
         <span class="muted">Editable JSON for this slide</span>
       </div>
       <textarea class="code" id="snippetOutput" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:.65rem">
+        <button class="btn mini" id="loadSnippetToEditorBtn">Load snippet into editor</button>
+        <button class="btn mini" id="replaceSlideFromSnippetBtn">Replace selected slide</button>
+        <button class="btn mini" id="addSlideFromSnippetBtn">Add slide from snippet</button>
+        <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
+      </div>
+      <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
     </div>
   </div>
 </div>
@@ -781,6 +788,43 @@ function buildPreview(){
     if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
     window.MathJax.typesetPromise([preview]).catch(()=>{});
   }
+}
+
+function parseSnippetSlide(){
+  const raw = snippetOutput.value.trim();
+  if(!raw) throw new Error('The snippet box is empty.');
+  const parsed = JSON.parse(raw);
+  return normalizeSlide(parsed);
+}
+function loadSnippetIntoEditor(){
+  const slide = parseSnippetSlide();
+  applySlideToForm(slide);
+  buildPreview();
+  showToast('Loaded snippet into editor.');
+}
+function replaceSelectedSlideFromSnippet(){
+  if(activeIndex < 0 || activeIndex >= slides.length){
+    throw new Error('Select a slide first.');
+  }
+  slides[activeIndex] = parseSnippetSlide();
+  applySlideToForm(slides[activeIndex]);
+  buildPreview();
+  renderDeckList();
+  showToast('Replaced selected slide from snippet.');
+}
+function addSlideFromSnippet(){
+  const slide = parseSnippetSlide();
+  slides.push(slide);
+  activeIndex = slides.length - 1;
+  applySlideToForm(slide);
+  buildPreview();
+  renderDeckList();
+  showToast('Added slide from snippet.');
+}
+function formatSnippet(){
+  const slide = parseSnippetSlide();
+  snippetOutput.value = JSON.stringify(slide, null, 2);
+  showToast('Formatted snippet.');
 }
 function renderDeckList(){
   deckCount.textContent = slides.length + ' slide' + (slides.length === 1 ? '' : 's');
@@ -1286,6 +1330,18 @@ document.getElementById('copySnippetBtn').addEventListener('click', copyCurrentS
 document.getElementById('copyMathJaxBtn').addEventListener('click', copyMathJaxHelper);
 document.getElementById('downloadStandaloneBtn').addEventListener('click', downloadStandalone);
 document.getElementById('downloadDeckBtn').addEventListener('click', downloadDeck);
+document.getElementById('loadSnippetToEditorBtn').addEventListener('click', ()=>{
+  try{ loadSnippetIntoEditor(); }catch(err){ alert(err.message || 'Could not load snippet.'); }
+});
+document.getElementById('replaceSlideFromSnippetBtn').addEventListener('click', ()=>{
+  try{ replaceSelectedSlideFromSnippet(); }catch(err){ alert(err.message || 'Could not replace slide from snippet.'); }
+});
+document.getElementById('addSlideFromSnippetBtn').addEventListener('click', ()=>{
+  try{ addSlideFromSnippet(); }catch(err){ alert(err.message || 'Could not add slide from snippet.'); }
+});
+document.getElementById('formatSnippetBtn').addEventListener('click', ()=>{
+  try{ formatSnippet(); }catch(err){ alert(err.message || 'Could not format snippet.'); }
+});
 document.getElementById('printPdfBtn').addEventListener('click', openPrintablePdf);
 document.getElementById('loadDeckBtn').addEventListener('click', ()=>document.getElementById('loadDeckInput').click());
 document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
