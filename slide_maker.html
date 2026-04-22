@@ -1544,6 +1544,8 @@ function saveFigureEmbedToDraft(embed){
   clean.querySelectorAll('.figure-resize-handle').forEach(el=>el.remove());
   clean.style.touchAction = '';
   clean.style.cursor = '';
+  clean.style.maxWidth = 'none';
+  clean.style.maxHeight = 'none';
   arr[blockIndex].content = replaceNthFigureHtml(arr[blockIndex].content, figureIndex, clean.outerHTML);
   if(currentColumnName() === column && selectedIndex(column) === blockIndex){
     blockFields.content.value = arr[blockIndex].content;
@@ -1601,6 +1603,8 @@ function initFigureInteractions(root){
     handle.addEventListener('pointerdown', (e)=>{
       selectBox(box);
       const rect = box.getBoundingClientRect();
+      const slideEl = embed.closest('.slide, .deck-slide, .print-slide') || embed.closest('[data-preview-root]') || document.body;
+      const slideRect = slideEl.getBoundingClientRect();
       active = {
         mode: 'resize',
         box,
@@ -1609,7 +1613,9 @@ function initFigureInteractions(root){
         startX: e.clientX,
         startY: e.clientY,
         startW: rect.width,
-        startH: rect.height
+        startH: rect.height,
+        maxW: Math.max(80, slideRect.right - rect.left - 24),
+        maxH: Math.max(60, slideRect.bottom - rect.top - 24)
       };
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -1633,17 +1639,27 @@ function initFigureInteractions(root){
     }else if(active.mode === 'resize'){
       const dx = e.clientX - active.startX;
       const dy = e.clientY - active.startY;
-      const w = Math.max(60, Math.round(active.startW + dx));
-      const h = Math.max(40, Math.round(active.startH + dy));
+      const w = Math.min(active.maxW || Infinity, Math.max(60, Math.round(active.startW + dx)));
+      const h = Math.min(active.maxH || Infinity, Math.max(40, Math.round(active.startH + dy)));
+      active.embed.style.maxWidth = 'none';
+      active.embed.style.maxHeight = 'none';
+      active.box.style.maxWidth = 'none';
+      active.box.style.maxHeight = 'none';
       active.box.style.width = w + 'px';
       active.box.style.height = h + 'px';
       const direct = active.box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure');
       if(direct){
+        direct.style.maxWidth = 'none';
+        direct.style.maxHeight = 'none';
         direct.style.width = '100%';
         direct.style.height = '100%';
         if(direct.tagName === 'FIGURE'){
+          direct.style.maxWidth = 'none';
+          direct.style.maxHeight = 'none';
           const inner = direct.querySelector('img,svg,canvas,iframe');
           if(inner){
+            inner.style.maxWidth = 'none';
+            inner.style.maxHeight = 'none';
             inner.style.width = '100%';
             inner.style.height = '100%';
           }
