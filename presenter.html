@@ -1680,10 +1680,10 @@ function baseStyle(el, evt){
   el.setAttribute('fill', 'none');
   el.style.vectorEffect = 'non-scaling-stroke';
 }
-function add(el){
+function add(el, shouldSelect){
   svg.appendChild(el);
   made.push(el);
-  selectElement(el);
+  if(shouldSelect) selectElement(el);
 }
 function clearSelection(){
   if(selected) selected.removeAttribute('data-selected');
@@ -1755,25 +1755,25 @@ svg.addEventListener('pointerdown', (evt)=>{
     baseStyle(poly, evt);
     poly.setAttribute('points', p.x + ',' + p.y);
     drawing = {tool, el: poly};
-    add(poly);
+    add(poly, false);
   } else if(tool === 'line'){
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     baseStyle(line, evt);
     line.setAttribute('x1', p.x); line.setAttribute('y1', p.y); line.setAttribute('x2', p.x); line.setAttribute('y2', p.y);
     drawing = {tool, el: line, start: p};
-    add(line);
+    add(line, false);
   } else if(tool === 'rect'){
     const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
     baseStyle(rect, evt);
     rect.setAttribute('x', p.x); rect.setAttribute('y', p.y); rect.setAttribute('width', 1); rect.setAttribute('height', 1);
     drawing = {tool, el: rect, start: p};
-    add(rect);
+    add(rect, false);
   } else if(tool === 'ellipse'){
     const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
     baseStyle(e, evt);
     e.setAttribute('cx', p.x); e.setAttribute('cy', p.y); e.setAttribute('rx', 1); e.setAttribute('ry', 1);
     drawing = {tool, el: e, start: p};
-    add(e);
+    add(e, false);
   } else if(tool === 'text'){
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x', p.x);
@@ -1782,7 +1782,7 @@ svg.addEventListener('pointerdown', (evt)=>{
     t.setAttribute('font-size', '28');
     t.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
     t.textContent = textInput.value || 'Text';
-    add(t);
+    add(t, false);
   }
   svg.setPointerCapture(evt.pointerId);
 });
@@ -1823,6 +1823,7 @@ svg.addEventListener('pointermove', (evt)=>{
 function stopInteraction(){
   drawing = null;
   dragOffset = null;
+  if(toolEl.value !== 'select') clearSelection();
 }
 svg.addEventListener('pointerup', stopInteraction);
 svg.addEventListener('pointercancel', stopInteraction);
