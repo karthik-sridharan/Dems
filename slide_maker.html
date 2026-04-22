@@ -1605,6 +1605,9 @@ function initFigureInteractions(root){
       const rect = box.getBoundingClientRect();
       const slideEl = embed.closest('.slide, .deck-slide, .print-slide') || embed.closest('[data-preview-root]') || document.body;
       const slideRect = slideEl.getBoundingClientRect();
+      const slideStyles = window.getComputedStyle(slideEl);
+      const padX = (parseFloat(slideStyles.paddingLeft || '0') + parseFloat(slideStyles.paddingRight || '0')) || 0;
+      const padY = (parseFloat(slideStyles.paddingTop || '0') + parseFloat(slideStyles.paddingBottom || '0')) || 0;
       active = {
         mode: 'resize',
         box,
@@ -1614,8 +1617,8 @@ function initFigureInteractions(root){
         startY: e.clientY,
         startW: rect.width,
         startH: rect.height,
-        maxW: Math.max(80, slideRect.right - rect.left - 24),
-        maxH: Math.max(60, slideRect.bottom - rect.top - 24)
+        maxW: Math.max(120, slideRect.width - padX - 24),
+        maxH: Math.max(80, slideRect.height - padY - 24)
       };
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -1648,6 +1651,9 @@ function initFigureInteractions(root){
       active.box.style.width = w + 'px';
       active.box.style.height = h + 'px';
       const direct = active.box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure');
+      active.embed.style.width = 'fit-content';
+      active.embed.style.maxWidth = 'none';
+      active.embed.style.maxHeight = 'none';
       if(direct){
         direct.style.maxWidth = 'none';
         direct.style.maxHeight = 'none';
@@ -1656,6 +1662,8 @@ function initFigureInteractions(root){
         if(direct.tagName === 'FIGURE'){
           direct.style.maxWidth = 'none';
           direct.style.maxHeight = 'none';
+          direct.style.width = '100%';
+          direct.style.height = '100%';
           const inner = direct.querySelector('img,svg,canvas,iframe');
           if(inner){
             inner.style.maxWidth = 'none';
