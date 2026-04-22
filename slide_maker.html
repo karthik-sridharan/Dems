@@ -466,7 +466,7 @@ window.MathJax = {
       </div>
       <div class="field full" style="align-content:end">
         <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
-        <button class="btn" id="printPdfBtn">Direct PDF</button>
+        <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
       </div>
     </div>
   </div>
@@ -2198,32 +2198,36 @@ function waitFrames(count=2){
     step(count);
   });
 }
-async function renderSlideForPdf(slide){
+async function renderSlideForPdf(slide, rasterScale){
   const root = document.createElement('div');
   root.className = 'pdf-render-root';
   const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
   root.innerHTML = `<section class="${cls}" style="${buildSlideStyle(slide)}">${buildSlideInner(slide).trim()}</section>`;
   document.body.appendChild(root);
   try{
-    if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    const raw = JSON.stringify(slide || {});
+    const hasMath = /\\\(|\\\[|\$/.test(raw);
+    if(hasMath && window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
       await window.MathJax.typesetPromise([root]).catch(()=>{});
     }
     if(typeof fitFiguresIn === 'function') fitFiguresIn(root);
-    // Replace embedded iframes with lightweight placeholders for PDF rendering.
+
+    // Replace heavy embedded blocks with lightweight placeholders for PDF rendering.
     root.querySelectorAll('iframe').forEach((frame)=>{
       const ph = document.createElement('div');
       ph.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:180px;border:1px solid rgba(17,17,17,.14);border-radius:14px;background:#fff;color:#555;font:600 18px Inter,Arial,sans-serif;';
       ph.textContent = 'Embedded HTML block';
       frame.replaceWith(ph);
     });
-    await waitFrames(2);
+
+    await waitFrames(1);
     const slideEl = root.firstElementChild;
     const canvas = await window.html2canvas(slideEl, {
       backgroundColor: '#ffffff',
-      scale: 1,
+      scale: rasterScale,
       useCORS: true,
       logging: false,
-      imageTimeout: 1200,
+      imageTimeout: 800,
       width: 1600,
       height: 900,
       windowWidth: 1600,
@@ -2231,13 +2235,15 @@ async function renderSlideForPdf(slide){
       scrollX: 0,
       scrollY: 0
     });
-    const data = canvas.toDataURL('image/jpeg', 0.92);
-    canvas.width = 1; canvas.height = 1;
+    const data = canvas.toDataURL('image/jpeg', 0.86);
+    canvas.width = 1;
+    canvas.height = 1;
     return data;
   } finally {
     root.remove();
   }
 }
+
 async function openPrintablePdf(){
   const payload = currentPayload();
   const perPage = Number(document.getElementById('printSlidesPerPage').value || '1');
@@ -2251,19 +2257,21 @@ async function openPrintablePdf(){
     alert('PDF libraries are still loading. Please wait a moment and try again.');
     return;
   }
+
   const win = window.open('', '_blank');
   if(!win){
     alert('Please allow pop-ups to open the generated PDF.');
     return;
   }
   win.document.open();
-  win.document.write('<!DOCTYPE html><html><head><title>Generating PDF…</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:2rem;color:#111} .muted{color:#555}</style></head><body><h2>Generating PDF…</h2><p class="muted">Please wait while the slides are rendered into a PDF.</p></body></html>');
+  win.document.write('<!DOCTYPE html><html><head><title>Generating PDF…</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:2rem;color:#111} .muted{color:#555}</style></head><body><h2>Generating PDF…</h2><p class="muted">Rendering slide images and packing them into a PDF.</p></body></html>');
   win.document.close();
 
   const filteredSlides = selected.map(i => normalizeSlide(payload.slides[i]));
   const layout = getPrintLayout(perPage);
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'letter', compress:true });
+
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const margin = 24;
@@ -2273,6 +2281,12 @@ async function openPrintablePdf(){
   const cellW = (usableW - gap * (layout.cols - 1)) / layout.cols;
   const cellH = (usableH - gap * (layout.rows - 1)) / layout.rows;
 
+  // Lower rasterization for multi-up handouts to keep it fast on iPad/Safari.
+  const rasterScale =
+    perPage === 1 ? 0.95 :
+    perPage === 2 ? 0.78 :
+    perPage === 4 ? 0.62 : 0.50;
+
   const origBtn = document.getElementById('printPdfBtn');
   const oldLabel = origBtn ? origBtn.textContent : '';
   if(origBtn) origBtn.textContent = 'Generating PDF…';
@@ -2281,22 +2295,32 @@ async function openPrintablePdf(){
   try{
     for(let idx = 0; idx < filteredSlides.length; idx += 1){
       if(idx > 0 && idx % perPage === 0) pdf.addPage();
+
       const slide = filteredSlides[idx];
-      const img = await renderSlideForPdf(slide);
+      const img = await renderSlideForPdf(slide, rasterScale);
+
       const slot = idx % perPage;
       const row = Math.floor(slot / layout.cols);
       const col = slot % layout.cols;
-      const scale = Math.min(cellW / 1600, cellH / 900);
-      const drawW = 1600 * scale;
-      const drawH = 900 * scale;
+
+      const fit = Math.min(cellW / 1600, cellH / 900);
+      const drawW = 1600 * fit;
+      const drawH = 900 * fit;
       const x = margin + col * (cellW + gap) + (cellW - drawW) / 2;
       const y = margin + row * (cellH + gap) + (cellH - drawH) / 2;
+
       pdf.addImage(img, 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
+
       if(win && win.document && win.document.body){
-        win.document.body.innerHTML = '<h2>Generating PDF…</h2><p class="muted">Rendered ' + (idx + 1) + ' of ' + filteredSlides.length + ' slides.</p>';
+        win.document.body.innerHTML =
+          '<h2>Generating PDF…</h2><p class="muted">Rendered ' +
+          (idx + 1) + ' of ' + filteredSlides.length +
+          ' slides.</p>';
       }
+
       await waitFrames(1);
     }
+
     const blob = pdf.output('blob');
     const url = URL.createObjectURL(blob);
     win.location.href = url;
@@ -2304,11 +2328,14 @@ async function openPrintablePdf(){
   } catch(err){
     console.error(err);
     if(win && win.document && win.document.body){
-      win.document.body.innerHTML = '<h2>Could not generate PDF</h2><pre style="white-space:pre-wrap;color:#900;">' + escapeHtml(err && (err.stack || err.message) || String(err)) + '</pre>';
+      win.document.body.innerHTML =
+        '<h2>Could not generate PDF</h2><pre style="white-space:pre-wrap;color:#900;">' +
+        escapeHtml(err && (err.stack || err.message) || String(err)) +
+        '</pre>';
     }
     alert('Could not generate the PDF. ' + (err && err.message ? err.message : ''));
   } finally {
-    if(origBtn) origBtn.textContent = oldLabel || 'Direct PDF';
+    if(origBtn) origBtn.textContent = oldLabel || 'Direct PDF (image-first)';
   }
 }
 
