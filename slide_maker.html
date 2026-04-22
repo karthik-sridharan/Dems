@@ -569,7 +569,7 @@ function buildSlideStyle(slide){
   return 'background:' + bg + ';color:' + font + ';--text:' + font + ';--muted:' + muted + ';--line:' + line + ';';
 }
 
-function parseStructuredText(raw){
+function parseStructuredText(raw, meta){
   const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
   if(!text) return '';
   function safeWithMath(str){
@@ -662,7 +662,7 @@ function parseStructuredText(raw){
     if(/^\\begin\{figurehtml\}$/i.test(line)){
       flushParagraph(); flushList();
       const collected = collectUntil(/^\\end\{figurehtml\}$/i, i + 1);
-      parts.push('<div class="figure-embed">' + collected.body + '</div>');
+      const figAttrs = meta ? (' data-column="' + escapeAttr(meta.column || '') + '" data-block-index="' + meta.blockIndex + '" data-figure-index="' + (meta.figureIndex++) + '"') : ''; parts.push('<div class="figure-embed"' + figAttrs + '>' + collected.body + '</div>');
       i = collected.endIndex;
       continue;
     }
@@ -749,7 +749,7 @@ function normalizeSlide(slide){
   out.rightBlocks = rightBlocks;
   return out;
 }
-function renderBlock(block, placeholderText){
+function renderBlock(block, placeholderText, meta){
   const resolvedMode = block.mode || 'panel';
   const raw = block.content || '';
   if(resolvedMode === 'diagram') return diagramMarkup();
@@ -760,11 +760,12 @@ function renderBlock(block, placeholderText){
     const p = preserveMathTokens(raw);
     return '<div class="pseudo-latex-block">' + restoreMathTokens(escapeHtml(p.out), p.tokens) + '</div>';
   }
-  return '<div class="rich">' + parseStructuredText(raw) + '</div>';
+  const richMeta = meta ? { column: meta.column, blockIndex: meta.blockIndex, figureIndex: 0 } : null;
+  return '<div class="rich">' + parseStructuredText(raw, richMeta) + '</div>';
 }
-function renderBlocks(blocks, placeholder){
+function renderBlocks(blocks, placeholder, columnName){
   const list = blocks && blocks.length ? blocks : [{ mode:'placeholder', content: placeholder || 'Add a block' }];
-  return '<div class="col-stack">' + list.map(block => renderBlock(block, placeholder)).join('') + '</div>';
+  return '<div class="col-stack">' + list.map((block, idx) => renderBlock(block, placeholder, { column: columnName || 'left', blockIndex: idx })).join('') + '</div>';
 }
 function buildSlideInner(slide){
   const heading = slide.headingLevel || 'h2';
@@ -776,7 +777,7 @@ function buildSlideInner(slide){
   if(s.slideType === 'two-col'){
     return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Left column') + '</div><div class="col">' + renderBlocks(s.rightBlocks, 'Right column') + '</div></div>';
   }
-  return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Main content') + '</div></div>';
+  return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Main content', 'left') + '</div></div>';
 }
 function buildSlideMarkup(slide){
   const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
@@ -1456,6 +1457,123 @@ function fitFiguresInSlide(slideEl){
     guard += 1;
   }
 }
+function parseTranslate(transform){
+  const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform || '');
+  return { x: m ? parseFloat(m[1]) : 0, y: m ? parseFloat(m[2]) : 0 };
+}
+function replaceNthFigureHtml(blockContent, figIndex, newBody){
+  let seen = -1;
+  return String(blockContent || '').replace(/\\begin\{figurehtml\}[\r\n]*([\s\S]*?)[\r\n]*\\end\{figurehtml\}/g, (m, body)=>{
+    seen += 1;
+    if(seen !== figIndex) return m;
+    return '\\begin{figurehtml}\n' + newBody + '\n\\end{figurehtml}';
+  });
+}
+function saveFigureEmbedToDraft(embed){
+  const column = embed.dataset.column || 'left';
+  const blockIndex = Number(embed.dataset.blockIndex);
+  const figureIndex = Number(embed.dataset.figureIndex);
+  const arr = blockArray(column);
+  if(!arr[blockIndex]) return;
+  const box = embed.querySelector('.figure-box');
+  if(!box) return;
+  const clean = box.cloneNode(true);
+  clean.classList.remove('selected');
+  clean.querySelectorAll('.figure-resize-handle').forEach(el=>el.remove());
+  clean.style.touchAction = '';
+  clean.style.cursor = '';
+  arr[blockIndex].content = replaceNthFigureHtml(arr[blockIndex].content, figureIndex, clean.outerHTML);
+  if(currentColumnName() === column && selectedIndex(column) === blockIndex){
+    blockFields.content.value = arr[blockIndex].content;
+  }
+  snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+}
+function ensureInteractiveFigureBox(embed){
+  let box = embed.querySelector('.figure-box');
+  if(!box){
+    box = document.createElement('div');
+    box.className = 'figure-box';
+    while(embed.firstChild) box.appendChild(embed.firstChild);
+    embed.appendChild(box);
+    const rect = box.getBoundingClientRect();
+    box.style.width = Math.max(80, Math.round(rect.width || 220)) + 'px';
+    box.style.height = Math.max(60, Math.round(rect.height || 160)) + 'px';
+    box.style.transform = 'translate(0px, 0px)';
+  }
+  if(!box.querySelector('.figure-resize-handle')){
+    const handle = document.createElement('div');
+    handle.className = 'figure-resize-handle';
+    box.appendChild(handle);
+  }
+  return box;
+}
+function initFigureInteractions(root){
+  const scope = root || document;
+  let active = null;
+  function selectBox(box){
+    scope.querySelectorAll('.figure-box.selected').forEach(el=>el.classList.remove('selected'));
+    if(box) box.classList.add('selected');
+  }
+  scope.querySelectorAll('.figure-embed[data-column]').forEach(embed=>{
+    const box = ensureInteractiveFigureBox(embed);
+    const handle = box.querySelector('.figure-resize-handle');
+    box.addEventListener('pointerdown', (e)=>{
+      if(e.target === handle) return;
+      selectBox(box);
+      const t = parseTranslate(box.style.transform);
+      active = {
+        mode: 'move',
+        box,
+        embed,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startTX: t.x,
+        startTY: t.y
+      };
+      box.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+    handle.addEventListener('pointerdown', (e)=>{
+      selectBox(box);
+      const rect = box.getBoundingClientRect();
+      active = {
+        mode: 'resize',
+        box,
+        embed,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startW: rect.width,
+        startH: rect.height
+      };
+      handle.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+  function finish(){
+    if(!active) return;
+    saveFigureEmbedToDraft(active.embed);
+    scheduleAutosave('Autosaved after figure edit.');
+    active = null;
+  }
+  window.addEventListener('pointermove', (e)=>{
+    if(!active) return;
+    if(active.mode === 'move'){
+      const dx = e.clientX - active.startX;
+      const dy = e.clientY - active.startY;
+      active.box.style.transform = `translate(${Math.round(active.startTX + dx)}px, ${Math.round(active.startTY + dy)}px)`;
+    }else if(active.mode === 'resize'){
+      const dx = e.clientX - active.startX;
+      const dy = e.clientY - active.startY;
+      active.box.style.width = Math.max(60, Math.round(active.startW + dx)) + 'px';
+      active.box.style.height = Math.max(40, Math.round(active.startH + dy)) + 'px';
+    }
+  }, { passive: false });
+  window.addEventListener('pointerup', finish, { passive: true });
+  window.addEventListener('pointercancel', finish, { passive: true });
+}
 function fitFiguresIn(root){
   const scope = root || document;
   scope.querySelectorAll('.slide, .deck-slide, .print-cell .slide').forEach(fitFiguresInSlide);
@@ -1466,9 +1584,10 @@ function buildPreview(){
   updatePreviewScale();
   if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
     if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
-    window.MathJax.typesetPromise([preview]).then(()=>{ fitFiguresIn(preview); updatePreviewScale(); }).catch(()=>{ fitFiguresIn(preview); });
+    window.MathJax.typesetPromise([preview]).then(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); updatePreviewScale(); }).catch(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); });
   } else {
     fitFiguresIn(preview);
+    initFigureInteractions(preview);
   }
 }
 
@@ -1637,7 +1756,7 @@ body{color:var(--deck-text);overflow:hidden}
 .pseudo-latex-block mjx-container{font-size:100% !important}
 .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}.bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
 .placeholder{min-height:220px;display:grid;place-items:center;color:rgba(17,17,17,.72);padding:1rem 1.15rem;text-align:center}
-.figure-embed{padding:.6rem;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:110px}.figure-embed figure{margin:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center}.figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:0 auto;object-fit:contain}.figure-embed svg{overflow:visible}
+.figure-embed{padding:.6rem;background:#fff;overflow:visible;display:flex;align-items:center;justify-content:center;min-height:110px;position:relative}.figure-embed figure{margin:0;width:auto;height:auto;display:flex;align-items:center;justify-content:center;overflow:visible}.figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:0 auto;object-fit:contain}.figure-embed svg{overflow:visible}.figure-box{position:relative;display:inline-block;overflow:visible}.figure-box > img,.figure-box > svg,.figure-box > canvas,.figure-box > iframe,.figure-box > figure{display:block;width:100%;height:100%;max-width:100%;max-height:100%}
 .custom-frame-wrap{overflow:hidden;background:#fff}.custom-frame{width:100%;height:720px;border:0;display:block;background:#fff}
 .diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
 .title-center{min-height:720px;display:grid;place-items:center;text-align:center;padding:3rem}.title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
