@@ -274,6 +274,29 @@
   .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}
   .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
 
+
+  .left-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+    margin:.35rem 0 .95rem;
+  }
+  .left-tab{
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);
+    color:var(--text);
+    border-radius:12px;
+    padding:.62rem .9rem;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .left-tab.active{
+    border-color:rgba(97,180,255,.55);
+    background:rgba(97,180,255,.12);
+  }
+  .left-pane{display:none}
+  .left-pane.active{display:grid;gap:1rem}
   @media (max-width:1150px){ .page{grid-template-columns:1fr} }
   @media (max-width:900px){
     .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
