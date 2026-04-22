@@ -1990,6 +1990,7 @@ function getPrintLayout(slidesPerPage){
 }
 
 
+
 function buildPrintableViewer(payload, slidesPerPage){
   const layout = getPrintLayout(slidesPerPage);
   const slidesNormalized = (payload.slides || []).map(normalizeSlide);
@@ -1999,7 +2000,7 @@ function buildPrintableViewer(payload, slidesPerPage){
     const chunk = slidesNormalized.slice(i, i + perPage);
     const cells = chunk.map(slide => {
       const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
-      return '<div class="print-cell"><div class="print-viewport"><section class="' + cls + '" style="' + buildSlideStyle(slide) + '">' + buildSlideInner(slide).trim() + '</section></div></div>';
+      return '<div class="print-cell"><div class="print-shell"><section class="' + cls + '" style="' + buildSlideStyle(slide) + '">' + buildSlideInner(slide).trim() + '</section></div></div>';
     });
     while(cells.length < perPage) cells.push('<div class="print-cell empty"></div>');
     pages.push('<section class="print-page ' + layout.className + '" style="--cols:' + layout.cols + ';--rows:' + layout.rows + '">' + cells.join('') + '</section>');
@@ -2013,13 +2014,14 @@ function buildPrintableViewer(payload, slidesPerPage){
 <title>${escapeHtml(payload.deckTitle || 'Printable presentation')}</title>
 <style>
   :root{
-    --paper:#ffffff;
+    --paper-w:11in;
+    --paper-h:8.5in;
+    --margin:0.35in;
+    --gap:0.18in;
+    --usable-w:calc(var(--paper-w) - 2 * var(--margin));
+    --usable-h:calc(var(--paper-h) - 2 * var(--margin));
     --sheet:#ececec;
     --ink:#111111;
-    --line:rgba(17,17,17,.12);
-    --page-w:10.3in;   /* 11 - 2*0.35 */
-    --page-h:7.8in;    /* 8.5 - 2*0.35 */
-    --page-gap:0.18in;
   }
   *{box-sizing:border-box}
   html,body{
@@ -2034,51 +2036,35 @@ function buildPrintableViewer(payload, slidesPerPage){
   .print-toolbar button{
     border:1px solid rgba(17,17,17,.16);background:#fff;color:#111;border-radius:12px;padding:.7rem .95rem;font:inherit;font-weight:700;cursor:pointer
   }
-  .print-deck{
-    display:grid;
-    justify-content:center;
-    gap:.22in;
-    padding:.22in 0;
-  }
+  .print-deck{display:grid;justify-content:center;gap:.22in;padding:.22in 0}
   .print-page{
-    width:var(--page-w);
-    height:var(--page-h);
+    width:var(--usable-w);
+    height:var(--usable-h);
     display:grid;
     grid-template-columns:repeat(var(--cols), minmax(0,1fr));
     grid-template-rows:repeat(var(--rows), minmax(0,1fr));
-    gap:var(--page-gap);
+    gap:var(--gap);
     overflow:hidden;
     page-break-after:always;
     break-after:page;
     break-inside:avoid;
-    background:transparent;
   }
   .print-page:last-child{page-break-after:auto;break-after:auto}
   .print-cell{
-    min-width:0;
-    min-height:0;
-    width:100%;
-    height:100%;
-    position:relative;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    min-width:0;min-height:0;width:100%;height:100%;
+    overflow:hidden;position:relative;
     break-inside:avoid;
   }
   .print-cell.empty{visibility:hidden}
-  .print-viewport{
+  .print-shell{
     position:relative;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
     width:100%;
     height:100%;
+    overflow:hidden;
   }
   .slide{
-    position:relative;
-    left:auto;top:auto;
+    position:absolute;
+    left:0; top:0;
     width:1600px;
     height:900px;
     min-height:900px;
@@ -2088,9 +2074,7 @@ function buildPrintableViewer(payload, slidesPerPage){
     background:#fff;
     color:#111;
     overflow:hidden;
-    transform:none;
     transform-origin:top left;
-    flex:0 0 auto;
   }
   .slide h1,.slide h2{margin:0;line-height:1.05}
   .slide h1{font-size:3.4rem;max-width:15ch}
@@ -2100,7 +2084,9 @@ function buildPrintableViewer(payload, slidesPerPage){
   .slide-body{margin-top:1.35rem}
   .slide.single .slide-body{display:block}
   .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
-  .col{min-width:0}.col-stack{display:grid;gap:1rem}.rich{display:grid;gap:1rem}
+  .col{min-width:0}
+  .col-stack{display:grid;gap:1rem}
+  .rich{display:grid;gap:1rem}
   .rich p,.rich ul,.rich ol,.rich h3,.display-math,.bullet-card,.placeholder,.diag,.pseudo-block,.pseudo-latex-block,.custom-frame-wrap,.figure-embed{
     margin:0;border:1px solid rgba(17,17,17,.12);border-radius:22px;background:rgba(127,127,127,.045);box-shadow:0 8px 24px rgba(0,0,0,.04)
   }
@@ -2109,7 +2095,10 @@ function buildPrintableViewer(payload, slidesPerPage){
   .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
   .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
   .display-math{font-size:1.18rem;padding:1rem 1.15rem;overflow:hidden}
-  .pseudo-block,.pseudo-latex-block{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow:hidden;color:rgba(17,17,17,.92)}
+  .pseudo-block,.pseudo-latex-block{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow:hidden;color:rgba(17,17,17,.92)
+  }
   .pseudo-latex-block mjx-container{font-size:100% !important}
   .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}
   .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
@@ -2123,16 +2112,12 @@ function buildPrintableViewer(payload, slidesPerPage){
   .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
   .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}
   .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
-  .figure-embed{display:inline-grid;place-items:center;padding:10px;overflow:hidden;min-height:80px;width:fit-content;max-width:100%;justify-self:center;margin-left:auto;margin-right:auto}
-  .figure-embed figure{margin:0;width:auto;height:auto;max-width:100%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
-  .figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;height:auto}
-  @page{size:11in 8.5in; margin:0.35in;}
+  @page{size:11in 8.5in landscape;margin:0.35in}
   @media print{
     html,body{background:#fff}
     .print-toolbar{display:none}
     .print-deck{padding:0;gap:0}
-    .print-page{margin:0}
-    .print-cell,.print-viewport,.slide{break-inside:avoid;page-break-inside:avoid}
+    .print-page{page-break-after:always;break-after:page}
   }
 </style>
 <script>
@@ -2145,37 +2130,38 @@ window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$
   <div><strong>${escapeHtml(payload.deckTitle || 'Printable presentation')}</strong> · ${Number(slidesPerPage) || 1} slide(s) per page</div>
   <button id="printNowBtn">Print / Save as PDF</button>
 </div>
-<div class="print-deck" id="printDeck">${pagesHtml}</div>
+<div class="print-deck">${pagesHtml}</div>
 <script>
-function layoutPrintableSlides(){
-  document.querySelectorAll('.print-viewport').forEach(viewport=>{
-    const slide=viewport.querySelector('.slide');
+function fitPrintSlides(){
+  document.querySelectorAll('.print-shell').forEach(shell=>{
+    const slide=shell.querySelector('.slide');
     if(!slide) return;
-    const scale=Math.min(viewport.clientWidth / 1600, viewport.clientHeight / 900);
-    const scaledW=1600*scale, scaledH=900*scale;
-    viewport.style.width = scaledW + 'px';
-    viewport.style.height = scaledH + 'px';
-    slide.style.zoom = scale;
-    slide.style.transform = 'none';
+    const scale=Math.min(shell.clientWidth / 1600, shell.clientHeight / 900);
+    const w=1600*scale;
+    const h=900*scale;
+    const x=Math.max(0,(shell.clientWidth-w)/2);
+    const y=Math.max(0,(shell.clientHeight-h)/2);
+    slide.style.transform='translate('+x+'px,'+y+'px) scale('+scale+')';
   });
 }
-function printWhenReady(){
-  layoutPrintableSlides();
-  setTimeout(()=>window.print(), 700);
+function doPrint(){
+  fitPrintSlides();
+  setTimeout(()=>window.print(), 350);
 }
 window.addEventListener('load', ()=>{
   if(window.MathJax && typeof window.MathJax.typesetPromise==='function'){
-    window.MathJax.typesetPromise().then(()=>requestAnimationFrame(()=>requestAnimationFrame(printWhenReady))).catch(printWhenReady);
+    window.MathJax.typesetPromise().then(()=>requestAnimationFrame(()=>requestAnimationFrame(doPrint))).catch(doPrint);
   }else{
-    requestAnimationFrame(()=>requestAnimationFrame(printWhenReady));
+    requestAnimationFrame(()=>requestAnimationFrame(doPrint));
   }
 });
-window.addEventListener('resize', layoutPrintableSlides);
-document.getElementById('printNowBtn').addEventListener('click', ()=>{layoutPrintableSlides(); window.print();});
+window.addEventListener('resize', fitPrintSlides);
+document.getElementById('printNowBtn').addEventListener('click', ()=>{fitPrintSlides(); window.print();});
 </scr` + `ipt>
 </body>
 </html>`;
 }
+
 
 function parseSlideSelection(selectionText, total){
   const raw = String(selectionText || '').trim();
