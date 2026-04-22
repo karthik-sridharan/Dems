@@ -1855,7 +1855,7 @@ function buildStandaloneViewer(payload){
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(payload.deckTitle || 'HTML Presentation')}</title>
-<script id="deck-source" type="application/json">${deckJson}</scr` + `ipt>
+<script id="deck-source" type="application/json">${deckJson}<\/script>
 <style>
 :root{--deck-bg:#060a16;--deck-panel:rgba(10,16,32,.82);--deck-text:#eef3ff}
 *{box-sizing:border-box}
@@ -1903,8 +1903,8 @@ body{color:var(--deck-text);overflow:hidden}
 </style>
 <script>
 window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$','$$'],['\\\\[','\\\\]']]},svg:{fontCache:'global'}};
-</scr` + `ipt>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
 </head>
 <body>
 <div class="deck-toolbar"><button class="nav-btn" id="prevBtn">◀</button><button class="nav-btn" id="nextBtn">▶</button></div>
@@ -2125,8 +2125,8 @@ function buildPrintableViewer(payload, slidesPerPage){
 </style>
 <script>
 window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};
-</scr` + `ipt>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"><\/script>
 </head>
 <body>
 <div class="print-toolbar">
@@ -2160,7 +2160,7 @@ window.addEventListener('load', ()=>{
 });
 window.addEventListener('resize', fitPrintSlides);
 document.getElementById('printNowBtn').addEventListener('click', ()=>{fitPrintSlides(); window.print();});
-</scr` + `ipt>
+<\/script>
 </body>
 </html>`;
 }
