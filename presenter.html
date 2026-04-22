@@ -3248,6 +3248,10 @@ document.getElementById('duplicateBlockBtn').addEventListener('click', duplicate
 document.getElementById('deleteBlockBtn').addEventListener('click', deleteBlock);
 document.getElementById('clearBlockBtn').addEventListener('click', clearBlockEditor);
 document.getElementById('addFigureBtn').addEventListener('click', openFigureModal);
+const toolsAddFigureBtn = document.getElementById('toolsAddFigureBtn');
+if(toolsAddFigureBtn) toolsAddFigureBtn.addEventListener('click', openFigureModal);
+const toolsOpenDiagramEditorBtn = document.getElementById('toolsOpenDiagramEditorBtn');
+if(toolsOpenDiagramEditorBtn) toolsOpenDiagramEditorBtn.addEventListener('click', ()=>{ openSimpleDiagramEditor(); });
 document.getElementById('closeFigureModalBtn').addEventListener('click', closeFigureModal);
 document.getElementById('figureSourceImageBtn').addEventListener('click', ()=>{
   figureImagePanel.style.display = '';
