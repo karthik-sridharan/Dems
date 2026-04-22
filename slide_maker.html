@@ -465,6 +465,7 @@ window.MathJax = {
         Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
       </div>
       <div class="field full" style="align-content:end">
+        <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
         <button class="btn" id="printPdfBtn">Direct PDF</button>
       </div>
     </div>
@@ -2310,6 +2311,26 @@ async function openPrintablePdf(){
     if(origBtn) origBtn.textContent = oldLabel || 'Direct PDF';
   }
 }
+
+async function exportPdfReadyHtml(){
+  const payload = currentPayload();
+  const perPage = Number(document.getElementById('printSlidesPerPage').value || '1');
+  const selectionText = (document.getElementById('printSlideSelection') || {}).value || 'all';
+  const selected = parseSlideSelection(selectionText, payload.slides.length);
+  if(!selected.length){
+    alert('No slides matched the selected range. Use all or a range like 1-3,5,8-10.');
+    return;
+  }
+  const filteredPayload = {
+    deckTitle: (payload.deckTitle || 'Printable presentation') + ' handout',
+    slides: selected.map(i => payload.slides[i])
+  };
+  const html = buildPrintableViewer(filteredPayload, perPage);
+  const base = (payload.deckTitle || 'presentation').replace(/[^\w\-]+/g,'_') || 'presentation';
+  await saveTextFileAs(base + '_'+ perPage + 'up_handout.html', html, 'text/html;charset=utf-8');
+  showToast('Saved PDF-ready HTML.');
+}
+
 async function downloadStandalone(){
 
   const slide = currentDraftSlide();
@@ -2472,6 +2493,7 @@ document.getElementById('addSlideFromSnippetBtn').addEventListener('click', ()=>
 document.getElementById('formatSnippetBtn').addEventListener('click', ()=>{
   try{ formatSnippet(); }catch(err){ alert(err.message || 'Could not format snippet.'); }
 });
+document.getElementById('exportPdfReadyHtmlBtn').addEventListener('click', ()=>exportPdfReadyHtml().catch(err=>alert(err.message || 'Could not save PDF-ready HTML.')));
 document.getElementById('printPdfBtn').addEventListener('click', openPrintablePdf);
 document.getElementById('loadDeckBtn').addEventListener('click', ()=>document.getElementById('loadDeckInput').click());
 document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
