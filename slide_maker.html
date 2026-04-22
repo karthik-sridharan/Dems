@@ -1415,15 +1415,19 @@ function fitFiguresInSlide(slideEl){
     const rect = embed.getBoundingClientRect();
     const remaining = Math.max(70, slideRect.bottom - rect.top - bottomPadding);
     const embedCap = Math.max(80, Math.min(remaining, slideMaxHeight * 0.62));
+    const remainingW = Math.max(120, slideRect.right - rect.left - bottomPadding);
     embed.style.maxHeight = embedCap + 'px';
+    embed.style.maxWidth = remainingW + 'px';
+    embed.style.width = 'fit-content';
     if(media){
       const mediaCap = Math.max(60, embedCap - 12);
       media.style.maxHeight = mediaCap + 'px';
+      media.style.maxWidth = Math.max(100, remainingW - 12) + 'px';
       media.style.width = 'auto';
       media.style.height = 'auto';
       if(media.tagName === 'IFRAME'){
         media.style.height = mediaCap + 'px';
-        media.style.width = '100%';
+        media.style.width = Math.max(100, remainingW - 12) + 'px';
       }
     }
   });
