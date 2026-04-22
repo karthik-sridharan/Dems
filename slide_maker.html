@@ -2014,9 +2014,12 @@ function buildPrintableViewer(payload, slidesPerPage){
 <style>
   :root{
     --paper:#ffffff;
-    --sheet:#f2f2f2;
+    --sheet:#ececec;
     --ink:#111111;
     --line:rgba(17,17,17,.12);
+    --page-w:10.3in;   /* 11 - 2*0.35 */
+    --page-h:7.8in;    /* 8.5 - 2*0.35 */
+    --page-gap:0.18in;
   }
   *{box-sizing:border-box}
   html,body{
@@ -2031,27 +2034,59 @@ function buildPrintableViewer(payload, slidesPerPage){
   .print-toolbar button{
     border:1px solid rgba(17,17,17,.16);background:#fff;color:#111;border-radius:12px;padding:.7rem .95rem;font:inherit;font-weight:700;cursor:pointer
   }
-  .print-deck{padding:.25in}
+  .print-deck{
+    display:grid;
+    justify-content:center;
+    gap:.22in;
+    padding:.22in 0;
+  }
   .print-page{
+    width:var(--page-w);
+    height:var(--page-h);
     display:grid;
     grid-template-columns:repeat(var(--cols), minmax(0,1fr));
     grid-template-rows:repeat(var(--rows), minmax(0,1fr));
-    gap:.18in;
-    min-height:calc(11in - .5in);
+    gap:var(--page-gap);
+    overflow:hidden;
     page-break-after:always;
     break-after:page;
+    break-inside:avoid;
+    background:transparent;
   }
   .print-page:last-child{page-break-after:auto;break-after:auto}
   .print-cell{
-    min-width:0;min-height:0;position:relative;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;
+    min-width:0;
+    min-height:0;
+    width:100%;
+    height:100%;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    break-inside:avoid;
   }
   .print-cell.empty{visibility:hidden}
-  .print-viewport{position:relative;width:100%;height:100%;overflow:hidden;display:block}
+  .print-viewport{
+    position:relative;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    display:block;
+  }
   .slide{
-    position:absolute;left:0;top:0;width:1600px;height:900px;min-height:900px;
-    border:1px solid rgba(17,17,17,.12);border-radius:28px;padding:3rem 3.3rem 4.8rem;
-    background:#fff;color:#111;overflow:hidden;transform-origin:top left;
+    position:absolute;
+    left:0;top:0;
+    width:1600px;
+    height:900px;
+    min-height:900px;
+    border:1px solid rgba(17,17,17,.12);
+    border-radius:28px;
+    padding:3rem 3.3rem 4.8rem;
+    background:#fff;
+    color:#111;
+    overflow:hidden;
+    transform-origin:top left;
   }
   .slide h1,.slide h2{margin:0;line-height:1.05}
   .slide h1{font-size:3.4rem;max-width:15ch}
@@ -2072,24 +2107,31 @@ function buildPrintableViewer(payload, slidesPerPage){
   .display-math{font-size:1.18rem;padding:1rem 1.15rem;overflow:hidden}
   .pseudo-block,.pseudo-latex-block{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow:hidden;color:rgba(17,17,17,.92)}
   .pseudo-latex-block mjx-container{font-size:100% !important}
-  .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)} .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
+  .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}
+  .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
   .placeholder{min-height:220px;display:grid;place-items:center;color:rgba(17,17,17,.72);padding:1rem 1.15rem;text-align:center}
   .custom-frame-wrap{overflow:hidden;background:#fff}
   .custom-frame{width:100%;height:100%;min-height:260px;border:0;display:block;background:#fff}
-  .diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}.title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+  .diag{display:grid;place-items:center;padding:.9rem}
+  .diagram{width:100%;max-width:680px;height:auto}
+  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
+  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
+  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+  .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}
+  .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
   .figure-embed{display:inline-grid;place-items:center;padding:10px;overflow:hidden;min-height:80px;width:fit-content;max-width:100%;justify-self:center;margin-left:auto;margin-right:auto}
   .figure-embed figure{margin:0;width:auto;height:auto;max-width:100%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
   .figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;height:auto}
-  .layout-1 .print-cell{min-height:calc(11in - .68in)}
-  .layout-2 .print-cell{min-height:calc((11in - .68in - .18in)/2)}
-  .layout-4 .print-cell{min-height:calc((11in - .68in - .18in)/2)}
-  .layout-6 .print-cell{min-height:calc((11in - .68in - (.18in * 2))/3)}
-  @page{size:landscape;margin:.35in}
-  @media print{body{background:#fff}.print-toolbar{display:none}.print-deck{padding:0}}
+  @page{size:11in 8.5in; margin:0.35in;}
+  @media print{
+    html,body{background:#fff}
+    .print-toolbar{display:none}
+    .print-deck{padding:0;gap:0}
+    .print-page{margin:0}
+  }
 </style>
 <script>
-window.MathJax={tex:{inlineMath:[['$','$'],['\(','\)']],displayMath:[['$$','$$'],['\[','\]']]},svg:{fontCache:'global'}};
+window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};
 </scr` + `ipt>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
 </head>
@@ -2106,20 +2148,20 @@ function layoutPrintableSlides(){
     if(!slide) return;
     const scale=Math.min(viewport.clientWidth / 1600, viewport.clientHeight / 900);
     const scaledW=1600*scale, scaledH=900*scale;
-    const x=Math.max(0,(viewport.clientWidth-scaledW)/2);
-    const y=Math.max(0,(viewport.clientHeight-scaledH)/2);
+    const x=(viewport.clientWidth-scaledW)/2;
+    const y=(viewport.clientHeight-scaledH)/2;
     slide.style.transform='translate('+x+'px,'+y+'px) scale('+scale+')';
   });
 }
 function printWhenReady(){
   layoutPrintableSlides();
-  setTimeout(()=>window.print(), 500);
+  setTimeout(()=>window.print(), 700);
 }
 window.addEventListener('load', ()=>{
   if(window.MathJax && typeof window.MathJax.typesetPromise==='function'){
-    window.MathJax.typesetPromise().then(printWhenReady).catch(printWhenReady);
+    window.MathJax.typesetPromise().then(()=>requestAnimationFrame(()=>requestAnimationFrame(printWhenReady))).catch(printWhenReady);
   }else{
-    printWhenReady();
+    requestAnimationFrame(()=>requestAnimationFrame(printWhenReady));
   }
 });
 window.addEventListener('resize', layoutPrintableSlides);
