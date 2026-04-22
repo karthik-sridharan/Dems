@@ -1934,13 +1934,19 @@ function updatePreviewScale(){
   const offsetY = Math.max(0, (frame.clientHeight - scaledH) / 2);
   scaleEl.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
+function isManualFigure(embed){
+  const box = embed && embed.querySelector('.figure-box');
+  if(!box) return false;
+  return box.dataset.userSized === '1' || box.dataset.userMoved === '1';
+}
 function fitFiguresInSlide(slideEl){
   if(!slideEl) return;
   const figures = Array.from(slideEl.querySelectorAll('.figure-embed'));
   if(!figures.length) return;
 
-  // reset any previous fitting
+  // reset any previous fitting only for auto-managed figures
   figures.forEach(embed=>{
+    if(isManualFigure(embed)) return;
     embed.style.maxHeight = '';
     embed.style.height = '';
     const media = embed.querySelector('img,svg,canvas,iframe');
@@ -1955,8 +1961,9 @@ function fitFiguresInSlide(slideEl){
   const slideMaxHeight = slideEl.clientHeight || 900;
   const bottomPadding = 20;
 
-  // First pass: cap each figure by the actual remaining space below its top edge.
+  // First pass: cap each auto-managed figure by the actual remaining space below its top edge.
   figures.forEach(embed=>{
+    if(isManualFigure(embed)) return;
     const media = embed.querySelector('img,svg,canvas,iframe');
     const rect = embed.getBoundingClientRect();
     const remaining = Math.max(70, slideRect.bottom - rect.top - bottomPadding);
@@ -1978,15 +1985,16 @@ function fitFiguresInSlide(slideEl){
     }
   });
 
-  // Second pass: if the slide still overflows, keep shrinking the largest visible figure.
+  // Second pass: if the slide still overflows, shrink only auto-managed figures.
   let guard = 0;
   while(slideEl.scrollHeight > slideMaxHeight + 2 && guard < 24){
     const overflow = slideEl.scrollHeight - slideMaxHeight;
     const candidates = figures.map(embed=>{
+      if(isManualFigure(embed)) return null;
       const media = embed.querySelector('img,svg,canvas,iframe');
       const rect = embed.getBoundingClientRect();
       return {embed, media, h: rect.height || 0};
-    }).filter(x=>x.h > 50).sort((a,b)=>b.h-a.h);
+    }).filter(x=>x && x.h > 50).sort((a,b)=>b.h-a.h);
 
     if(!candidates.length) break;
     const c = candidates[0];
@@ -2343,6 +2351,7 @@ function initFigureInteractions(root){
           nextX = snapValue(nextX);
           nextY = snapValue(nextY);
         }
+        active.box.dataset.userMoved = '1';
         active.box.style.transform = `translate(${Math.round(nextX)}px, ${Math.round(nextY)}px)`;
         if(snapToGuidesToggle?.checked) applyGuideSnapping(active.box);
       }else if(active.mode === 'resize'){
@@ -2359,6 +2368,7 @@ function initFigureInteractions(root){
           w = snapValue(w);
           h = snapValue(h);
         }
+        active.box.dataset.userSized = '1';
         active.embed.style.maxWidth = 'none';
         active.embed.style.maxHeight = 'none';
         active.box.style.maxWidth = 'none';
