@@ -1989,16 +1989,28 @@ function getPrintLayout(slidesPerPage){
   return { rows: 1, cols: 1, className: 'layout-1' };
 }
 
+
 function buildPrintableViewer(payload, slidesPerPage){
-  const deckJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');
   const layout = getPrintLayout(slidesPerPage);
+  const slidesNormalized = (payload.slides || []).map(normalizeSlide);
+  const perPage = Number(slidesPerPage) || 1;
+  const pages = [];
+  for(let i = 0; i < slidesNormalized.length; i += perPage){
+    const chunk = slidesNormalized.slice(i, i + perPage);
+    const cells = chunk.map(slide => {
+      const cls = slide.slideType === 'title-center' ? 'slide title-center' : (slide.slideType === 'two-col' ? 'slide two-col' : 'slide single');
+      return '<div class="print-cell"><div class="print-viewport"><section class="' + cls + '" style="' + buildSlideStyle(slide) + '">' + buildSlideInner(slide).trim() + '</section></div></div>';
+    });
+    while(cells.length < perPage) cells.push('<div class="print-cell empty"></div>');
+    pages.push('<section class="print-page ' + layout.className + '" style="--cols:' + layout.cols + ';--rows:' + layout.rows + '">' + cells.join('') + '</section>');
+  }
+  const pagesHtml = pages.join('');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(payload.deckTitle || 'Printable presentation')}</title>
-<script id="deck-source" type="application/json">${deckJson}</scr` + `ipt>
 <style>
   :root{
     --paper:#ffffff;
@@ -2035,26 +2047,11 @@ function buildPrintableViewer(payload, slidesPerPage){
     display:flex;align-items:center;justify-content:center;
   }
   .print-cell.empty{visibility:hidden}
-  .print-viewport{
-    position:relative;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    display:block;
-  }
+  .print-viewport{position:relative;width:100%;height:100%;overflow:hidden;display:block}
   .slide{
-    position:absolute;
-    left:0;top:0;
-    width:1600px;
-    height:900px;
-    min-height:900px;
-    border:1px solid rgba(17,17,17,.12);
-    border-radius:28px;
-    padding:3rem 3.3rem 4.8rem;
-    background:#fff;
-    color:#111;
-    overflow:hidden;
-    transform-origin:top left;
+    position:absolute;left:0;top:0;width:1600px;height:900px;min-height:900px;
+    border:1px solid rgba(17,17,17,.12);border-radius:28px;padding:3rem 3.3rem 4.8rem;
+    background:#fff;color:#111;overflow:hidden;transform-origin:top left;
   }
   .slide h1,.slide h2{margin:0;line-height:1.05}
   .slide h1{font-size:3.4rem;max-width:15ch}
@@ -2064,9 +2061,7 @@ function buildPrintableViewer(payload, slidesPerPage){
   .slide-body{margin-top:1.35rem}
   .slide.single .slide-body{display:block}
   .slide.two-col .slide-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.35rem;align-items:start}
-  .col{min-width:0}
-  .col-stack{display:grid;gap:1rem}
-  .rich{display:grid;gap:1rem}
+  .col{min-width:0}.col-stack{display:grid;gap:1rem}.rich{display:grid;gap:1rem}
   .rich p,.rich ul,.rich ol,.rich h3,.display-math,.bullet-card,.placeholder,.diag,.pseudo-block,.pseudo-latex-block,.custom-frame-wrap,.figure-embed{
     margin:0;border:1px solid rgba(17,17,17,.12);border-radius:22px;background:rgba(127,127,127,.045);box-shadow:0 8px 24px rgba(0,0,0,.04)
   }
@@ -2075,27 +2070,15 @@ function buildPrintableViewer(payload, slidesPerPage){
   .rich li{margin:.5rem 0;color:rgba(17,17,17,.85);font-size:1.22rem;line-height:1.58}
   .rich h3{font-size:1.3rem;color:inherit;padding:.95rem 1.15rem}
   .display-math{font-size:1.18rem;padding:1rem 1.15rem;overflow:hidden}
-  .pseudo-block,.pseudo-latex-block{
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow:hidden;color:rgba(17,17,17,.92)
-  }
+  .pseudo-block,.pseudo-latex-block{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.08rem;line-height:1.62;white-space:pre-wrap;tab-size:2;padding:1rem 1.15rem;overflow:hidden;color:rgba(17,17,17,.92)}
   .pseudo-latex-block mjx-container{font-size:100% !important}
-  .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)}
-  .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
+  .bullet-card{padding:1rem 1.15rem;background:rgba(127,127,127,.045)} .bullet-card b{display:block;margin-bottom:.35rem;font-size:1.12rem}
   .placeholder{min-height:220px;display:grid;place-items:center;color:rgba(17,17,17,.72);padding:1rem 1.15rem;text-align:center}
   .custom-frame-wrap{overflow:hidden;background:#fff}
   .custom-frame{width:100%;height:100%;min-height:260px;border:0;display:block;background:#fff}
-  .diag{display:grid;place-items:center;padding:.9rem}
-  .diagram{width:100%;max-width:680px;height:auto}
-  .diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}
-  .diagram .node{fill:none;stroke:currentColor;stroke-width:6}
-  .diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
-  .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}
-  .title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
-  .figure-embed{
-    display:inline-grid;place-items:center;padding:10px;overflow:hidden;min-height:80px;
-    width:fit-content;max-width:100%;justify-self:center;margin-left:auto;margin-right:auto
-  }
+  .diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}
+  .title-center{width:1600px;height:900px;min-height:900px;display:grid;place-items:center;text-align:center;padding:3rem}.title-center h1,.title-center h2{font-size:clamp(3.2rem,8vw,5.6rem);max-width:16ch}
+  .figure-embed{display:inline-grid;place-items:center;padding:10px;overflow:hidden;min-height:80px;width:fit-content;max-width:100%;justify-self:center;margin-left:auto;margin-right:auto}
   .figure-embed figure{margin:0;width:auto;height:auto;max-width:100%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
   .figure-embed img,.figure-embed svg,.figure-embed canvas,.figure-embed iframe{display:block;max-width:100%;height:auto}
   .layout-1 .print-cell{min-height:calc(11in - .68in)}
@@ -2103,14 +2086,10 @@ function buildPrintableViewer(payload, slidesPerPage){
   .layout-4 .print-cell{min-height:calc((11in - .68in - .18in)/2)}
   .layout-6 .print-cell{min-height:calc((11in - .68in - (.18in * 2))/3)}
   @page{size:landscape;margin:.35in}
-  @media print{
-    body{background:#fff}
-    .print-toolbar{display:none}
-    .print-deck{padding:0}
-  }
+  @media print{body{background:#fff}.print-toolbar{display:none}.print-deck{padding:0}}
 </style>
 <script>
-window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};
+window.MathJax={tex:{inlineMath:[['$','$'],['\(','\)']],displayMath:[['$$','$$'],['\[','\]']]},svg:{fontCache:'global'}};
 </scr` + `ipt>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></scr` + `ipt>
 </head>
@@ -2119,37 +2098,8 @@ window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$
   <div><strong>${escapeHtml(payload.deckTitle || 'Printable presentation')}</strong> · ${Number(slidesPerPage) || 1} slide(s) per page</div>
   <button id="printNowBtn">Print / Save as PDF</button>
 </div>
-<div class="print-deck" id="printDeck"></div>
+<div class="print-deck" id="printDeck">${pagesHtml}</div>
 <script>
-const deckPayload=JSON.parse(document.getElementById('deck-source').textContent);
-const layout=${JSON.stringify(layout)};
-function escapeHtml(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-function escapeAttr(str){return escapeHtml(str).replace(/\n/g,'&#10;');}
-function preserveMathTokens(str){const tokens=[];let out=String(str??'');const patterns=[/\$\$[\s\S]+?\$\$/g,/\\\[[\s\S]+?\\\]/g,/\\\([\s\S]+?\\\)/g,/\$(?!\s)[^$\n]+?\$/g];patterns.forEach(pattern=>{out=out.replace(pattern,m=>{const key='@@MATH'+tokens.length+'@@';tokens.push(m);return key;});});return {out,tokens};}
-function restoreMathTokens(str,tokens){return String(str).replace(/@@MATH(\d+)@@/g,(_,i)=>tokens[Number(i)]??'');}
-function parseStructuredText(raw){const text=String(raw??'').replace(/\r\n/g,'\n').trim();if(!text)return '';function safeWithMath(str){const p=preserveMathTokens(str);return restoreMathTokens(escapeHtml(p.out),p.tokens);}const lines=text.split('\n');const parts=[];let paragraph=[];let listType=null;let listItems=[];function flushParagraph(){if(!paragraph.length)return;const joined=paragraph.join(' ').trim();if(joined)parts.push('<p>'+safeWithMath(joined)+'</p>');paragraph=[];}function flushList(){if(!listItems.length)return;const tag=listType==='enumerate'?'ol':'ul';parts.push('<'+tag+'>'+listItems.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</'+tag+'>');listItems=[];listType=null;}function collectUntil(endPattern,startIndex){const chunk=[];let i=startIndex;while(i<lines.length&&!endPattern.test(lines[i].trim())){chunk.push(lines[i]);i+=1;}return {body:chunk.join('\n').trim(),endIndex:i};}function simpleCardBody(body){const trimmed=body.trim();if(!trimmed)return '';return trimmed.split(/\n\s*\n/).map(block=>'<p>'+safeWithMath(block.replace(/\s*\n\s*/g,' ').trim())+'</p>').join('');}
-for(let i=0;i<lines.length;i+=1){const line=lines[i].trim();if(!line){flushParagraph();flushList();continue;}const paragraphMatch=line.match(/^\\paragraph\{([\s\S]*)\}$/);if(paragraphMatch){flushParagraph();flushList();parts.push('<p>'+safeWithMath(paragraphMatch[1].trim())+'</p>');continue;}if(/^\\begin\{itemize\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\end\{itemize\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\item\s+([\s\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ul>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ul>');continue;}if(/^\\begin\{enumerate\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\end\{enumerate\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\item\s+([\s\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ol>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ol>');continue;}if(/^\\begin\{equation\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\end\{equation\}$/i,i+1);parts.push('<div class="display-math">\\[\\begin{aligned}'+escapeHtml(collected.body)+'\\end{aligned}\\]</div>');i=collected.endIndex;continue;}const cardBegin=line.match(/^\\begin\{card\}\{([\s\S]*)\}$/i);if(cardBegin){flushParagraph();flushList();const collected=collectUntil(/^\\end\{card\}$/i,i+1);parts.push('<div class="bullet-card"><b>'+safeWithMath(cardBegin[1].trim())+'</b><div>'+simpleCardBody(collected.body)+'</div></div>');i=collected.endIndex;continue;}if(/^\\begin\{figurehtml\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\end\{figurehtml\}$/i,i+1);parts.push('<div class="figure-embed">'+collected.body+'</div>');i=collected.endIndex;continue;}if(/^UL:/i.test(line)){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.replace(/^UL:/i,'').trim());continue;}if(line.startsWith('- ')){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.slice(2).trim());continue;}flushList();if(line.startsWith('### ')){flushParagraph();parts.push('<h3>'+safeWithMath(line.slice(4).trim())+'</h3>');continue;}if(/^P:/i.test(line)){flushParagraph();parts.push('<p>'+safeWithMath(line.replace(/^P:/i,'').trim())+'</p>');continue;}if(/^EQ:/i.test(line)){flushParagraph();parts.push('<div class="display-math">'+safeWithMath(line.replace(/^EQ:/i,'').trim())+'</div>');continue;}if(/^CARD:/i.test(line)){flushParagraph();const payload=line.replace(/^CARD:/i,'').trim();const pieces=payload.split('|');const cardTitle=pieces.shift()||'';const cardBody=pieces.join('|');parts.push('<div class="bullet-card"><b>'+safeWithMath(cardTitle)+'</b><div><p>'+safeWithMath(cardBody)+'</p></div></div>');continue;}paragraph.push(line);}flushParagraph();flushList();return parts.join('\n');}
-function diagramMarkup(){return '<div class="diag"><svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder"><line x1="145" y1="145" x2="355" y2="125" class="edge"/><line x1="145" y1="145" x2="355" y2="295" class="edge"/><line x1="145" y1="285" x2="355" y2="125" class="edge"/><line x1="145" y1="285" x2="355" y2="295" class="edge"/><line x1="405" y1="125" x2="615" y2="215" class="edge"/><line x1="405" y1="295" x2="615" y2="215" class="edge"/><circle cx="115" cy="145" r="34" class="node"/><circle cx="115" cy="285" r="34" class="node"/><circle cx="375" cy="125" r="34" class="node"/><circle cx="375" cy="295" r="34" class="node"/><circle cx="645" cy="215" r="34" class="node"/><text x="88" y="153" class="label">x₁</text><text x="88" y="293" class="label">x₂</text><text x="350" y="133" class="label">h₁</text><text x="350" y="303" class="label">h₂</text><text x="632" y="223" class="label">ŷ</text></svg></div>';}
-function customFrameMarkup(raw){const html=String(raw||'').trim();if(!html)return '<div class="placeholder">Paste custom HTML here.</div>';return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="'+escapeAttr(html)+'"></iframe></div>';}
-function normalizeBlock(block){return {mode:block.mode||'panel',title:block.title||'',content:block.content||''};}
-function normalizeSlide(slide){const out=JSON.parse(JSON.stringify(slide||{}));let leftBlocks=Array.isArray(out.leftBlocks)?out.leftBlocks.map(normalizeBlock):null;let rightBlocks=Array.isArray(out.rightBlocks)?out.rightBlocks.map(normalizeBlock):null;if(!leftBlocks){leftBlocks=[{mode:out.leftMode||'panel',title:'',content:out.leftHtml||''}];}if(!rightBlocks){rightBlocks=out.slideType==='two-col'?[{mode:out.rightMode||'panel',title:'',content:out.rightHtml||''}]:[];}out.leftBlocks=leftBlocks;out.rightBlocks=rightBlocks;return out;}
-function renderBlock(block,placeholderText){const resolvedMode=block.mode||'panel';const raw=block.content||'';if(resolvedMode==='diagram')return diagramMarkup();if(resolvedMode==='custom')return customFrameMarkup(raw);if(resolvedMode==='placeholder')return '<div class="placeholder">'+escapeHtml(raw||placeholderText||'Placeholder')+'</div>';if(resolvedMode==='pseudocode')return '<pre class="pseudo-block">'+escapeHtml(raw)+'</pre>';if(resolvedMode==='pseudocode-latex'){const p=preserveMathTokens(raw);return '<div class="pseudo-latex-block">'+restoreMathTokens(escapeHtml(p.out),p.tokens)+'</div>';}return '<div class="rich">'+parseStructuredText(raw)+'</div>';}
-function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
-function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\n/g,'<br>')+'</'+heading+'>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='two-col'){return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
-const slides=deckPayload.slides.map(normalizeSlide);
-const deck=document.getElementById('printDeck');
-function buildPages(){
-  const perPage=${Number(slidesPerPage) || 1};
-  const pages=[];
-  for(let i=0;i<slides.length;i+=perPage){
-    const chunk=slides.slice(i, i+perPage);
-    const cells=chunk.map(slide=>'<div class="print-cell"><div class="print-viewport"><section class="slide '+(slide.slideType==='title-center'?'title-center':(slide.slideType==='two-col'?'two-col':'single'))+'" style="'+('background:'+(slide.bgColor||'#ffffff')+';color:'+(slide.fontColor||'#111111')+';')+'">'+buildSlideInner(slide).trim()+'</section></div></div>');
-    while(cells.length < perPage) cells.push('<div class="print-cell empty"></div>');
-    pages.push('<section class="print-page '+layout.className+'" style="--cols:'+layout.cols+';--rows:'+layout.rows+'">'+cells.join('')+'</section>');
-  }
-  deck.innerHTML=pages.join('');
-}
-buildPages();
 function layoutPrintableSlides(){
   document.querySelectorAll('.print-viewport').forEach(viewport=>{
     const slide=viewport.querySelector('.slide');
@@ -2161,12 +2111,17 @@ function layoutPrintableSlides(){
     slide.style.transform='translate('+x+'px,'+y+'px) scale('+scale+')';
   });
 }
-function afterTypeset(){layoutPrintableSlides();setTimeout(()=>window.print(), 350);}
-if(window.MathJax && typeof window.MathJax.typesetPromise==='function'){
-  window.MathJax.typesetPromise([deck]).then(afterTypeset).catch(afterTypeset);
-}else{
-  window.addEventListener('load', afterTypeset);
+function printWhenReady(){
+  layoutPrintableSlides();
+  setTimeout(()=>window.print(), 500);
 }
+window.addEventListener('load', ()=>{
+  if(window.MathJax && typeof window.MathJax.typesetPromise==='function'){
+    window.MathJax.typesetPromise().then(printWhenReady).catch(printWhenReady);
+  }else{
+    printWhenReady();
+  }
+});
 window.addEventListener('resize', layoutPrintableSlides);
 document.getElementById('printNowBtn').addEventListener('click', ()=>{layoutPrintableSlides(); window.print();});
 </scr` + `ipt>
