@@ -98,6 +98,40 @@
     height:900px;
     transform-origin:top left;
   }
+  .preview-grid-overlay,.preview-margin-overlay{
+    position:absolute;inset:0;pointer-events:none;z-index:1;display:none;
+  }
+  .preview-grid-overlay.show{
+    display:block;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size:40px 40px;
+  }
+  .preview-margin-overlay.show{display:block}
+  .preview-margin-box{
+    position:absolute;left:53px;right:53px;top:48px;bottom:48px;
+    border:2px dashed rgba(97,180,255,.45);border-radius:20px;
+  }
+  .preview-center-v,.preview-center-h{
+    position:absolute;background:rgba(97,180,255,.28);
+  }
+  .preview-center-v{top:0;bottom:0;left:50%;width:2px;transform:translateX(-1px)}
+  .preview-center-h{left:0;right:0;top:50%;height:2px;transform:translateY(-1px)}
+  .library-list{display:grid;gap:.5rem;max-height:220px;overflow:auto}
+  .library-item{
+    border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);
+    border-radius:14px;padding:.65rem .75rem;cursor:pointer;text-align:left
+  }
+  .library-item.active{border-color:rgba(97,180,255,.55);background:rgba(97,180,255,.1)}
+  .library-item small{display:block;color:var(--muted);margin-top:.18rem}
+  .figure-toolbar{display:grid;gap:.7rem}
+  .tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
+  .tool-grid .btn{width:100%}
+  .tool-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .inline-checks{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
+  .inline-checks label{display:flex;gap:.45rem;align-items:center}
+
   .copy-toast{
     position:fixed;right:1rem;bottom:1rem;background:rgba(15,22,48,.96);border:1px solid rgba(255,255,255,.16);
     color:var(--text);padding:.8rem 1rem;border-radius:14px;opacity:0;transform:translateY(10px);
@@ -411,7 +445,7 @@ window.MathJax = {
       </div>
       <span class="badge">Preview and export use the same renderer</span>
     </div>
-    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
+    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-grid-overlay" id="previewGridOverlay"></div><div class="preview-margin-overlay" id="previewMarginOverlay"><div class="preview-margin-box"></div><div class="preview-center-v"></div><div class="preview-center-h"></div></div><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
     <div>
       <div class="preview-header">
         <h2>Current slide snippet</h2>
@@ -476,6 +510,57 @@ window.MathJax = {
           </div>
           <div class="help" style="margin-top:.35rem">Accent color and radius apply deck-wide. Background and font apply to slides that use <b>master theme defaults</b>.</div>
         </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem;padding:.95rem">
+      <div class="smallcaps">Reusable block library</div>
+      <div class="help" style="margin-top:.45rem">Save the current block as a reusable component or insert a reusable block into the current slide.</div>
+      <div class="template-list" style="margin-top:.7rem">
+        <button data-block-template="theorem"><small>Theorem box</small></button>
+        <button data-block-template="proof"><small>Proof box</small></button>
+        <button data-block-template="recap"><small>Recap box</small></button>
+        <button data-block-template="algorithm"><small>Algorithm box</small></button>
+        <button data-block-template="citation"><small>Citation box</small></button>
+        <button data-block-template="reminder"><small>Speaker reminder box</small></button>
+      </div>
+      <div class="toolbar" style="margin-top:.7rem">
+        <button class="btn mini" id="saveCurrentBlockToLibraryBtn">Save current block to library</button>
+        <button class="btn mini" id="insertLibraryBlockBtn">Insert selected library block</button>
+        <button class="btn mini" id="deleteLibraryBlockBtn">Delete selected saved block</button>
+      </div>
+      <div class="library-list" id="blockLibraryList" style="margin-top:.7rem"></div>
+    </div>
+
+    <div class="panel figure-toolbar" style="margin-top:1rem;padding:.95rem">
+      <div class="smallcaps">Figure tools and guides</div>
+      <div class="help">Select one or more figures in the preview. Shift-click adds to the selection.</div>
+      <div class="inline-checks">
+        <label><input type="checkbox" id="showGridToggle" style="width:auto" /> Show grid</label>
+        <label><input type="checkbox" id="showMarginsToggle" style="width:auto" /> Show margins</label>
+        <label><input type="checkbox" id="snapToGuidesToggle" style="width:auto" checked /> Snap to guides</label>
+        <label><input type="checkbox" id="lockAspectToggle" style="width:auto" /> Lock aspect ratio</label>
+      </div>
+      <div class="help" id="selectedFiguresStatus">No figure selected.</div>
+      <div class="tool-grid">
+        <button class="btn mini" id="alignFigureLeftBtn">Align left</button>
+        <button class="btn mini" id="alignFigureCenterBtn">Align center</button>
+        <button class="btn mini" id="alignFigureRightBtn">Align right</button>
+        <button class="btn mini" id="alignFigureTopBtn">Align top</button>
+        <button class="btn mini" id="alignFigureMiddleBtn">Align middle</button>
+        <button class="btn mini" id="alignFigureBottomBtn">Align bottom</button>
+      </div>
+      <div class="tool-grid two">
+        <button class="btn mini" id="distributeFigureHorizBtn">Distribute horiz.</button>
+        <button class="btn mini" id="distributeFigureVertBtn">Distribute vert.</button>
+      </div>
+      <div class="tool-grid">
+        <button class="btn mini" id="snapFigureBtn">Snap to grid</button>
+        <button class="btn mini" id="bringForwardBtn">Bring forward</button>
+        <button class="btn mini" id="sendBackwardBtn">Send backward</button>
+        <button class="btn mini" id="cropFigureBtn">Crop</button>
+        <button class="btn mini" id="duplicateFigureBtn">Duplicate</button>
+        <button class="btn mini" id="resetFigureBtn">Reset</button>
       </div>
     </div>
 
@@ -656,14 +741,25 @@ const figureAltInput = document.getElementById('figureAltInput');
 const figureFileInput = document.getElementById('figureFileInput');
 const figureImagePanel = document.getElementById('figureImagePanel');
 const figureEditorPanel = document.getElementById('figureEditorPanel');
+const blockLibraryList = document.getElementById('blockLibraryList');
+const showGridToggle = document.getElementById('showGridToggle');
+const showMarginsToggle = document.getElementById('showMarginsToggle');
+const snapToGuidesToggle = document.getElementById('snapToGuidesToggle');
+const lockAspectToggle = document.getElementById('lockAspectToggle');
+const selectedFiguresStatus = document.getElementById('selectedFiguresStatus');
+const previewGridOverlay = document.getElementById('previewGridOverlay');
+const previewMarginOverlay = document.getElementById('previewMarginOverlay');
 
 let slides = [];
 let activeIndex = -1;
 let draftBlocks = { left: [], right: [] };
 let selectedBlock = { left: -1, right: -1 };
 const AUTOSAVE_KEY = 'html-presentation-generator-autosave-v5';
+const BLOCK_LIBRARY_KEY = 'html-presentation-generator-block-library-v1';
 let autosaveTimer = null;
 let autosaveDirtyCount = 0;
+let blockLibrary = [];
+
 
 function showToast(message){
   toast.textContent = message;
@@ -676,6 +772,96 @@ function setAutosaveStatus(msg){
   if(el) el.textContent = msg;
 }
 function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+function defaultReusableBlock(kind){
+  const presets = {
+    theorem: { mode:'panel', title:'Theorem', content:'\\begin{card}{Theorem}\\nState the theorem clearly here.\\n\\end{card}' },
+    proof: { mode:'panel', title:'Proof', content:'\\begin{card}{Proof}\\nSketch the argument here.\\n\\end{card}' },
+    recap: { mode:'panel', title:'Recap', content:'\\begin{card}{Recap}\\n\\begin{itemize}\\n\\item First takeaway\\n\\item Second takeaway\\n\\end{itemize}\\n\\end{card}' },
+    algorithm: { mode:'pseudocode-latex', title:'Algorithm', content:'Input: \\(x\\)\\n\\nfor \\(t = 1\\) to \\(T\\) do\\n  step\\nend\\n\\nreturn output' },
+    citation: { mode:'panel', title:'Citation', content:'\\begin{card}{Citation}\\nAuthor, Title, Venue, Year.\\n\\end{card}' },
+    reminder: { mode:'panel', title:'Speaker reminder', content:'\\begin{card}{Speaker reminder}\\nMention the intuition before the formal statement.\\n\\end{card}' }
+  };
+  return clone(presets[kind] || presets.recap);
+}
+function builtinLibraryEntries(){
+  return [
+    {id:'builtin-theorem', name:'Theorem box', builtin:true, block:defaultReusableBlock('theorem')},
+    {id:'builtin-proof', name:'Proof box', builtin:true, block:defaultReusableBlock('proof')},
+    {id:'builtin-recap', name:'Recap box', builtin:true, block:defaultReusableBlock('recap')},
+    {id:'builtin-algorithm', name:'Algorithm box', builtin:true, block:defaultReusableBlock('algorithm')},
+    {id:'builtin-citation', name:'Citation box', builtin:true, block:defaultReusableBlock('citation')},
+    {id:'builtin-reminder', name:'Speaker reminder box', builtin:true, block:defaultReusableBlock('reminder')}
+  ];
+}
+function loadBlockLibrary(){
+  try{
+    const raw = localStorage.getItem(BLOCK_LIBRARY_KEY);
+    const saved = raw ? JSON.parse(raw) : [];
+    blockLibrary = builtinLibraryEntries().concat(Array.isArray(saved) ? saved : []);
+  }catch(err){
+    blockLibrary = builtinLibraryEntries();
+  }
+}
+function persistBlockLibrary(){
+  const custom = blockLibrary.filter(item => !item.builtin);
+  localStorage.setItem(BLOCK_LIBRARY_KEY, JSON.stringify(custom));
+}
+function renderBlockLibrary(){
+  if(!blockLibraryList) return;
+  blockLibraryList.innerHTML = blockLibrary.map((item, idx)=>`<button class="library-item ${idx===renderBlockLibrary.selectedIndex?'active':''}" data-lib-index="${idx}">${escapeHtml(item.name || 'Reusable block')}<small>${escapeHtml(item.block?.mode || 'panel')}${item.builtin ? ' · built-in' : ''}</small></button>`).join('');
+  blockLibraryList.querySelectorAll('[data-lib-index]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      renderBlockLibrary.selectedIndex = Number(btn.dataset.libIndex);
+      renderBlockLibrary();
+    });
+  });
+}
+renderBlockLibrary.selectedIndex = 0;
+function saveCurrentBlockToLibrary(){
+  const block = currentBlockFromEditor();
+  const suggested = block.title || 'Reusable block';
+  const name = prompt('Save reusable block as', suggested);
+  if(!name) return;
+  blockLibrary.push({
+    id:'saved-' + Date.now(),
+    name,
+    builtin:false,
+    block: clone(block)
+  });
+  renderBlockLibrary.selectedIndex = blockLibrary.length - 1;
+  persistBlockLibrary();
+  renderBlockLibrary();
+  showToast('Saved reusable block.');
+}
+function insertSelectedLibraryBlock(){
+  const item = blockLibrary[renderBlockLibrary.selectedIndex];
+  if(!item) return;
+  const name = currentColumnName();
+  const arr = blockArray(name);
+  const idx = selectedIndex(name);
+  const insertAt = idx >= 0 ? idx + 1 : arr.length;
+  arr.splice(insertAt, 0, clone(item.block));
+  setSelectedIndex(name, insertAt);
+  loadSelectedBlockIntoEditor();
+  renderBlockList();
+  buildPreview();
+  scheduleAutosave('Autosaved after inserting reusable block.');
+  showToast('Inserted reusable block.');
+}
+function deleteSelectedLibraryBlock(){
+  const item = blockLibrary[renderBlockLibrary.selectedIndex];
+  if(!item || item.builtin){
+    showToast('Built-in reusable blocks cannot be deleted.');
+    return;
+  }
+  blockLibrary.splice(renderBlockLibrary.selectedIndex, 1);
+  renderBlockLibrary.selectedIndex = Math.max(0, Math.min(renderBlockLibrary.selectedIndex, blockLibrary.length - 1));
+  persistBlockLibrary();
+  renderBlockLibrary();
+  showToast('Deleted saved reusable block.');
+}
+
 function escapeHtml(str){
   return String(str ?? '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1643,6 +1829,200 @@ function saveFigureEmbedToDraft(embed){
   }
   snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
 }
+function getSelectedFigureBoxes(root){
+  return Array.from((root || preview).querySelectorAll('.figure-box.selected'));
+}
+function updatePreviewGuides(){
+  if(previewGridOverlay) previewGridOverlay.classList.toggle('show', !!showGridToggle?.checked);
+  if(previewMarginOverlay) previewMarginOverlay.classList.toggle('show', !!showMarginsToggle?.checked);
+}
+function refreshFigureToolState(){
+  const boxes = getSelectedFigureBoxes();
+  if(!selectedFiguresStatus) return;
+  selectedFiguresStatus.textContent = boxes.length ? (boxes.length + ' figure' + (boxes.length===1?'':'s') + ' selected.') : 'No figure selected.';
+  if(boxes.length === 1 && lockAspectToggle){
+    lockAspectToggle.checked = boxes[0].dataset.lockAspect === '1';
+  }
+}
+function getSlideMetricsForBox(box){
+  const slide = box.closest('.slide, .deck-slide, .print-slide');
+  const slideRect = slide.getBoundingClientRect();
+  const styles = getComputedStyle(slide);
+  const padL = parseFloat(styles.paddingLeft || '0') || 0;
+  const padR = parseFloat(styles.paddingRight || '0') || 0;
+  const padT = parseFloat(styles.paddingTop || '0') || 0;
+  const padB = parseFloat(styles.paddingBottom || '0') || 0;
+  const scale = getInteractionScale(slide);
+  return {
+    slide,
+    slideRect,
+    scaleX: scale.x || 1,
+    scaleY: scale.y || 1,
+    contentLeft: padL,
+    contentRight: (slide.clientWidth || slide.offsetWidth || 1600) - padR,
+    contentTop: padT,
+    contentBottom: (slide.clientHeight || slide.offsetHeight || 900) - padB,
+    contentWidth: (slide.clientWidth || slide.offsetWidth || 1600) - padL - padR,
+    contentHeight: (slide.clientHeight || slide.offsetHeight || 900) - padT - padB
+  };
+}
+function moveBoxTo(box, targetLeft, targetTop){
+  const m = getSlideMetricsForBox(box);
+  const rect = box.getBoundingClientRect();
+  const current = parseTranslate(box.style.transform);
+  const leftNow = (rect.left - m.slideRect.left) / m.scaleX;
+  const topNow = (rect.top - m.slideRect.top) / m.scaleY;
+  const nextX = current.x + (targetLeft - leftNow);
+  const nextY = current.y + (targetTop - topNow);
+  box.style.transform = `translate(${Math.round(nextX)}px, ${Math.round(nextY)}px)`;
+}
+function normalizeFigureSelection(singleBox, additive){
+  const scope = preview;
+  if(!additive){
+    scope.querySelectorAll('.figure-box.selected').forEach(el=>{ if(el !== singleBox) el.classList.remove('selected'); });
+  }
+  if(singleBox) singleBox.classList.add('selected');
+  refreshFigureToolState();
+}
+function saveSelectedFigures(){
+  getSelectedFigureBoxes().forEach(box=>{
+    const embed = box.closest('.figure-embed[data-column]');
+    if(embed) saveFigureEmbedToDraft(embed);
+  });
+  scheduleAutosave('Autosaved after figure edit.');
+}
+function snapValue(v, step=20){ return Math.round(v / step) * step; }
+function applySnapToBox(box){
+  const t = parseTranslate(box.style.transform);
+  box.style.transform = `translate(${snapValue(t.x)}px, ${snapValue(t.y)}px)`;
+}
+function alignSelectedFigures(which){
+  const boxes = getSelectedFigureBoxes();
+  if(!boxes.length) return;
+  boxes.forEach(box=>{
+    const m = getSlideMetricsForBox(box);
+    const rect = box.getBoundingClientRect();
+    const w = rect.width / m.scaleX;
+    const h = rect.height / m.scaleY;
+    let left = (rect.left - m.slideRect.left) / m.scaleX;
+    let top = (rect.top - m.slideRect.top) / m.scaleY;
+    if(which === 'left') left = m.contentLeft;
+    if(which === 'center') left = m.contentLeft + (m.contentWidth - w) / 2;
+    if(which === 'right') left = m.contentRight - w;
+    if(which === 'top') top = m.contentTop;
+    if(which === 'middle') top = m.contentTop + (m.contentHeight - h) / 2;
+    if(which === 'bottom') top = m.contentBottom - h;
+    moveBoxTo(box, left, top);
+  });
+  saveSelectedFigures();
+  buildPreview();
+}
+function distributeSelectedFigures(axis){
+  const boxes = getSelectedFigureBoxes();
+  if(boxes.length < 3) return;
+  const items = boxes.map(box=>{
+    const m = getSlideMetricsForBox(box);
+    const rect = box.getBoundingClientRect();
+    return {
+      box, m,
+      left: (rect.left - m.slideRect.left) / m.scaleX,
+      top: (rect.top - m.slideRect.top) / m.scaleY,
+      width: rect.width / m.scaleX,
+      height: rect.height / m.scaleY
+    };
+  }).sort((a,b)=> axis==='x' ? a.left-b.left : a.top-b.top);
+  const first = items[0], last = items[items.length-1];
+  const total = items.slice(1,-1).reduce((s,it)=>s+(axis==='x'?it.width:it.height),0);
+  const span = axis==='x' ? (last.left - (first.left + first.width)) : (last.top - (first.top + first.height));
+  const gap = items.length > 2 ? (span - total) / (items.length - 1) : 0;
+  let cursor = axis==='x' ? first.left + first.width + gap : first.top + first.height + gap;
+  items.slice(1,-1).forEach(it=>{
+    if(axis==='x') moveBoxTo(it.box, cursor, it.top);
+    else moveBoxTo(it.box, it.left, cursor);
+    cursor += (axis==='x' ? it.width : it.height) + gap;
+  });
+  saveSelectedFigures();
+  buildPreview();
+}
+function bringSelectedFigures(delta){
+  const boxes = getSelectedFigureBoxes();
+  boxes.forEach(box=>{
+    const z = parseInt(box.style.zIndex || '1', 10) || 1;
+    box.style.zIndex = String(Math.max(1, z + delta));
+  });
+  saveSelectedFigures();
+  buildPreview();
+}
+function toggleCropSelectedFigure(){
+  const boxes = getSelectedFigureBoxes();
+  boxes.forEach(box=>{
+    const cropped = box.dataset.crop === '1';
+    box.dataset.crop = cropped ? '0' : '1';
+    box.style.overflow = cropped ? 'visible' : 'hidden';
+    const media = box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure > img, :scope > figure > svg, :scope > figure > canvas, :scope > figure > iframe');
+    if(media){
+      media.style.objectFit = cropped ? 'contain' : 'cover';
+    }
+  });
+  saveSelectedFigures();
+  buildPreview();
+}
+function duplicateSelectedFigure(){
+  const boxes = getSelectedFigureBoxes();
+  if(boxes.length !== 1) return;
+  const embed = boxes[0].closest('.figure-embed[data-column]');
+  if(!embed) return;
+  const column = embed.dataset.column || 'left';
+  const blockIndex = Number(embed.dataset.blockIndex);
+  const figureIndex = Number(embed.dataset.figureIndex);
+  const arr = blockArray(column);
+  if(!arr[blockIndex]) return;
+  arr[blockIndex].content = String(arr[blockIndex].content || '').replace(/\begin\{figurehtml\}[\r\n]*([\s\S]*?)[\r\n]*\end\{figurehtml\}/g, (m, body)=>{
+    duplicateSelectedFigure._seen = (duplicateSelectedFigure._seen || 0) + 1;
+    if(duplicateSelectedFigure._seen - 1 !== figureIndex) return m;
+    return m + '\n\n\\begin{figurehtml}\n' + body + '\n\\end{figurehtml}';
+  });
+  duplicateSelectedFigure._seen = 0;
+  if(currentColumnName() === column && selectedIndex(column) === blockIndex){
+    blockFields.content.value = arr[blockIndex].content;
+  }
+  buildPreview();
+  scheduleAutosave('Autosaved after figure duplicate.');
+}
+function resetSelectedFigure(){
+  getSelectedFigureBoxes().forEach(box=>{
+    box.style.transform = 'translate(0px, 0px)';
+    box.style.zIndex = '1';
+    box.dataset.crop = '0';
+    box.style.overflow = 'visible';
+    const ow = parseFloat(box.dataset.originalW || '220') || 220;
+    const oh = parseFloat(box.dataset.originalH || '160') || 160;
+    box.style.width = ow + 'px';
+    box.style.height = oh + 'px';
+    const media = box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure > img, :scope > figure > svg, :scope > figure > canvas, :scope > figure > iframe');
+    if(media) media.style.objectFit = 'contain';
+  });
+  saveSelectedFigures();
+  buildPreview();
+}
+function applyGuideSnapping(box){
+  const t = parseTranslate(box.style.transform);
+  let x = t.x, y = t.y;
+  const m = getSlideMetricsForBox(box);
+  const rect = box.getBoundingClientRect();
+  const w = rect.width / m.scaleX, h = rect.height / m.scaleY;
+  const currentLeft = (rect.left - m.slideRect.left) / m.scaleX;
+  const currentTop = (rect.top - m.slideRect.top) / m.scaleY;
+  const currentCenterX = currentLeft + w/2;
+  const currentCenterY = currentTop + h/2;
+  const guideTol = 10;
+  const targetsX = [m.contentLeft, m.contentLeft + m.contentWidth/2 - w/2, m.contentRight - w];
+  const targetsY = [m.contentTop, m.contentTop + m.contentHeight/2 - h/2, m.contentBottom - h];
+  targetsX.forEach(tx=>{ if(Math.abs(currentLeft - tx) < guideTol) x += tx - currentLeft; });
+  targetsY.forEach(ty=>{ if(Math.abs(currentTop - ty) < guideTol) y += ty - currentTop; });
+  box.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+}
+
 function getInteractionScale(el){
   const target = el.closest('.slide, .deck-slide, .print-slide') || el;
   const rect = target.getBoundingClientRect();
@@ -1663,10 +2043,15 @@ function ensureInteractiveFigureBox(embed){
     while(embed.firstChild) box.appendChild(embed.firstChild);
     embed.appendChild(box);
     const rect = box.getBoundingClientRect();
-    box.style.width = Math.max(80, Math.round(rect.width || 220)) + 'px';
-    box.style.height = Math.max(60, Math.round(rect.height || 160)) + 'px';
-    box.style.transform = 'translate(0px, 0px)';
+    const ow = Math.max(80, Math.round(rect.width || 220));
+    const oh = Math.max(60, Math.round(rect.height || 160));
+    box.style.width = ow + 'px';
+    box.style.height = oh + 'px';
+    box.dataset.originalW = String(ow);
+    box.dataset.originalH = String(oh);
+    box.style.transform = box.style.transform || 'translate(0px, 0px)';
     box.style.cursor = 'grab';
+    box.style.zIndex = box.style.zIndex || '1';
   }
   if(!box.querySelector('.figure-resize-handle')){
     const handle = document.createElement('div');
@@ -1677,37 +2062,22 @@ function ensureInteractiveFigureBox(embed){
 }
 function initFigureInteractions(root){
   const scope = root || document;
-  let active = null;
-  function selectBox(box){
-    scope.querySelectorAll('.figure-box.selected').forEach(el=>el.classList.remove('selected'));
-    if(box) box.classList.add('selected');
+  if(scope.__figureInitDone){
+    refreshFigureToolState();
+    return;
   }
-  scope.querySelectorAll('.figure-embed[data-column]').forEach(embed=>{
-    const box = ensureInteractiveFigureBox(embed);
-    const handle = box.querySelector('.figure-resize-handle');
-    box.addEventListener('pointerdown', (e)=>{
-      if(e.target === handle) return;
-      selectBox(box);
-      const t = parseTranslate(box.style.transform);
-      box.style.cursor = 'grabbing';
-      const scale = getInteractionScale(box);
-      active = {
-        mode: 'move',
-        box,
-        embed,
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
-        startTX: t.x,
-        startTY: t.y,
-        scaleX: scale.x,
-        scaleY: scale.y
-      };
-      box.setPointerCapture?.(e.pointerId);
-      e.preventDefault();
-    });
-    handle.addEventListener('pointerdown', (e)=>{
-      selectBox(box);
+  scope.__figureInitDone = true;
+  let active = null;
+
+  scope.addEventListener('pointerdown', (e)=>{
+    const handle = e.target.closest('.figure-resize-handle');
+    const box = e.target.closest('.figure-box');
+    if(!box) return;
+    const embed = box.closest('.figure-embed[data-column]');
+    if(!embed) return;
+
+    if(handle){
+      normalizeFigureSelection(box, e.shiftKey || e.metaKey || e.ctrlKey);
       const rect = box.getBoundingClientRect();
       const slideEl = embed.closest('.slide, .deck-slide, .print-slide') || embed.closest('[data-preview-root]') || document.body;
       const slideRect = slideEl.getBoundingClientRect();
@@ -1717,75 +2087,111 @@ function initFigureInteractions(root){
       const scale = getInteractionScale(slideEl);
       active = {
         mode: 'resize',
-        box,
-        embed,
+        box, embed,
         pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
+        startX: e.clientX, startY: e.clientY,
         startW: box.offsetWidth || parseFloat(box.style.width) || rect.width,
         startH: box.offsetHeight || parseFloat(box.style.height) || rect.height,
         maxW: Math.max(120, (slideEl.clientWidth || slideEl.offsetWidth || slideRect.width) - padX - 24),
         maxH: Math.max(80, (slideEl.clientHeight || slideEl.offsetHeight || slideRect.height) - padY - 24),
-        scaleX: scale.x,
-        scaleY: scale.y
+        scaleX: scale.x, scaleY: scale.y,
+        aspect: (box.offsetWidth || rect.width) / Math.max(1, (box.offsetHeight || rect.height))
       };
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
       e.stopPropagation();
-    });
-  });
-  function finish(){
-    if(!active) return;
-    if(active.box) active.box.style.cursor = 'grab';
-    saveFigureEmbedToDraft(active.embed);
-    scheduleAutosave('Autosaved after figure edit.');
-    active = null;
-  }
-  window.addEventListener('pointermove', (e)=>{
-    if(!active) return;
+      refreshFigureToolState();
+      return;
+    }
+
+    normalizeFigureSelection(box, e.shiftKey || e.metaKey || e.ctrlKey);
+    const t = parseTranslate(box.style.transform);
+    box.style.cursor = 'grabbing';
+    const scale = getInteractionScale(box);
+    active = {
+      mode:'move',
+      box, embed,
+      pointerId:e.pointerId,
+      startX:e.clientX, startY:e.clientY,
+      startTX:t.x, startTY:t.y,
+      scaleX:scale.x, scaleY:scale.y
+    };
+    box.setPointerCapture?.(e.pointerId);
     e.preventDefault();
-    if(active.mode === 'move'){
-      const dx = (e.clientX - active.startX) / (active.scaleX || 1);
-      const dy = (e.clientY - active.startY) / (active.scaleY || 1);
-      active.box.style.transform = `translate(${Math.round(active.startTX + dx)}px, ${Math.round(active.startTY + dy)}px)`;
-    }else if(active.mode === 'resize'){
-      const dx = (e.clientX - active.startX) / (active.scaleX || 1);
-      const dy = (e.clientY - active.startY) / (active.scaleY || 1);
-      const w = Math.min(active.maxW || Infinity, Math.max(60, Math.round(active.startW + dx)));
-      const h = Math.min(active.maxH || Infinity, Math.max(40, Math.round(active.startH + dy)));
-      active.embed.style.maxWidth = 'none';
-      active.embed.style.maxHeight = 'none';
-      active.box.style.maxWidth = 'none';
-      active.box.style.maxHeight = 'none';
-      active.box.style.width = w + 'px';
-      active.box.style.height = h + 'px';
-      const direct = active.box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure');
-      active.embed.style.width = 'fit-content';
-      active.embed.style.maxWidth = 'none';
-      active.embed.style.maxHeight = 'none';
-      if(direct){
-        direct.style.maxWidth = 'none';
-        direct.style.maxHeight = 'none';
-        direct.style.width = '100%';
-        direct.style.height = '100%';
-        if(direct.tagName === 'FIGURE'){
+    refreshFigureToolState();
+  });
+
+  if(!window.__figureWindowHandlersBound){
+    window.__figureWindowHandlersBound = true;
+    window.addEventListener('pointermove', (e)=>{
+      if(!active) return;
+      e.preventDefault();
+      if(active.mode === 'move'){
+        let dx = (e.clientX - active.startX) / (active.scaleX || 1);
+        let dy = (e.clientY - active.startY) / (active.scaleY || 1);
+        let nextX = active.startTX + dx;
+        let nextY = active.startTY + dy;
+        if(showGridToggle?.checked || snapToGuidesToggle?.checked){
+          nextX = snapValue(nextX);
+          nextY = snapValue(nextY);
+        }
+        active.box.style.transform = `translate(${Math.round(nextX)}px, ${Math.round(nextY)}px)`;
+        if(snapToGuidesToggle?.checked) applyGuideSnapping(active.box);
+      }else if(active.mode === 'resize'){
+        let dx = (e.clientX - active.startX) / (active.scaleX || 1);
+        let dy = (e.clientY - active.startY) / (active.scaleY || 1);
+        let w = Math.min(active.maxW || Infinity, Math.max(60, Math.round(active.startW + dx)));
+        let h = Math.min(active.maxH || Infinity, Math.max(40, Math.round(active.startH + dy)));
+        const lockAspect = lockAspectToggle?.checked || active.box.dataset.lockAspect === '1';
+        if(lockAspect){
+          if(Math.abs(dx) >= Math.abs(dy)) h = Math.max(40, Math.round(w / active.aspect));
+          else w = Math.max(60, Math.round(h * active.aspect));
+        }
+        if(showGridToggle?.checked || snapToGuidesToggle?.checked){
+          w = snapValue(w);
+          h = snapValue(h);
+        }
+        active.embed.style.maxWidth = 'none';
+        active.embed.style.maxHeight = 'none';
+        active.box.style.maxWidth = 'none';
+        active.box.style.maxHeight = 'none';
+        active.box.style.width = w + 'px';
+        active.box.style.height = h + 'px';
+        const direct = active.box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure');
+        active.embed.style.width = 'fit-content';
+        if(direct){
           direct.style.maxWidth = 'none';
           direct.style.maxHeight = 'none';
           direct.style.width = '100%';
           direct.style.height = '100%';
-          const inner = direct.querySelector('img,svg,canvas,iframe');
-          if(inner){
-            inner.style.maxWidth = 'none';
-            inner.style.maxHeight = 'none';
-            inner.style.width = '100%';
-            inner.style.height = '100%';
+          if(direct.tagName === 'FIGURE'){
+            const inner = direct.querySelector('img,svg,canvas,iframe');
+            if(inner){
+              inner.style.maxWidth = 'none';
+              inner.style.maxHeight = 'none';
+              inner.style.width = '100%';
+              inner.style.height = '100%';
+            }
           }
         }
       }
-    }
-  }, { passive: false });
-  window.addEventListener('pointerup', finish, { passive: true });
-  window.addEventListener('pointercancel', finish, { passive: true });
+    }, { passive:false });
+    window.addEventListener('pointerup', ()=>{
+      if(!active) return;
+      if(active.box) active.box.style.cursor = 'grab';
+      saveFigureEmbedToDraft(active.embed);
+      scheduleAutosave('Autosaved after figure edit.');
+      active = null;
+    }, { passive:true });
+    window.addEventListener('pointercancel', ()=>{
+      if(!active) return;
+      if(active.box) active.box.style.cursor = 'grab';
+      saveFigureEmbedToDraft(active.embed);
+      scheduleAutosave('Autosaved after figure edit.');
+      active = null;
+    }, { passive:true });
+  }
+  refreshFigureToolState();
 }
 function fitFiguresIn(root){
   const scope = root || document;
@@ -1795,12 +2201,14 @@ function buildPreview(){
   preview.innerHTML = buildSlideMarkup(currentDraftSlide());
   snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
   updatePreviewScale();
+  updatePreviewGuides();
   if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
     if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
-    window.MathJax.typesetPromise([preview]).then(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); updatePreviewScale(); }).catch(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); });
+    window.MathJax.typesetPromise([preview]).then(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); updatePreviewScale(); refreshFigureToolState(); }).catch(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); refreshFigureToolState(); });
   } else {
     fitFiguresIn(preview);
     initFigureInteractions(preview);
+    refreshFigureToolState();
   }
 }
 
@@ -2785,6 +3193,39 @@ document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
   }
 });
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
+document.querySelectorAll('[data-block-template]').forEach(btn=>btn.addEventListener('click', ()=>{
+  const kind = btn.dataset.blockTemplate;
+  const block = defaultReusableBlock(kind);
+  blockFields.mode.value = block.mode;
+  blockFields.title.value = block.title || '';
+  blockFields.content.value = block.content || '';
+  buildPreview();
+}));
+document.getElementById('saveCurrentBlockToLibraryBtn').addEventListener('click', saveCurrentBlockToLibrary);
+document.getElementById('insertLibraryBlockBtn').addEventListener('click', insertSelectedLibraryBlock);
+document.getElementById('deleteLibraryBlockBtn').addEventListener('click', deleteSelectedLibraryBlock);
+showGridToggle.addEventListener('change', updatePreviewGuides);
+showMarginsToggle.addEventListener('change', updatePreviewGuides);
+lockAspectToggle.addEventListener('change', ()=>{
+  getSelectedFigureBoxes().forEach(box=>{ box.dataset.lockAspect = lockAspectToggle.checked ? '1' : '0'; });
+  saveSelectedFigures();
+});
+document.getElementById('alignFigureLeftBtn').addEventListener('click', ()=>alignSelectedFigures('left'));
+document.getElementById('alignFigureCenterBtn').addEventListener('click', ()=>alignSelectedFigures('center'));
+document.getElementById('alignFigureRightBtn').addEventListener('click', ()=>alignSelectedFigures('right'));
+document.getElementById('alignFigureTopBtn').addEventListener('click', ()=>alignSelectedFigures('top'));
+document.getElementById('alignFigureMiddleBtn').addEventListener('click', ()=>alignSelectedFigures('middle'));
+document.getElementById('alignFigureBottomBtn').addEventListener('click', ()=>alignSelectedFigures('bottom'));
+document.getElementById('distributeFigureHorizBtn').addEventListener('click', ()=>distributeSelectedFigures('x'));
+document.getElementById('distributeFigureVertBtn').addEventListener('click', ()=>distributeSelectedFigures('y'));
+document.getElementById('snapFigureBtn').addEventListener('click', ()=>{ getSelectedFigureBoxes().forEach(applySnapToBox); saveSelectedFigures(); buildPreview(); });
+document.getElementById('bringForwardBtn').addEventListener('click', ()=>bringSelectedFigures(1));
+document.getElementById('sendBackwardBtn').addEventListener('click', ()=>bringSelectedFigures(-1));
+document.getElementById('cropFigureBtn').addEventListener('click', toggleCropSelectedFigure);
+document.getElementById('duplicateFigureBtn').addEventListener('click', duplicateSelectedFigure);
+document.getElementById('resetFigureBtn').addEventListener('click', resetSelectedFigure);
+loadBlockLibrary();
+renderBlockLibrary();
 if(expandDiagramSnippet){ expandDiagramSnippet.addEventListener('change', buildPreview); }
 
 if(!restoreAutosave()){
