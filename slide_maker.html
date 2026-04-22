@@ -197,6 +197,23 @@
     max-height:100%;
     pointer-events:none;
   }
+  .slide .figure-box > figure{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .slide .figure-box > figure > img,
+  .slide .figure-box > figure > svg,
+  .slide .figure-box > figure > canvas,
+  .slide .figure-box > figure > iframe{
+    display:block;
+    width:100%;
+    height:100%;
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    pointer-events:none;
+  }
   .slide .figure-resize-handle{
     position:absolute;
     right:-8px;
@@ -1616,8 +1633,22 @@ function initFigureInteractions(root){
     }else if(active.mode === 'resize'){
       const dx = e.clientX - active.startX;
       const dy = e.clientY - active.startY;
-      active.box.style.width = Math.max(60, Math.round(active.startW + dx)) + 'px';
-      active.box.style.height = Math.max(40, Math.round(active.startH + dy)) + 'px';
+      const w = Math.max(60, Math.round(active.startW + dx));
+      const h = Math.max(40, Math.round(active.startH + dy));
+      active.box.style.width = w + 'px';
+      active.box.style.height = h + 'px';
+      const direct = active.box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure');
+      if(direct){
+        direct.style.width = '100%';
+        direct.style.height = '100%';
+        if(direct.tagName === 'FIGURE'){
+          const inner = direct.querySelector('img,svg,canvas,iframe');
+          if(inner){
+            inner.style.width = '100%';
+            inner.style.height = '100%';
+          }
+        }
+      }
     }
   }, { passive: false });
   window.addEventListener('pointerup', finish, { passive: true });
