@@ -1392,27 +1392,63 @@ function fitFiguresInSlide(slideEl){
   if(!slideEl) return;
   const figures = Array.from(slideEl.querySelectorAll('.figure-embed'));
   if(!figures.length) return;
+
+  // reset any previous fitting
   figures.forEach(embed=>{
     embed.style.maxHeight = '';
+    embed.style.height = '';
     const media = embed.querySelector('img,svg,canvas,iframe');
-    if(media) media.style.maxHeight = '';
+    if(media){
+      media.style.maxHeight = '';
+      media.style.height = '';
+      media.style.width = '';
+    }
   });
-  const maxHeight = slideEl.clientHeight || 900;
+
+  const slideRect = slideEl.getBoundingClientRect();
+  const slideMaxHeight = slideEl.clientHeight || 900;
+  const bottomPadding = 20;
+
+  // First pass: cap each figure by the actual remaining space below its top edge.
+  figures.forEach(embed=>{
+    const media = embed.querySelector('img,svg,canvas,iframe');
+    const rect = embed.getBoundingClientRect();
+    const remaining = Math.max(70, slideRect.bottom - rect.top - bottomPadding);
+    const embedCap = Math.max(80, Math.min(remaining, slideMaxHeight * 0.62));
+    embed.style.maxHeight = embedCap + 'px';
+    if(media){
+      const mediaCap = Math.max(60, embedCap - 12);
+      media.style.maxHeight = mediaCap + 'px';
+      media.style.width = 'auto';
+      media.style.height = 'auto';
+      if(media.tagName === 'IFRAME'){
+        media.style.height = mediaCap + 'px';
+        media.style.width = '100%';
+      }
+    }
+  });
+
+  // Second pass: if the slide still overflows, keep shrinking the largest visible figure.
   let guard = 0;
-  while(slideEl.scrollHeight > maxHeight + 2 && guard < 16){
-    const overflow = slideEl.scrollHeight - maxHeight;
+  while(slideEl.scrollHeight > slideMaxHeight + 2 && guard < 24){
+    const overflow = slideEl.scrollHeight - slideMaxHeight;
     const candidates = figures.map(embed=>{
       const media = embed.querySelector('img,svg,canvas,iframe');
-      const mediaRect = media ? media.getBoundingClientRect() : embed.getBoundingClientRect();
-      return {embed, media, h: mediaRect.height || 0};
-    }).filter(x=>x.h > 40).sort((a,b)=>b.h-a.h);
+      const rect = embed.getBoundingClientRect();
+      return {embed, media, h: rect.height || 0};
+    }).filter(x=>x.h > 50).sort((a,b)=>b.h-a.h);
+
     if(!candidates.length) break;
     const c = candidates[0];
-    const current = parseFloat((c.media && c.media.style.maxHeight) || c.h);
-    const reduce = Math.min(Math.max(overflow + 8, 24), current * 0.35);
-    const next = Math.max(70, current - reduce);
-    c.embed.style.maxHeight = (next + 12) + 'px';
-    if(c.media) c.media.style.maxHeight = next + 'px';
+    const current = parseFloat(c.embed.style.maxHeight || c.h);
+    const reduce = Math.min(Math.max(overflow + 12, 28), current * 0.40);
+    const next = Math.max(60, current - reduce);
+    c.embed.style.maxHeight = next + 'px';
+    if(c.media){
+      const mediaNext = Math.max(48, next - 12);
+      c.media.style.maxHeight = mediaNext + 'px';
+      if(c.media.tagName === 'IFRAME') c.media.style.height = mediaNext + 'px';
+    }
     guard += 1;
   }
 }
