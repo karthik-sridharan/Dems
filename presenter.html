@@ -295,12 +295,25 @@ window.MathJax = {
 <body>
 <div class="page">
   <div class="panel stack">
+<div class="page">
+  <div class="panel stack">
     <div>
       <div class="smallcaps">Presentation generator</div>
       <h1>Build slides or a full deck</h1>
       <p class="help">Full editor with dropdowns, presets, live preview, slide list, <b>Load generated HTML</b>, custom HTML isolation, and <code>pseudocode-latex</code>. New: each column can now contain <b>multiple stacked content boxes</b>.</p>
     </div>
 
+
+    <div class="left-tabs" id="leftTabs">
+      <button class="left-tab active" type="button" data-left-tab="edit">Edit</button>
+      <button class="left-tab" type="button" data-left-tab="presets">Presets</button>
+      <button class="left-tab" type="button" data-left-tab="slides">Slides</button>
+      <button class="left-tab" type="button" data-left-tab="tools">Tools</button>
+      <button class="left-tab" type="button" data-left-tab="files">Files</button>
+      <button class="left-tab" type="button" data-left-tab="help">Help</button>
+    </div>
+
+    <div class="left-pane active" data-left-pane="edit">
     <div class="field-grid">
       <div class="field full">
         <label for="deckTitle">Presentation title</label>
@@ -435,11 +448,13 @@ window.MathJax = {
       </div>
     </div>
 
-    <div class="panel" style="margin-top:1rem;padding:.95rem">
-      <div class="smallcaps">Presets and deck tools</div>
-    <details>
-      <summary>Slide presets</summary>
-      <div class="template-list" style="margin-top:.65rem">
+
+    </div>
+
+    <div class="left-pane" data-left-pane="presets">
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">Slide presets</div>
+<div class="template-list" style="margin-top:.65rem">
         <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
         <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
         <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
@@ -455,9 +470,15 @@ window.MathJax = {
         <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
         <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
       </div>
-    </details>
 
-    <div class="toolbar">
+    
+      </div>
+    </div>
+
+    <div class="left-pane" data-left-pane="slides">
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">Slide actions</div>
+<div class="toolbar">
       <button class="btn primary" id="addSlideBtn">Add as new slide</button>
       <button class="btn" id="updateSlideBtn">Update selected slide</button>
       <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
@@ -465,7 +486,9 @@ window.MathJax = {
       <button class="btn" id="clearFormBtn">Clear form</button>
     </div>
 
-    <div class="panel" style="padding:.9rem">
+    
+      </div>
+<div class="panel" style="padding:.9rem">
       <div class="preview-header">
         <h2>Deck slides</h2>
         <span class="badge" id="deckCount">0 slides</span>
@@ -477,66 +500,9 @@ window.MathJax = {
       </div>
     </div>
 
-    <details>
-      <summary>How to write content</summary>
-      <div class="help" style="margin-top:.55rem">
-        <p>For panel/plain modes, you can use:</p>
-        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
-        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
-        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
-        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
-        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
-        <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
-        <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
-      </div>
-    </details>
-
-    <div class="toolbar">
-      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
-      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
-      <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
-      <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
-      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
-      <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
-      <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
-    </div>
-
-    <div class="field-grid">
-      <div class="field">
-        <label for="printSlidesPerPage">Slides per printable page</label>
-        <select id="printSlidesPerPage">
-          <option value="1" selected>1 slide per page</option>
-          <option value="2">2 slides per page</option>
-          <option value="4">4 slides per page</option>
-          <option value="6">6 slides per page</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="printSlideSelection">Slides to include</label>
-        <input id="printSlideSelection" placeholder="all or 1-3,5,8" value="all" />
-      </div>
-      <div class="field full help">
-        Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
-      </div>
-      <div class="field full" style="align-content:end">
-        <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
-        <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
-      </div>
-    </div>
-
-
-  </div>
-
-  <div class="panel preview-wrap">
-    <div class="preview-header">
-      <div>
-        <div class="smallcaps">Live preview</div>
-        <h2 id="previewTitle">Current slide</h2>
-      </div>
-      <span class="badge">Preview and export use the same renderer</span>
-    </div>
-    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-grid-overlay" id="previewGridOverlay"></div><div class="preview-margin-overlay" id="previewMarginOverlay"><div class="preview-margin-box"></div><div class="preview-center-v"></div><div class="preview-center-h"></div></div><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
+    
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">Current slide snippet</div>
     <div>
       <div class="preview-header">
         <h2>Current slide snippet</h2>
@@ -552,6 +518,8 @@ window.MathJax = {
       <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
       <div class="help" style="margin-top:.35rem" id="autosaveStatus">Autosave ready.</div>
     </div>
+
+      </div>
     <div class="panel" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Master theme</div>
       <div class="field-grid" style="margin-top:.7rem">
@@ -604,6 +572,10 @@ window.MathJax = {
       </div>
     </div>
 
+
+    </div>
+
+    <div class="left-pane" data-left-pane="tools">
     <div class="panel" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Reusable block library</div>
       <div class="help" style="margin-top:.45rem">Save the current block as a reusable component or insert a reusable block into the current slide.</div>
@@ -622,6 +594,7 @@ window.MathJax = {
       </div>
       <div class="library-list" id="blockLibraryList" style="margin-top:.7rem"></div>
     </div>
+
 
     <div class="panel figure-toolbar" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Figure tools and guides</div>
@@ -655,10 +628,82 @@ window.MathJax = {
       </div>
     </div>
 
+
+    </div>
+
+    <div class="left-pane" data-left-pane="files">
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">Files and export</div>
+<div class="toolbar">
+      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
+      <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
+      <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
+      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
+      <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
+      <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
+    </div>
+
+    
+<div class="field-grid">
+      <div class="field">
+        <label for="printSlidesPerPage">Slides per printable page</label>
+        <select id="printSlidesPerPage">
+          <option value="1" selected>1 slide per page</option>
+          <option value="2">2 slides per page</option>
+          <option value="4">4 slides per page</option>
+          <option value="6">6 slides per page</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="printSlideSelection">Slides to include</label>
+        <input id="printSlideSelection" placeholder="all or 1-3,5,8" value="all" />
+      </div>
+      <div class="field full help">
+        Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
+      </div>
+      <div class="field full" style="align-content:end">
+        <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
+        <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
+      </div>
+    </div>
+
+
+
+      </div>
+    </div>
+
+    <div class="left-pane" data-left-pane="help">
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">How to write content</div>
+<div class="help" style="margin-top:.55rem">
+        <p>For panel/plain modes, you can use:</p>
+        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
+        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
+        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
+        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
+        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
+        <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
+        <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
+      </div>
+
+    
+      </div>
     </div>
   </div>
-</div>
 
+  <div class="panel preview-wrap">
+    <div class="preview-header">
+      <div>
+        <div class="smallcaps">Live preview</div>
+        <h2 id="previewTitle">Current slide</h2>
+      </div>
+      <span class="badge">Preview and export use the same renderer</span>
+    </div>
+    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-grid-overlay" id="previewGridOverlay"></div><div class="preview-margin-overlay" id="previewMarginOverlay"><div class="preview-margin-box"></div><div class="preview-center-v"></div><div class="preview-center-h"></div></div><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="figureModal" hidden>
   <div class="modal-card">
