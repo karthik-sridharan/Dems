@@ -1984,6 +1984,25 @@ function currentPayload(){
   return { deckTitle: fields.deckTitle.value || 'My HTML Presentation', slides: slides.length ? slides : [currentDraftSlide()] };
 }
 
+function sanitizeBlockForPdf(block){
+  const b = clone(block || {});
+  if((b.mode || 'panel') === 'custom'){
+    return {
+      mode: 'panel',
+      title: b.title || 'Custom HTML',
+      content: '\\begin{card}{Custom HTML block}\\nHad custom HTML\\n\\end{card}'
+    };
+  }
+  return b;
+}
+
+function sanitizeSlideForPdf(slide){
+  const s = normalizeSlide(clone(slide || {}));
+  s.leftBlocks = (s.leftBlocks || []).map(sanitizeBlockForPdf);
+  s.rightBlocks = (s.rightBlocks || []).map(sanitizeBlockForPdf);
+  return s;
+}
+
 function getPrintLayout(slidesPerPage){
   const n = Number(slidesPerPage) || 1;
   if(n === 2) return { rows: 2, cols: 1, className: 'layout-2' };
