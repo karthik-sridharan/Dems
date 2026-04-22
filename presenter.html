@@ -1041,12 +1041,44 @@ function rgbaFromHex(hex, alpha){
   if(!rgb) return 'rgba(0,0,0,' + alpha + ')';
   return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
 }
+function normalizeTheme(theme){
+  const t = theme || {};
+  return {
+    name: t.name || 'Default theme',
+    bgColor: t.bgColor || '#ffffff',
+    fontColor: t.fontColor || '#111111',
+    accentColor: t.accentColor || '#2f6fed',
+    panelRadius: Number.isFinite(Number(t.panelRadius)) ? Number(t.panelRadius) : 22,
+    titleScale: Number.isFinite(Number(t.titleScale)) ? Number(t.titleScale) : 1
+  };
+}
+function currentThemeFromFields(){
+  return normalizeTheme({
+    name: themeFields.name.value,
+    bgColor: themeFields.bgColor.value,
+    fontColor: themeFields.fontColor.value,
+    accentColor: themeFields.accentColor.value,
+    panelRadius: themeFields.panelRadius.value,
+    titleScale: themeFields.titleScale.value
+  });
+}
+function applyThemeToForm(theme){
+  const t = normalizeTheme(theme);
+  themeFields.name.value = t.name;
+  themeFields.bgColor.value = t.bgColor;
+  themeFields.fontColor.value = t.fontColor;
+  themeFields.accentColor.value = t.accentColor;
+  themeFields.panelRadius.value = String(t.panelRadius);
+  themeFields.titleScale.value = String(t.titleScale);
+}
 function buildSlideStyle(slide){
-  const bg = slide.bgColor || '#ffffff';
-  const font = slide.fontColor || '#111111';
+  const theme = currentThemeFromFields();
+  const useTheme = slide.inheritTheme !== false;
+  const bg = useTheme ? theme.bgColor : (slide.bgColor || theme.bgColor);
+  const font = useTheme ? theme.fontColor : (slide.fontColor || theme.fontColor);
   const muted = rgbaFromHex(font, 0.72);
   const line = rgbaFromHex(font, 0.14);
-  return 'background:' + bg + ';color:' + font + ';--text:' + font + ';--muted:' + muted + ';--line:' + line + ';';
+  return 'background:' + bg + ';color:' + font + ';--text:' + font + ';--muted:' + muted + ';--line:' + line + ';--accent:' + theme.accentColor + ';--radius:' + theme.panelRadius + 'px;--title-scale:' + theme.titleScale + ';';
 }
 
 function parseStructuredText(raw, meta){
