@@ -390,6 +390,34 @@ window.MathJax = {
       </div>
     </div>
 
+  </div>
+
+  <div class="panel preview-wrap">
+    <div class="preview-header">
+      <div>
+        <div class="smallcaps">Live preview</div>
+        <h2 id="previewTitle">Current slide</h2>
+      </div>
+      <span class="badge">Preview and export use the same renderer</span>
+    </div>
+    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
+    <div>
+      <div class="preview-header">
+        <h2>Current slide snippet</h2>
+        <span class="muted">Editable JSON for this slide</span>
+      </div>
+      <textarea class="code" id="snippetOutput" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:.65rem">
+        <button class="btn mini" id="loadSnippetToEditorBtn">Load snippet into editor</button>
+        <button class="btn mini" id="replaceSlideFromSnippetBtn">Replace selected slide</button>
+        <button class="btn mini" id="addSlideFromSnippetBtn">Add slide from snippet</button>
+        <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
+      </div>
+      <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
+      <div class="help" style="margin-top:.35rem" id="autosaveStatus">Autosave ready.</div>
+    </div>
+    <div class="panel" style="margin-top:1rem;padding:.95rem">
+      <div class="smallcaps">Presets and deck tools</div>
     <details>
       <summary>Slide presets</summary>
       <div class="template-list" style="margin-top:.65rem">
@@ -469,31 +497,6 @@ window.MathJax = {
         <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
       </div>
     </div>
-  </div>
-
-  <div class="panel preview-wrap">
-    <div class="preview-header">
-      <div>
-        <div class="smallcaps">Live preview</div>
-        <h2 id="previewTitle">Current slide</h2>
-      </div>
-      <span class="badge">Preview and export use the same renderer</span>
-    </div>
-    <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
-    <div>
-      <div class="preview-header">
-        <h2>Current slide snippet</h2>
-        <span class="muted">Editable JSON for this slide</span>
-      </div>
-      <textarea class="code" id="snippetOutput" spellcheck="false"></textarea>
-      <div class="row" style="margin-top:.65rem">
-        <button class="btn mini" id="loadSnippetToEditorBtn">Load snippet into editor</button>
-        <button class="btn mini" id="replaceSlideFromSnippetBtn">Replace selected slide</button>
-        <button class="btn mini" id="addSlideFromSnippetBtn">Add slide from snippet</button>
-        <button class="btn mini" id="formatSnippetBtn">Format snippet</button>
-      </div>
-      <div class="help" style="margin-top:.45rem">Paste a slide JSON object here, then load it into the editor or turn it into a new slide.</div>
-      <div class="help" style="margin-top:.35rem" id="autosaveStatus">Autosave ready.</div>
     </div>
   </div>
 </div>
