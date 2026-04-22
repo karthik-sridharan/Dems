@@ -435,6 +435,97 @@ window.MathJax = {
       </div>
     </div>
 
+    <div class="panel" style="margin-top:1rem;padding:.95rem">
+      <div class="smallcaps">Presets and deck tools</div>
+    <details>
+      <summary>Slide presets</summary>
+      <div class="template-list" style="margin-top:.65rem">
+        <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
+        <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
+        <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
+        <button data-preset="callouts">Title + two callout boxes<small>Two emphasized side-by-side callouts.</small></button>
+        <button data-preset="figureExplain">Title + figure + explanation<small>Figure on one side, explanation on the other.</small></button>
+        <button data-preset="theoremProof">Theorem / proof slide<small>Named theorem block followed by proof block.</small></button>
+        <button data-preset="algorithmLayout">Algorithm slide<small>Pseudocode plus notes beneath it.</small></button>
+        <button data-preset="sectionDivider">Section divider<small>Clean section transition slide.</small></button>
+        <button data-preset="comparison">Comparison slide<small>Two contrasted columns with headings.</small></button>
+        <button data-preset="imageText">Image-left text-right<small>Image or figure on left, narrative on right.</small></button>
+        <button data-preset="fullFigureCaption">Full-width figure with caption<small>Large figure area plus caption below.</small></button>
+        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
+        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
+        <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn primary" id="addSlideBtn">Add as new slide</button>
+      <button class="btn" id="updateSlideBtn">Update selected slide</button>
+      <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
+      <button class="btn" id="deleteSlideBtn">Delete selected</button>
+      <button class="btn" id="clearFormBtn">Clear form</button>
+    </div>
+
+    <div class="panel" style="padding:.9rem">
+      <div class="preview-header">
+        <h2>Deck slides</h2>
+        <span class="badge" id="deckCount">0 slides</span>
+      </div>
+      <div class="deck-list" id="deckList"></div>
+      <div class="row" style="margin-top:.75rem">
+        <button class="btn mini" id="moveUpBtn">Move up</button>
+        <button class="btn mini" id="moveDownBtn">Move down</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>How to write content</summary>
+      <div class="help" style="margin-top:.55rem">
+        <p>For panel/plain modes, you can use:</p>
+        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
+        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
+        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
+        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
+        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
+        <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
+        <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
+      </div>
+    </details>
+
+    <div class="toolbar">
+      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
+      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
+      <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
+      <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
+      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
+      <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
+      <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label for="printSlidesPerPage">Slides per printable page</label>
+        <select id="printSlidesPerPage">
+          <option value="1" selected>1 slide per page</option>
+          <option value="2">2 slides per page</option>
+          <option value="4">4 slides per page</option>
+          <option value="6">6 slides per page</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="printSlideSelection">Slides to include</label>
+        <input id="printSlideSelection" placeholder="all or 1-3,5,8" value="all" />
+      </div>
+      <div class="field full help">
+        Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
+      </div>
+      <div class="field full" style="align-content:end">
+        <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
+        <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
+      </div>
+    </div>
+
+
   </div>
 
   <div class="panel preview-wrap">
@@ -564,95 +655,6 @@ window.MathJax = {
       </div>
     </div>
 
-    <div class="panel" style="margin-top:1rem;padding:.95rem">
-      <div class="smallcaps">Presets and deck tools</div>
-    <details>
-      <summary>Slide presets</summary>
-      <div class="template-list" style="margin-top:.65rem">
-        <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
-        <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
-        <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
-        <button data-preset="callouts">Title + two callout boxes<small>Two emphasized side-by-side callouts.</small></button>
-        <button data-preset="figureExplain">Title + figure + explanation<small>Figure on one side, explanation on the other.</small></button>
-        <button data-preset="theoremProof">Theorem / proof slide<small>Named theorem block followed by proof block.</small></button>
-        <button data-preset="algorithmLayout">Algorithm slide<small>Pseudocode plus notes beneath it.</small></button>
-        <button data-preset="sectionDivider">Section divider<small>Clean section transition slide.</small></button>
-        <button data-preset="comparison">Comparison slide<small>Two contrasted columns with headings.</small></button>
-        <button data-preset="imageText">Image-left text-right<small>Image or figure on left, narrative on right.</small></button>
-        <button data-preset="fullFigureCaption">Full-width figure with caption<small>Large figure area plus caption below.</small></button>
-        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
-        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
-        <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
-      </div>
-    </details>
-
-    <div class="toolbar">
-      <button class="btn primary" id="addSlideBtn">Add as new slide</button>
-      <button class="btn" id="updateSlideBtn">Update selected slide</button>
-      <button class="btn" id="duplicateSlideBtn">Duplicate selected</button>
-      <button class="btn" id="deleteSlideBtn">Delete selected</button>
-      <button class="btn" id="clearFormBtn">Clear form</button>
-    </div>
-
-    <div class="panel" style="padding:.9rem">
-      <div class="preview-header">
-        <h2>Deck slides</h2>
-        <span class="badge" id="deckCount">0 slides</span>
-      </div>
-      <div class="deck-list" id="deckList"></div>
-      <div class="row" style="margin-top:.75rem">
-        <button class="btn mini" id="moveUpBtn">Move up</button>
-        <button class="btn mini" id="moveDownBtn">Move down</button>
-      </div>
-    </div>
-
-    <details>
-      <summary>How to write content</summary>
-      <div class="help" style="margin-top:.55rem">
-        <p>For panel/plain modes, you can use:</p>
-        <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
-        <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
-        <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
-        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
-        <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
-        <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
-        <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
-      </div>
-    </details>
-
-    <div class="toolbar">
-      <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
-      <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
-      <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
-      <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
-      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
-      <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
-      <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
-    </div>
-
-    <div class="field-grid">
-      <div class="field">
-        <label for="printSlidesPerPage">Slides per printable page</label>
-        <select id="printSlidesPerPage">
-          <option value="1" selected>1 slide per page</option>
-          <option value="2">2 slides per page</option>
-          <option value="4">4 slides per page</option>
-          <option value="6">6 slides per page</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="printSlideSelection">Slides to include</label>
-        <input id="printSlideSelection" placeholder="all or 1-3,5,8" value="all" />
-      </div>
-      <div class="field full help">
-        Choose which slides to include in the printable PDF. Use <code>all</code> or ranges like <code>1-3,5,8-10</code>.
-      </div>
-      <div class="field full" style="align-content:end">
-        <button class="btn" id="exportPdfReadyHtmlBtn">Export PDF-ready HTML</button>
-        <button class="btn" id="printPdfBtn">Direct PDF (image-first)</button>
-      </div>
-    </div>
     </div>
   </div>
 </div>
