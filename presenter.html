@@ -297,6 +297,28 @@
   }
   .left-pane{display:none}
   .left-pane.active{display:grid;gap:1rem}
+  .subtabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+    margin:.2rem 0 .75rem;
+  }
+  .subtab{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    color:var(--text);
+    border-radius:10px;
+    padding:.5rem .8rem;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .subtab.active{
+    border-color:rgba(97,180,255,.45);
+    background:rgba(97,180,255,.10);
+  }
+  .subpane{display:none}
+  .subpane.active{display:grid;gap:1rem}
   @media (max-width:1150px){ .page{grid-template-columns:1fr} }
   @media (max-width:900px){
     .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
@@ -335,7 +357,13 @@ window.MathJax = {
     </div>
 
     <div class="left-pane active" data-left-pane="edit">
-    <div class="field-grid">
+
+      <div class="subtabs" data-subtab-group="edit">
+        <button class="subtab active" type="button" data-subtab="edit:slide">Slide setup</button>
+        <button class="subtab" type="button" data-subtab="edit:blocks">Content blocks</button>
+      </div>
+      <div class="subpane active" data-subpane="edit:slide">
+<div class="field-grid">
       <div class="field full">
         <label for="deckTitle">Presentation title</label>
         <input id="deckTitle" value="My HTML Presentation" />
@@ -410,8 +438,9 @@ window.MathJax = {
         <input id="notesBody" value="" />
       </div>
     </div>
-
-    <div class="panel stack" style="padding:.9rem">
+      </div>
+      <div class="subpane" data-subpane="edit:blocks">
+<div class="panel stack" style="padding:.9rem">
       <div class="section-head">
         <h2>Column content blocks</h2>
         <span class="badge" id="columnModeBadge">Single-column slide</span>
@@ -468,17 +497,30 @@ window.MathJax = {
         </div>
       </div>
     </div>
-
+      </div>
 
     </div>
 
     <div class="left-pane" data-left-pane="presets">
+
       <div class="panel" style="padding:.95rem">
         <div class="smallcaps">Slide presets</div>
-<div class="template-list" style="margin-top:.65rem">
+        <div class="subtabs" data-subtab-group="presets">
+          <button class="subtab active" type="button" data-subtab="presets:core">Core presets</button>
+          <button class="subtab" type="button" data-subtab="presets:layouts">Layout templates</button>
+        </div>
+        <div class="subpane active" data-subpane="presets:core">
+          <div class="template-list" style="margin-top:.2rem">
         <button data-preset="title">Centered title slide<small>Big centered title and optional subtitle.</small></button>
         <button data-preset="concept">Concept slide<small>One-column title + bullets.</small></button>
         <button data-preset="twocol">Two-column lecture slide<small>Full-width title with body split into two columns.</small></button>
+        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
+        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
+        <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
+          </div>
+        </div>
+        <div class="subpane" data-subpane="presets:layouts">
+          <div class="template-list" style="margin-top:.2rem">
         <button data-preset="callouts">Title + two callout boxes<small>Two emphasized side-by-side callouts.</small></button>
         <button data-preset="figureExplain">Title + figure + explanation<small>Figure on one side, explanation on the other.</small></button>
         <button data-preset="theoremProof">Theorem / proof slide<small>Named theorem block followed by proof block.</small></button>
@@ -487,17 +529,21 @@ window.MathJax = {
         <button data-preset="comparison">Comparison slide<small>Two contrasted columns with headings.</small></button>
         <button data-preset="imageText">Image-left text-right<small>Image or figure on left, narrative on right.</small></button>
         <button data-preset="fullFigureCaption">Full-width figure with caption<small>Large figure area plus caption below.</small></button>
-        <button data-preset="appendix">Summary / appendix slide<small>Recipe or recap slide with concise bullets.</small></button>
-        <button data-preset="pseudocode">Pseudocode slide<small>Single-column title with one large pseudocode block.</small></button>
-        <button data-preset="pseudocodeLatex">Pseudocode + LaTeX slide<small>Pseudocode formatting with MathJax-rendered math inside.</small></button>
+          </div>
+        </div>
       </div>
 
-    
-      </div>
     </div>
 
     <div class="left-pane" data-left-pane="slides">
-      <div class="panel" style="padding:.95rem">
+
+      <div class="subtabs" data-subtab-group="slides">
+        <button class="subtab active" type="button" data-subtab="slides:deck">Deck</button>
+        <button class="subtab" type="button" data-subtab="slides:snippet">Snippet</button>
+        <button class="subtab" type="button" data-subtab="slides:theme">Master theme</button>
+      </div>
+      <div class="subpane active" data-subpane="slides:deck">
+<div class="panel" style="padding:.95rem">
         <div class="smallcaps">Slide actions</div>
 <div class="toolbar">
       <button class="btn primary" id="addSlideBtn">Add as new slide</button>
@@ -520,9 +566,9 @@ window.MathJax = {
         <button class="btn mini" id="moveDownBtn">Move down</button>
       </div>
     </div>
-
-    
-      <div class="panel" style="padding:.95rem">
+      </div>
+      <div class="subpane" data-subpane="slides:snippet">
+<div class="panel" style="padding:.95rem">
         <div class="smallcaps">Current slide snippet</div>
     <div>
       <div class="preview-header">
@@ -541,7 +587,9 @@ window.MathJax = {
     </div>
 
       </div>
-    <div class="panel" style="margin-top:1rem;padding:.95rem">
+      </div>
+      <div class="subpane" data-subpane="slides:theme">
+<div class="panel" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Master theme</div>
       <div class="field-grid" style="margin-top:.7rem">
         <div class="field full">
@@ -592,12 +640,18 @@ window.MathJax = {
         </div>
       </div>
     </div>
-
+      </div>
 
     </div>
 
     <div class="left-pane" data-left-pane="tools">
-    <div class="panel" style="margin-top:1rem;padding:.95rem">
+
+      <div class="subtabs" data-subtab-group="tools">
+        <button class="subtab active" type="button" data-subtab="tools:blocks">Block library</button>
+        <button class="subtab" type="button" data-subtab="tools:figures">Figure tools</button>
+      </div>
+      <div class="subpane active" data-subpane="tools:blocks">
+<div class="panel" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Reusable block library</div>
       <div class="help" style="margin-top:.45rem">Save the current block as a reusable component or insert a reusable block into the current slide.</div>
       <div class="template-list" style="margin-top:.7rem">
@@ -615,9 +669,9 @@ window.MathJax = {
       </div>
       <div class="library-list" id="blockLibraryList" style="margin-top:.7rem"></div>
     </div>
-
-
-    <div class="panel figure-toolbar" style="margin-top:1rem;padding:.95rem">
+      </div>
+      <div class="subpane" data-subpane="tools:figures">
+<div class="panel figure-toolbar" style="margin-top:1rem;padding:.95rem">
       <div class="smallcaps">Figure tools and guides</div>
       <div class="help">Select one or more figures in the preview. Shift-click adds to the selection.</div>
       <div class="inline-checks">
@@ -648,13 +702,19 @@ window.MathJax = {
         <button class="btn mini" id="resetFigureBtn">Reset</button>
       </div>
     </div>
-
+      </div>
 
     </div>
 
     <div class="left-pane" data-left-pane="files">
-      <div class="panel" style="padding:.95rem">
-        <div class="smallcaps">Files and export</div>
+
+      <div class="subtabs" data-subtab-group="files">
+        <button class="subtab active" type="button" data-subtab="files:save">Save / load</button>
+        <button class="subtab" type="button" data-subtab="files:handout">Handout / PDF</button>
+      </div>
+      <div class="subpane active" data-subpane="files:save">
+        <div class="panel" style="padding:.95rem">
+          <div class="smallcaps">Files and export</div>
 <div class="toolbar">
       <button class="btn" id="copySnippetBtn">Copy current slide snippet</button>
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
@@ -665,8 +725,11 @@ window.MathJax = {
       <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
       <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
     </div>
-
-    
+        </div>
+      </div>
+      <div class="subpane" data-subpane="files:handout">
+        <div class="panel" style="padding:.95rem">
+          <div class="smallcaps">Handout and PDF</div>
 <div class="field-grid">
       <div class="field">
         <label for="printSlidesPerPage">Slides per printable page</label>
@@ -693,26 +756,40 @@ window.MathJax = {
 
 
       </div>
+        </div>
+      </div>
+
     </div>
 
     <div class="left-pane" data-left-pane="help">
+
       <div class="panel" style="padding:.95rem">
         <div class="smallcaps">How to write content</div>
+        <div class="subtabs" data-subtab-group="help">
+          <button class="subtab active" type="button" data-subtab="help:syntax">Syntax</button>
+          <button class="subtab" type="button" data-subtab="help:math">Math and figures</button>
+        </div>
+        <div class="subpane active" data-subpane="help:syntax">
 <div class="help" style="margin-top:.55rem">
         <p>For panel/plain modes, you can use:</p>
         <p><code>\paragraph{Teach the pattern before teaching every symbol.}</code></p>
         <p><code>\begin{itemize}</code><br><code>\item First key point</code><br><code>\item Second key point</code><br><code>\end{itemize}</code></p>
         <p><code>\begin{enumerate}</code><br><code>\item A</code><br><code>\item B</code><br><code>\end{enumerate}</code></p>
-        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
         <p><code>\begin{card}{Key idea}</code><br><code>Each neuron turns an incoming sensitivity into an outgoing sensitivity.</code><br><code>\end{card}</code></p>
+      </div>
+        </div>
+        <div class="subpane" data-subpane="help:math">
+<div class="help" style="margin-top:.55rem">
+        <p>For equations, use:</p>
+        <p><code>\begin{equation}</code><br><code>\nabla_w L &= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}\\</code><br><code>&= \frac{\partial L}{\partial z}\frac{\partial z}{\partial w}</code><br><code>\end{equation}</code></p>
         <p>For <b>pseudocode</b>, paste plain indented pseudocode.</p>
         <p>For <b>pseudocode-latex</b>, paste indented pseudocode and write math as <code>\( ... \)</code> or <code>\[ ... \]</code>.</p>
+        <p>Use <b>Add figure</b> in the block editor to insert images or figure-maker diagrams at the cursor position.</p>
+      </div>
+        </div>
       </div>
 
-    
-      </div>
     </div>
-  </div>
 
   <div class="panel preview-wrap">
     <div class="preview-header">
@@ -3265,6 +3342,19 @@ document.querySelectorAll('[data-left-tab]').forEach(btn=>{
     const tab = btn.dataset.leftTab;
     document.querySelectorAll('[data-left-tab]').forEach(el=>el.classList.toggle('active', el === btn));
     document.querySelectorAll('[data-left-pane]').forEach(el=>el.classList.toggle('active', el.dataset.leftPane === tab));
+  });
+});
+
+document.querySelectorAll('[data-subtab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const name = btn.dataset.subtab;
+    const group = name.split(':')[0];
+    document.querySelectorAll('[data-subtab]').forEach(el=>{
+      if((el.dataset.subtab || '').startsWith(group + ':')) el.classList.toggle('active', el === btn);
+    });
+    document.querySelectorAll('[data-subpane]').forEach(el=>{
+      if((el.dataset.subpane || '').startsWith(group + ':')) el.classList.toggle('active', el.dataset.subpane === name);
+    });
   });
 });
 
