@@ -2078,7 +2078,9 @@ function saveSelectedFigures(){
     const embed = box.closest('.figure-embed[data-column]');
     if(embed) saveFigureEmbedToDraft(embed);
   });
-  scheduleAutosave('Autosaved after figure edit.');
+  saveCurrentBlockToDraft();
+  saveCurrentSlideToDeck();
+  persistAutosaveNow('Autosaved after figure edit.');
 }
 function snapValue(v, step=20){ return Math.round(v / step) * step; }
 function applySnapToBox(box){
