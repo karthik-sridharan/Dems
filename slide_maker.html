@@ -1990,7 +1990,7 @@ function getPrintLayout(slidesPerPage){
 }
 
 function buildPrintableViewer(payload, slidesPerPage){
-  const deckJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\/script>');
+  const deckJson = JSON.stringify(payload).replace(/<\/script>/gi, '<\\/script>');
   const layout = getPrintLayout(slidesPerPage);
   return `<!DOCTYPE html>
 <html lang="en">
