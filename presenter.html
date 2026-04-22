@@ -1287,7 +1287,7 @@ function buildSlideInner(slide){
   const s = normalizeSlide(slide);
   if(s.slideType === 'title-center') return '<div class="title-center">' + titleHtml + kickerHtml + '</div>';
   if(s.slideType === 'two-col'){
-    return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Left column') + '</div><div class="col">' + renderBlocks(s.rightBlocks, 'Right column') + '</div></div>';
+    return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Left column', 'left') + '</div><div class="col">' + renderBlocks(s.rightBlocks, 'Right column', 'right') + '</div></div>';
   }
   return titleHtml + kickerHtml + ledeHtml + '<div class="slide-body"><div class="col">' + renderBlocks(s.leftBlocks, 'Main content', 'left') + '</div></div>';
 }
@@ -1677,8 +1677,15 @@ function baseStyle(el, evt){
   const width = evt && evt.pointerType === 'pen' ? (2 + pressure * 4).toFixed(2) : '3';
   el.setAttribute('stroke', '#111');
   el.setAttribute('stroke-width', width);
-  el.setAttribute('fill', 'none');
+  el.setAttribute('fill', 'transparent');
   el.style.vectorEffect = 'non-scaling-stroke';
+  const tag = (el.tagName || '').toLowerCase();
+  if(tag === 'line' || tag === 'polyline') el.setAttribute('pointer-events', 'visibleStroke');
+  else el.setAttribute('pointer-events', 'all');
+}
+function hitTarget(target){
+  if(!target || target === svg) return null;
+  return target.closest('rect,ellipse,line,polyline,text');
 }
 function add(el, shouldSelect){
   svg.appendChild(el);
@@ -1730,8 +1737,9 @@ svg.addEventListener('pointerdown', (evt)=>{
   const p = pt(evt);
 
   if(tool === 'select'){
-    if(evt.target && evt.target !== svg){
-      selectElement(evt.target);
+    const hit = hitTarget(evt.target);
+    if(hit){
+      selectElement(hit);
       dragOffset = {x:p.x, y:p.y};
     } else {
       clearSelection();
@@ -1741,8 +1749,9 @@ svg.addEventListener('pointerdown', (evt)=>{
   }
 
   if(tool === 'erase'){
-    if(evt.target && evt.target !== svg){
-      removeEl(evt.target);
+    const hit = hitTarget(evt.target);
+    if(hit){
+      removeEl(hit);
     }
     svg.setPointerCapture(evt.pointerId);
     return;
@@ -1781,6 +1790,7 @@ svg.addEventListener('pointerdown', (evt)=>{
     t.setAttribute('fill', '#111');
     t.setAttribute('font-size', '28');
     t.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+    t.setAttribute('pointer-events', 'all');
     t.textContent = textInput.value || 'Text';
     add(t, false);
   }
@@ -1792,7 +1802,8 @@ svg.addEventListener('pointermove', (evt)=>{
   const p = pt(evt);
 
   if(toolEl.value === 'erase' && (evt.buttons & 1)){
-    if(evt.target && evt.target !== svg) removeEl(evt.target);
+    const hit = hitTarget(evt.target);
+    if(hit) removeEl(hit);
     return;
   }
 
@@ -2373,6 +2384,7 @@ function initFigureInteractions(root){
 }
 function fitFiguresIn(root){
   const scope = root || document;
+  scope.querySelectorAll('.figure-embed[data-column]').forEach(embed=>ensureInteractiveFigureBox(embed));
   scope.querySelectorAll('.slide, .deck-slide, .print-cell .slide').forEach(fitFiguresInSlide);
 }
 function buildPreview(){
