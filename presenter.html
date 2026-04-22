@@ -1492,8 +1492,9 @@ function updateBlock(){
   arr[idx] = currentBlockFromEditor();
   renderBlockList();
   buildPreview();
+  saveCurrentSlideToDeck();
+  persistAutosaveNow('Autosaved after block update.');
   showToast('Updated block.');
-  scheduleAutosave('Autosaved after block update.');
 }
 function duplicateBlock(){
   const name = currentColumnName();
@@ -1552,17 +1553,27 @@ function currentFigureMode(){
 function wrapFigureHtml(html){
   return '\n\\begin{figurehtml}\n' + html + '\n\\end{figurehtml}\n';
 }
+function standaloneFigureBlock(html){
+  return {
+    mode: 'plain',
+    title: 'Figure',
+    content: wrapFigureHtml(String(html || '').trim())
+  };
+}
 function insertFigureAsNewCustomBlock(html){
   const name = currentColumnName();
   const arr = blockArray(name);
   const idx = selectedIndex(name);
-  const block = { mode:'custom', title:'Figure', content: html };
+  const block = standaloneFigureBlock(html);
   const insertAt = idx >= 0 ? idx + 1 : arr.length;
   arr.splice(insertAt, 0, block);
   setSelectedIndex(name, insertAt);
   loadSelectedBlockIntoEditor();
   buildPreview();
-  showToast('Added figure as a new custom block.');
+  saveCurrentBlockToDraft();
+  saveCurrentSlideToDeck();
+  persistAutosaveNow('Autosaved after inserting figure.');
+  showToast('Added figure as a new block.');
 }
 function insertFigureHtml(html){
   const clean = String(html || '').trim();
@@ -1570,13 +1581,19 @@ function insertFigureHtml(html){
   const mode = currentFigureMode();
   if(mode === 'custom'){
     insertTextAtCursor(blockFields.content, (blockFields.content.value && !blockFields.content.value.endsWith('\n') ? '\n' : '') + clean + '\n');
+    saveCurrentBlockToDraft();
     buildPreview();
+    saveCurrentSlideToDeck();
+    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into custom HTML block.');
     return;
   }
   if(mode === 'panel' || mode === 'plain'){
     insertTextAtCursor(blockFields.content, wrapFigureHtml(clean));
+    saveCurrentBlockToDraft();
     buildPreview();
+    saveCurrentSlideToDeck();
+    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into the current block.');
     return;
   }
