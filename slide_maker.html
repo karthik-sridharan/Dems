@@ -1552,6 +1552,18 @@ function saveFigureEmbedToDraft(embed){
   }
   snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
 }
+function getInteractionScale(el){
+  const target = el.closest('.slide, .deck-slide, .print-slide') || el;
+  const rect = target.getBoundingClientRect();
+  const ow = target.offsetWidth || parseFloat(getComputedStyle(target).width) || rect.width || 1;
+  const oh = target.offsetHeight || parseFloat(getComputedStyle(target).height) || rect.height || 1;
+  const scaleX = rect.width / ow || 1;
+  const scaleY = rect.height / oh || 1;
+  return {
+    x: scaleX > 0 ? scaleX : 1,
+    y: scaleY > 0 ? scaleY : 1
+  };
+}
 function ensureInteractiveFigureBox(embed){
   let box = embed.querySelector('.figure-box');
   if(!box){
@@ -1587,6 +1599,7 @@ function initFigureInteractions(root){
       selectBox(box);
       const t = parseTranslate(box.style.transform);
       box.style.cursor = 'grabbing';
+      const scale = getInteractionScale(box);
       active = {
         mode: 'move',
         box,
@@ -1595,7 +1608,9 @@ function initFigureInteractions(root){
         startX: e.clientX,
         startY: e.clientY,
         startTX: t.x,
-        startTY: t.y
+        startTY: t.y,
+        scaleX: scale.x,
+        scaleY: scale.y
       };
       box.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -1608,6 +1623,7 @@ function initFigureInteractions(root){
       const slideStyles = window.getComputedStyle(slideEl);
       const padX = (parseFloat(slideStyles.paddingLeft || '0') + parseFloat(slideStyles.paddingRight || '0')) || 0;
       const padY = (parseFloat(slideStyles.paddingTop || '0') + parseFloat(slideStyles.paddingBottom || '0')) || 0;
+      const scale = getInteractionScale(slideEl);
       active = {
         mode: 'resize',
         box,
@@ -1615,10 +1631,12 @@ function initFigureInteractions(root){
         pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
-        startW: rect.width,
-        startH: rect.height,
-        maxW: Math.max(120, slideRect.width - padX - 24),
-        maxH: Math.max(80, slideRect.height - padY - 24)
+        startW: box.offsetWidth || parseFloat(box.style.width) || rect.width,
+        startH: box.offsetHeight || parseFloat(box.style.height) || rect.height,
+        maxW: Math.max(120, (slideEl.clientWidth || slideEl.offsetWidth || slideRect.width) - padX - 24),
+        maxH: Math.max(80, (slideEl.clientHeight || slideEl.offsetHeight || slideRect.height) - padY - 24),
+        scaleX: scale.x,
+        scaleY: scale.y
       };
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -1636,12 +1654,12 @@ function initFigureInteractions(root){
     if(!active) return;
     e.preventDefault();
     if(active.mode === 'move'){
-      const dx = e.clientX - active.startX;
-      const dy = e.clientY - active.startY;
+      const dx = (e.clientX - active.startX) / (active.scaleX || 1);
+      const dy = (e.clientY - active.startY) / (active.scaleY || 1);
       active.box.style.transform = `translate(${Math.round(active.startTX + dx)}px, ${Math.round(active.startTY + dy)}px)`;
     }else if(active.mode === 'resize'){
-      const dx = e.clientX - active.startX;
-      const dy = e.clientY - active.startY;
+      const dx = (e.clientX - active.startX) / (active.scaleX || 1);
+      const dy = (e.clientY - active.startY) / (active.scaleY || 1);
       const w = Math.min(active.maxW || Infinity, Math.max(60, Math.round(active.startW + dx)));
       const h = Math.min(active.maxH || Infinity, Math.max(40, Math.round(active.startH + dy)));
       active.embed.style.maxWidth = 'none';
