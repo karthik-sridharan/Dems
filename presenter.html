@@ -2225,13 +2225,17 @@ function fitFiguresInSlide(slideEl){
   const figures = Array.from(slideEl.querySelectorAll('.figure-embed'));
   if(!figures.length) return;
 
-  // reset any previous fitting
+  // Reset only auto-managed figures. Manually moved/resized figures should keep their saved box geometry.
   figures.forEach(embed=>{
+    if(isManualFigureEmbed(embed)) return;
     embed.style.maxHeight = '';
+    embed.style.maxWidth = '';
     embed.style.height = '';
+    embed.style.width = '';
     const media = embed.querySelector('img,svg,canvas,iframe');
     if(media){
       media.style.maxHeight = '';
+      media.style.maxWidth = '';
       media.style.height = '';
       media.style.width = '';
     }
@@ -2241,8 +2245,9 @@ function fitFiguresInSlide(slideEl){
   const slideMaxHeight = slideEl.clientHeight || 900;
   const bottomPadding = 20;
 
-  // First pass: cap each figure by the actual remaining space below its top edge.
+  // First pass: cap only auto-managed figures by the actual remaining space below their top edge.
   figures.forEach(embed=>{
+    if(isManualFigureEmbed(embed)) return;
     const media = embed.querySelector('img,svg,canvas,iframe');
     const rect = embed.getBoundingClientRect();
     const remaining = Math.max(70, slideRect.bottom - rect.top - bottomPadding);
@@ -2264,15 +2269,16 @@ function fitFiguresInSlide(slideEl){
     }
   });
 
-  // Second pass: if the slide still overflows, keep shrinking the largest visible figure.
+  // Second pass: if the slide still overflows, shrink only auto-managed figures.
   let guard = 0;
   while(slideEl.scrollHeight > slideMaxHeight + 2 && guard < 24){
     const overflow = slideEl.scrollHeight - slideMaxHeight;
     const candidates = figures.map(embed=>{
+      if(isManualFigureEmbed(embed)) return null;
       const media = embed.querySelector('img,svg,canvas,iframe');
       const rect = embed.getBoundingClientRect();
       return {embed, media, h: rect.height || 0};
-    }).filter(x=>x.h > 50).sort((a,b)=>b.h-a.h);
+    }).filter(x=>x && x.h > 50).sort((a,b)=>b.h-a.h);
 
     if(!candidates.length) break;
     const c = candidates[0];
@@ -3110,7 +3116,7 @@ const deck=document.getElementById('deck');const slideMap=document.getElementByI
 deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');return '<section class="'+cls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'"><button class="slides-button" type="button">Slides</button><div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'</section>';}).join('\\n');
 slideMapList.innerHTML=deckPayload.slides.map((slide,idx)=>'<button type="button" class="slide-map-item" data-go="'+idx+'"><span>'+(idx+1)+'.</span><span>'+escapeHtml(slide.title||('Slide '+(idx+1)))+'</span></button>').join('');
 let active=0;const slideEls=Array.from(document.querySelectorAll('.deck-slide'));
-function fitFiguresInSlide(slideEl){if(!slideEl)return;const figures=Array.from(slideEl.querySelectorAll('.figure-embed'));if(!figures.length)return;figures.forEach(embed=>{embed.style.maxHeight='';const media=embed.querySelector('img,svg,canvas,iframe');if(media)media.style.maxHeight='';});const maxHeight=slideEl.clientHeight||window.innerHeight||900;let guard=0;while(slideEl.scrollHeight>maxHeight+2&&guard<16){const overflow=slideEl.scrollHeight-maxHeight;const candidates=figures.map(embed=>{const media=embed.querySelector('img,svg,canvas,iframe');const rect=(media||embed).getBoundingClientRect();return {embed,media,h:rect.height||0};}).filter(x=>x.h>40).sort((a,b)=>b.h-a.h);if(!candidates.length)break;const c=candidates[0];const current=parseFloat((c.media&&c.media.style.maxHeight)||c.h);const reduce=Math.min(Math.max(overflow+8,24),current*0.35);const next=Math.max(70,current-reduce);c.embed.style.maxHeight=(next+12)+'px';if(c.media)c.media.style.maxHeight=next+'px';guard+=1;}}
+function fitFiguresInSlide(slideEl){if(!slideEl)return;const figures=Array.from(slideEl.querySelectorAll('.figure-embed'));if(!figures.length)return;const isManual=embed=>{const box=embed&&embed.querySelector('.figure-box');return !!(box&&(box.dataset.userMoved==='1'||box.dataset.userSized==='1'));};figures.forEach(embed=>{if(isManual(embed))return;embed.style.maxHeight='';embed.style.maxWidth='';embed.style.height='';embed.style.width='';const media=embed.querySelector('img,svg,canvas,iframe');if(media){media.style.maxHeight='';media.style.maxWidth='';media.style.height='';media.style.width='';}});const maxHeight=slideEl.clientHeight||window.innerHeight||900;let guard=0;while(slideEl.scrollHeight>maxHeight+2&&guard<16){const overflow=slideEl.scrollHeight-maxHeight;const candidates=figures.map(embed=>{if(isManual(embed))return null;const media=embed.querySelector('img,svg,canvas,iframe');const rect=(media||embed).getBoundingClientRect();return {embed,media,h:rect.height||0};}).filter(x=>x&&x.h>40).sort((a,b)=>b.h-a.h);if(!candidates.length)break;const c=candidates[0];const current=parseFloat((c.media&&c.media.style.maxHeight)||c.h);const reduce=Math.min(Math.max(overflow+8,24),current*0.35);const next=Math.max(70,current-reduce);c.embed.style.maxHeight=(next+12)+'px';if(c.media)c.media.style.maxHeight=next+'px';guard+=1;}}
 function fitFiguresIn(root){(root||document).querySelectorAll('.deck-slide.active,.print-cell .slide,.slide').forEach(fitFiguresInSlide);}
 function render(){slideEls.forEach((el,i)=>el.classList.toggle('active',i===active));if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
 function go(i){if(i<0||i>=slideEls.length)return;active=i;render();slideMap.classList.remove('open');}
