@@ -2832,15 +2832,15 @@ function initPreviewBlockSelection(){
 function buildPreview(){
   preview.innerHTML = buildSlideMarkup(currentDraftSlide());
   snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+  initPreviewBlockSelection();
   updatePreviewScale();
   updatePreviewGuides();
+  const finalizePreview = ()=>{ fitFiguresIn(preview); initFigureInteractions(preview); updatePreviewScale(); refreshFigureToolState(); updatePreviewBlockSelectionUI(); };
   if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
     if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([preview]);
-    window.MathJax.typesetPromise([preview]).then(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); updatePreviewScale(); refreshFigureToolState(); }).catch(()=>{ fitFiguresIn(preview); initFigureInteractions(preview); refreshFigureToolState(); });
+    window.MathJax.typesetPromise([preview]).then(finalizePreview).catch(finalizePreview);
   } else {
-    fitFiguresIn(preview);
-    initFigureInteractions(preview);
-    refreshFigureToolState();
+    finalizePreview();
   }
 }
 
