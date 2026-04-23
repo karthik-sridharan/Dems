@@ -720,8 +720,10 @@ window.MathJax = {
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
       <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
       <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
-      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
+      <button class="btn" id="loadDeckBtn">Load HTML presentation</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
+      <button class="btn" id="loadPresentationJsonBtn">Load presentation JSON</button>
+      <input id="loadPresentationJsonInput" type="file" accept=".json,application/json" hidden />
       <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
       <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
     </div>
@@ -1492,9 +1494,8 @@ function updateBlock(){
   arr[idx] = currentBlockFromEditor();
   renderBlockList();
   buildPreview();
-  saveCurrentSlideToDeck();
-  persistAutosaveNow('Autosaved after block update.');
   showToast('Updated block.');
+  scheduleAutosave('Autosaved after block update.');
 }
 function duplicateBlock(){
   const name = currentColumnName();
@@ -1553,27 +1554,17 @@ function currentFigureMode(){
 function wrapFigureHtml(html){
   return '\n\\begin{figurehtml}\n' + html + '\n\\end{figurehtml}\n';
 }
-function standaloneFigureBlock(html){
-  return {
-    mode: 'plain',
-    title: 'Figure',
-    content: wrapFigureHtml(String(html || '').trim())
-  };
-}
 function insertFigureAsNewCustomBlock(html){
   const name = currentColumnName();
   const arr = blockArray(name);
   const idx = selectedIndex(name);
-  const block = standaloneFigureBlock(html);
+  const block = { mode:'custom', title:'Figure', content: html };
   const insertAt = idx >= 0 ? idx + 1 : arr.length;
   arr.splice(insertAt, 0, block);
   setSelectedIndex(name, insertAt);
   loadSelectedBlockIntoEditor();
   buildPreview();
-  saveCurrentBlockToDraft();
-  saveCurrentSlideToDeck();
-  persistAutosaveNow('Autosaved after inserting figure.');
-  showToast('Added figure as a new block.');
+  showToast('Added figure as a new custom block.');
 }
 function insertFigureHtml(html){
   const clean = String(html || '').trim();
@@ -1581,19 +1572,13 @@ function insertFigureHtml(html){
   const mode = currentFigureMode();
   if(mode === 'custom'){
     insertTextAtCursor(blockFields.content, (blockFields.content.value && !blockFields.content.value.endsWith('\n') ? '\n' : '') + clean + '\n');
-    saveCurrentBlockToDraft();
     buildPreview();
-    saveCurrentSlideToDeck();
-    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into custom HTML block.');
     return;
   }
   if(mode === 'panel' || mode === 'plain'){
     insertTextAtCursor(blockFields.content, wrapFigureHtml(clean));
-    saveCurrentBlockToDraft();
     buildPreview();
-    saveCurrentSlideToDeck();
-    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into the current block.');
     return;
   }
@@ -1934,19 +1919,13 @@ function updatePreviewScale(){
   const offsetY = Math.max(0, (frame.clientHeight - scaledH) / 2);
   scaleEl.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
-function isManualFigure(embed){
-  const box = embed && embed.querySelector('.figure-box');
-  if(!box) return false;
-  return box.dataset.userSized === '1' || box.dataset.userMoved === '1';
-}
 function fitFiguresInSlide(slideEl){
   if(!slideEl) return;
   const figures = Array.from(slideEl.querySelectorAll('.figure-embed'));
   if(!figures.length) return;
 
-  // reset any previous fitting only for auto-managed figures
+  // reset any previous fitting
   figures.forEach(embed=>{
-    if(isManualFigure(embed)) return;
     embed.style.maxHeight = '';
     embed.style.height = '';
     const media = embed.querySelector('img,svg,canvas,iframe');
@@ -1961,9 +1940,8 @@ function fitFiguresInSlide(slideEl){
   const slideMaxHeight = slideEl.clientHeight || 900;
   const bottomPadding = 20;
 
-  // First pass: cap each auto-managed figure by the actual remaining space below its top edge.
+  // First pass: cap each figure by the actual remaining space below its top edge.
   figures.forEach(embed=>{
-    if(isManualFigure(embed)) return;
     const media = embed.querySelector('img,svg,canvas,iframe');
     const rect = embed.getBoundingClientRect();
     const remaining = Math.max(70, slideRect.bottom - rect.top - bottomPadding);
@@ -1985,16 +1963,15 @@ function fitFiguresInSlide(slideEl){
     }
   });
 
-  // Second pass: if the slide still overflows, shrink only auto-managed figures.
+  // Second pass: if the slide still overflows, keep shrinking the largest visible figure.
   let guard = 0;
   while(slideEl.scrollHeight > slideMaxHeight + 2 && guard < 24){
     const overflow = slideEl.scrollHeight - slideMaxHeight;
     const candidates = figures.map(embed=>{
-      if(isManualFigure(embed)) return null;
       const media = embed.querySelector('img,svg,canvas,iframe');
       const rect = embed.getBoundingClientRect();
       return {embed, media, h: rect.height || 0};
-    }).filter(x=>x && x.h > 50).sort((a,b)=>b.h-a.h);
+    }).filter(x=>x.h > 50).sort((a,b)=>b.h-a.h);
 
     if(!candidates.length) break;
     const c = candidates[0];
@@ -2351,7 +2328,6 @@ function initFigureInteractions(root){
           nextX = snapValue(nextX);
           nextY = snapValue(nextY);
         }
-        active.box.dataset.userMoved = '1';
         active.box.style.transform = `translate(${Math.round(nextX)}px, ${Math.round(nextY)}px)`;
         if(snapToGuidesToggle?.checked) applyGuideSnapping(active.box);
       }else if(active.mode === 'resize'){
@@ -2368,7 +2344,6 @@ function initFigureInteractions(root){
           w = snapValue(w);
           h = snapValue(h);
         }
-        active.box.dataset.userSized = '1';
         active.embed.style.maxWidth = 'none';
         active.embed.style.maxHeight = 'none';
         active.box.style.maxWidth = 'none';
@@ -3189,7 +3164,19 @@ async function loadDeckFromFile(file){
     if(!match) throw new Error('This file does not contain an editable deck-source block.');
     payload = JSON.parse(match[1]);
   }
-  if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this HTML file.');
+  if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this file.');
+  fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
+  if(payload.theme) applyThemeToForm(payload.theme);
+  slides = payload.slides.map(normalizeSlide);
+  activeIndex = slides.length ? 0 : -1;
+  if(activeIndex >= 0) applySlideToForm(slides[0]); else clearForm(false);
+  buildPreview();
+  renderDeckList();
+}
+async function loadPresentationJsonFromFile(file){
+  const text = await file.text();
+  const payload = JSON.parse(text);
+  if(!payload || !Array.isArray(payload.slides)) throw new Error('This JSON file does not contain a presentation with a slides array.');
   fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   if(payload.theme) applyThemeToForm(payload.theme);
   slides = payload.slides.map(normalizeSlide);
@@ -3408,9 +3395,22 @@ document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
   if(!file) return;
   try{
     await loadDeckFromFile(file);
-    showToast('Loaded editable presentation.');
+    showToast('Loaded HTML presentation.');
   }catch(err){
     alert(err.message || 'Could not load this HTML file.');
+  }finally{
+    e.target.value = '';
+  }
+});
+document.getElementById('loadPresentationJsonBtn').addEventListener('click', ()=>document.getElementById('loadPresentationJsonInput').click());
+document.getElementById('loadPresentationJsonInput').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    await loadPresentationJsonFromFile(file);
+    showToast('Loaded presentation JSON.');
+  }catch(err){
+    alert(err.message || 'Could not load this presentation JSON file.');
   }finally{
     e.target.value = '';
   }
