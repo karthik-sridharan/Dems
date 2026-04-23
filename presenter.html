@@ -1612,7 +1612,7 @@ window.insertFigureHtmlFromEditor = insertFigureHtml;
 function buildImageFigureHtml(src, alt){
   const safeSrc = escapeAttr(src || '');
   const safeAlt = escapeAttr(alt || '');
-  return '<figure><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
+  return '<figure data-figure-kind="image" data-box-x="0" data-box-y="0" data-box-w="" data-box-h="" data-original-w="" data-original-h="" data-lock-aspect="1" data-user-moved="0" data-user-sized="0" data-crop="0" data-z-index="1" data-object-fit="contain"><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
 }
 function openFigureModal(){
   figureImagePanel.style.display = '';
@@ -2023,6 +2023,83 @@ function replaceNthFigureHtml(blockContent, figIndex, newBody){
     return '\\begin{figurehtml}\n' + newBody + '\n\\end{figurehtml}';
   });
 }
+function getFigurePrimaryMedia(box){
+  return box ? box.querySelector(':scope > img, :scope > svg, :scope > canvas, :scope > iframe, :scope > figure > img, :scope > figure > svg, :scope > figure > canvas, :scope > figure > iframe') : null;
+}
+function getSerializedImageFigure(box){
+  if(!box) return null;
+  const fig = box.querySelector(':scope > figure[data-figure-kind="image"]');
+  if(fig && fig.querySelector('img')) return fig;
+  const img = box.querySelector(':scope > img[data-figure-kind="image"]');
+  return img || null;
+}
+function serializeFigureBox(box){
+  const imageFigure = getSerializedImageFigure(box);
+  if(imageFigure){
+    const img = imageFigure.tagName.toLowerCase() === 'img' ? imageFigure : imageFigure.querySelector('img');
+    if(img){
+      const t = parseTranslate(box.style.transform);
+      const w = parseFloat(box.style.width || '') || box.offsetWidth || img.naturalWidth || 220;
+      const h = parseFloat(box.style.height || '') || box.offsetHeight || img.naturalHeight || 160;
+      const ow = parseFloat(box.dataset.originalW || '') || img.naturalWidth || w;
+      const oh = parseFloat(box.dataset.originalH || '') || img.naturalHeight || h;
+      const lockAspect = box.dataset.lockAspect === '1' ? '1' : '0';
+      const userMoved = box.dataset.userMoved === '1' || Math.abs(t.x) > 0.5 || Math.abs(t.y) > 0.5 ? '1' : '0';
+      const userSized = box.dataset.userSized === '1' ? '1' : '0';
+      const crop = box.dataset.crop === '1' ? '1' : '0';
+      const z = String(box.style.zIndex || box.dataset.zIndex || '1');
+      const objFit = escapeAttr((img.style.objectFit || imageFigure.dataset.objectFit || 'contain'));
+      const safeSrc = escapeAttr(img.getAttribute('src') || '');
+      const safeAlt = escapeAttr(img.getAttribute('alt') || '');
+      return '<figure data-figure-kind="image" data-box-x="' + escapeAttr(String(Math.round(t.x))) + '" data-box-y="' + escapeAttr(String(Math.round(t.y))) + '" data-box-w="' + escapeAttr(String(Math.round(w))) + '" data-box-h="' + escapeAttr(String(Math.round(h))) + '" data-original-w="' + escapeAttr(String(Math.round(ow))) + '" data-original-h="' + escapeAttr(String(Math.round(oh))) + '" data-lock-aspect="' + lockAspect + '" data-user-moved="' + userMoved + '" data-user-sized="' + userSized + '" data-crop="' + crop + '" data-z-index="' + escapeAttr(z) + '" data-object-fit="' + objFit + '"><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
+    }
+  }
+  const clean = box.cloneNode(true);
+  clean.classList.remove('selected');
+  clean.querySelectorAll('.figure-resize-handle').forEach(el=>el.remove());
+  clean.style.touchAction = '';
+  clean.style.cursor = '';
+  clean.style.maxWidth = 'none';
+  clean.style.maxHeight = 'none';
+  return clean.outerHTML;
+}
+function applySerializedImageState(box){
+  const fig = box ? box.querySelector(':scope > figure[data-figure-kind="image"]') : null;
+  if(!fig) return false;
+  const img = fig.querySelector('img');
+  if(!img) return false;
+
+  const x = parseFloat(fig.dataset.boxX || '0') || 0;
+  const y = parseFloat(fig.dataset.boxY || '0') || 0;
+  const w = parseFloat(fig.dataset.boxW || '') || 0;
+  const h = parseFloat(fig.dataset.boxH || '') || 0;
+  const ow = parseFloat(fig.dataset.originalW || '') || w || img.naturalWidth || 220;
+  const oh = parseFloat(fig.dataset.originalH || '') || h || img.naturalHeight || 160;
+
+  box.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
+  if(w > 0) box.style.width = Math.round(w) + 'px';
+  if(h > 0) box.style.height = Math.round(h) + 'px';
+  box.dataset.originalW = String(Math.round(ow));
+  box.dataset.originalH = String(Math.round(oh));
+  box.dataset.lockAspect = fig.dataset.lockAspect || '1';
+  box.dataset.userMoved = fig.dataset.userMoved || (Math.abs(x) > 0.5 || Math.abs(y) > 0.5 ? '1' : '0');
+  box.dataset.userSized = fig.dataset.userSized || (w > 0 && h > 0 ? '1' : '0');
+  box.dataset.crop = fig.dataset.crop || '0';
+  box.dataset.zIndex = fig.dataset.zIndex || '1';
+  box.style.zIndex = box.dataset.zIndex;
+  box.style.overflow = box.dataset.crop === '1' ? 'hidden' : 'visible';
+  img.style.objectFit = fig.dataset.objectFit || (box.dataset.crop === '1' ? 'cover' : 'contain');
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.maxWidth = 'none';
+  img.style.maxHeight = 'none';
+  return true;
+}
+function isManualFigureEmbed(embed){
+  const box = embed ? embed.querySelector('.figure-box') : null;
+  if(!box) return false;
+  return box.dataset.userMoved === '1' || box.dataset.userSized === '1';
+}
 function saveFigureEmbedToDraft(embed){
   const column = embed.dataset.column || 'left';
   const blockIndex = Number(embed.dataset.blockIndex);
@@ -2031,14 +2108,8 @@ function saveFigureEmbedToDraft(embed){
   if(!arr[blockIndex]) return;
   const box = embed.querySelector('.figure-box');
   if(!box) return;
-  const clean = box.cloneNode(true);
-  clean.classList.remove('selected');
-  clean.querySelectorAll('.figure-resize-handle').forEach(el=>el.remove());
-  clean.style.touchAction = '';
-  clean.style.cursor = '';
-  clean.style.maxWidth = 'none';
-  clean.style.maxHeight = 'none';
-  arr[blockIndex].content = replaceNthFigureHtml(arr[blockIndex].content, figureIndex, clean.outerHTML);
+  const serialized = serializeFigureBox(box);
+  arr[blockIndex].content = replaceNthFigureHtml(arr[blockIndex].content, figureIndex, serialized);
   if(currentColumnName() === column && selectedIndex(column) === blockIndex){
     blockFields.content.value = arr[blockIndex].content;
   }
@@ -2213,7 +2284,10 @@ function resetSelectedFigure(){
   getSelectedFigureBoxes().forEach(box=>{
     box.style.transform = 'translate(0px, 0px)';
     box.style.zIndex = '1';
+    box.dataset.zIndex = '1';
     box.dataset.crop = '0';
+    box.dataset.userMoved = '0';
+    box.dataset.userSized = '0';
     box.style.overflow = 'visible';
     const ow = parseFloat(box.dataset.originalW || '220') || 220;
     const oh = parseFloat(box.dataset.originalH || '160') || 160;
@@ -2262,16 +2336,20 @@ function ensureInteractiveFigureBox(embed){
     box.className = 'figure-box';
     while(embed.firstChild) box.appendChild(embed.firstChild);
     embed.appendChild(box);
-    const rect = box.getBoundingClientRect();
-    const ow = Math.max(80, Math.round(rect.width || 220));
-    const oh = Math.max(60, Math.round(rect.height || 160));
-    box.style.width = ow + 'px';
-    box.style.height = oh + 'px';
-    box.dataset.originalW = String(ow);
-    box.dataset.originalH = String(oh);
-    box.style.transform = box.style.transform || 'translate(0px, 0px)';
+    const restored = applySerializedImageState(box);
+    if(!restored){
+      const rect = box.getBoundingClientRect();
+      const media = getFigurePrimaryMedia(box);
+      const ow = Math.max(80, Math.round(rect.width || (media && media.naturalWidth) || 220));
+      const oh = Math.max(60, Math.round(rect.height || (media && media.naturalHeight) || 160));
+      box.style.width = ow + 'px';
+      box.style.height = oh + 'px';
+      box.dataset.originalW = String(ow);
+      box.dataset.originalH = String(oh);
+      box.style.transform = box.style.transform || 'translate(0px, 0px)';
+      box.style.zIndex = box.style.zIndex || '1';
+    }
     box.style.cursor = 'grab';
-    box.style.zIndex = box.style.zIndex || '1';
   }
   if(!box.querySelector('.figure-resize-handle')){
     const handle = document.createElement('div');
@@ -2355,6 +2433,7 @@ function initFigureInteractions(root){
           nextX = snapValue(nextX);
           nextY = snapValue(nextY);
         }
+        active.box.dataset.userMoved = '1';
         active.box.style.transform = `translate(${Math.round(nextX)}px, ${Math.round(nextY)}px)`;
         if(snapToGuidesToggle?.checked) applyGuideSnapping(active.box);
       }else if(active.mode === 'resize'){
@@ -2371,6 +2450,7 @@ function initFigureInteractions(root){
           w = snapValue(w);
           h = snapValue(h);
         }
+        active.box.dataset.userSized = '1';
         active.embed.style.maxWidth = 'none';
         active.embed.style.maxHeight = 'none';
         active.box.style.maxWidth = 'none';
@@ -3351,9 +3431,21 @@ document.getElementById('insertFigureFileBtn').addEventListener('click', ()=>{
   if(!file){ alert('Choose an image file first.'); return; }
   const reader = new FileReader();
   reader.onload = ()=>{
-    insertFigureHtml(buildImageFigureHtml(String(reader.result || ''), (figureAltInput.value || file.name || '').trim()));
-    closeFigureModal();
-    figureFileInput.value = '';
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth || img.width;
+      c.height = img.naturalHeight || img.height;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0);
+      const embedded = c.toDataURL('image/jpeg', 0.92);
+      insertFigureHtml(buildImageFigureHtml(String(embedded || ''), (figureAltInput.value || file.name || '').trim()));
+      closeFigureModal();
+      figureFileInput.value = '';
+    };
+    img.src = String(reader.result || '');
   };
   reader.readAsDataURL(file);
 });
