@@ -297,6 +297,32 @@
   }
   .left-pane{display:none}
   .left-pane.active{display:grid;gap:1rem}
+  .style-preset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;margin-top:.6rem}
+  .style-card{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:18px;padding:.9rem;display:grid;gap:.55rem}
+  .style-card b{font-size:1rem}
+  .style-card small{color:var(--muted);line-height:1.35}
+  .style-tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+  .style-tools-grid .full{grid-column:1 / -1}
+  .slide h1,.slide h2,.deck-slide h1,.deck-slide h2{text-transform:var(--title-transform,none);letter-spacing:var(--title-letter-spacing,normal)}
+  .slide.style-berkeley,.deck-slide.style-berkeley{padding-left:calc(3.3rem + var(--sidebar-width,118px))}
+  .slide.style-berkeley::before,.deck-slide.style-berkeley::before{content:'';position:absolute;left:0;top:0;bottom:0;width:var(--sidebar-width,118px);background:var(--chrome-fill,#17365d)}
+  .slide.style-berkeley::after,.deck-slide.style-berkeley::after{content:'';position:absolute;left:var(--sidebar-width,118px);top:0;right:0;height:18px;background:var(--accent,#d4a017)}
+  .slide.style-berkeley h1,.slide.style-berkeley h2,.deck-slide.style-berkeley h1,.deck-slide.style-berkeley h2{color:var(--chrome-fill,#17365d)}
+  .slide.style-madrid,.deck-slide.style-madrid{padding-top:5rem;padding-bottom:5.2rem}
+  .slide.style-madrid::before,.deck-slide.style-madrid::before{content:'';position:absolute;left:0;top:0;right:0;height:58px;background:var(--chrome-fill,#1f4e79)}
+  .slide.style-madrid::after,.deck-slide.style-madrid::after{content:'';position:absolute;left:0;right:0;bottom:0;height:24px;background:var(--accent,#2f6fed)}
+  .slide.style-madrid h1,.slide.style-madrid h2,.deck-slide.style-madrid h1,.deck-slide.style-madrid h2{color:var(--chrome-fill,#1f4e79)}
+  .slide.style-annarbor,.deck-slide.style-annarbor{padding-top:4.8rem;padding-bottom:5rem}
+  .slide.style-annarbor::before,.deck-slide.style-annarbor::before{content:'';position:absolute;left:0;top:0;right:0;height:64px;background:var(--chrome-fill,#c99a06)}
+  .slide.style-annarbor::after,.deck-slide.style-annarbor::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--accent,#7a4f01)}
+  .slide.style-annarbor h1,.slide.style-annarbor h2,.deck-slide.style-annarbor h1,.deck-slide.style-annarbor h2{color:#5b3c00}
+  .slide.style-cambridgeus,.deck-slide.style-cambridgeus{padding-top:4.7rem;padding-bottom:5rem}
+  .slide.style-cambridgeus::before,.deck-slide.style-cambridgeus::before{content:'';position:absolute;left:0;top:0;right:0;height:56px;background:linear-gradient(90deg,var(--accent,#c53030) 0 18px,var(--chrome-fill,#0f4c81) 18px 100%)}
+  .slide.style-cambridgeus::after,.deck-slide.style-cambridgeus::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--chrome-fill,#0f4c81)}
+  .slide.style-cambridgeus h1,.slide.style-cambridgeus h2,.deck-slide.style-cambridgeus h1,.deck-slide.style-cambridgeus h2{color:var(--chrome-fill,#0f4c81)}
+  .slide.style-pittsburgh,.deck-slide.style-pittsburgh{padding-top:4.2rem}
+  .slide.style-pittsburgh::before,.deck-slide.style-pittsburgh::before{content:'';position:absolute;left:0;top:0;right:0;height:16px;background:var(--chrome-fill,#2f6fed)}
+  .slide.style-pittsburgh h1,.slide.style-pittsburgh h2,.deck-slide.style-pittsburgh h1,.deck-slide.style-pittsburgh h2{color:var(--chrome-fill,#2f6fed)}
   .subtabs{
     display:flex;
     flex-wrap:wrap;
@@ -647,77 +673,64 @@ window.MathJax = {
 
 
     <div class="left-pane" data-left-pane="styles">
+      <div class="panel" style="padding:.95rem">
+        <div class="smallcaps">Master presentation styles</div>
+        <div class="help" style="margin-top:.45rem">Beamer-inspired master styles for the whole deck.</div>
+        <div class="style-preset-grid">
+          <div class="style-card"><b>Berkeley</b><small>Sidebar navigation feel with strong institutional chrome.</small><button class="btn mini" type="button" data-style-preset="berkeley">Use Berkeley</button></div>
+          <div class="style-card"><b>Madrid</b><small>Top and bottom bars with clean lecture-deck styling.</small><button class="btn mini" type="button" data-style-preset="madrid">Use Madrid</button></div>
+          <div class="style-card"><b>AnnArbor</b><small>Warm header chrome and footer accent.</small><button class="btn mini" type="button" data-style-preset="annarbor">Use AnnArbor</button></div>
+          <div class="style-card"><b>CambridgeUS</b><small>Formal title bar with accent stripe.</small><button class="btn mini" type="button" data-style-preset="cambridgeus">Use CambridgeUS</button></div>
+          <div class="style-card"><b>Pittsburgh</b><small>Minimal accent rule with compact slide chrome.</small><button class="btn mini" type="button" data-style-preset="pittsburgh">Use Pittsburgh</button></div>
+          <div class="style-card"><b>Classic</b><small>Minimal generator default with maximum content room.</small><button class="btn mini" type="button" data-style-preset="classic">Use Classic</button></div>
+        </div>
 
-      <div class="subtabs" data-subtab-group="styles">
-        <button class="subtab active" type="button" data-subtab="styles:presets">Beamer presets</button>
-        <button class="subtab" type="button" data-subtab="styles:builder">Style builder</button>
-      </div>
-
-      <div class="subpane active" data-subpane="styles:presets">
-        <div class="panel" style="padding:.95rem">
-          <div class="smallcaps">Master presentation style presets</div>
-          <div class="help" style="margin-top:.45rem">These are Beamer-inspired master styles. Applying one updates the deck-wide master theme and slide chrome.</div>
-          <div class="style-preset-grid">
-            <div class="style-card"><b>Berkeley</b><small>Sidebar navigation feel with a strong institutional band and restrained title treatment.</small><button class="btn mini" type="button" data-style-preset="berkeley">Use Berkeley</button></div>
-            <div class="style-card"><b>Madrid</b><small>Clean top and bottom bars with a modern lecture-deck look.</small><button class="btn mini" type="button" data-style-preset="madrid">Use Madrid</button></div>
-            <div class="style-card"><b>AnnArbor</b><small>Warm header chrome with a presentation-style footer accent.</small><button class="btn mini" type="button" data-style-preset="annarbor">Use AnnArbor</button></div>
-            <div class="style-card"><b>CambridgeUS</b><small>Structured title bar with accent stripe and formal classroom feel.</small><button class="btn mini" type="button" data-style-preset="cambridgeus">Use CambridgeUS</button></div>
-            <div class="style-card"><b>Pittsburgh</b><small>Minimal chrome with a bold title accent and compact overhead-slide feel.</small><button class="btn mini" type="button" data-style-preset="pittsburgh">Use Pittsburgh</button></div>
-            <div class="style-card"><b>Classic</b><small>Clean generator default with minimal chrome and maximum content space.</small><button class="btn mini" type="button" data-style-preset="classic">Use Classic</button></div>
+        <div class="smallcaps" style="margin-top:1rem">Style builder tools</div>
+        <div class="field-grid style-tools-grid" style="margin-top:.65rem">
+          <div class="field">
+            <label for="themeBeamerStyle">Style family</label>
+            <select id="themeBeamerStyle">
+              <option value="classic" selected>Classic / minimal</option>
+              <option value="berkeley">Berkeley-style sidebar</option>
+              <option value="madrid">Madrid-style bars</option>
+              <option value="annarbor">AnnArbor-style warm chrome</option>
+              <option value="cambridgeus">CambridgeUS-style formal bar</option>
+              <option value="pittsburgh">Pittsburgh-style accent rule</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="themeChromeColor">Chrome color</label>
+            <input id="themeChromeColor" type="color" value="#17365d" />
+          </div>
+          <div class="field">
+            <label for="themeChromeTextColor">Chrome text color</label>
+            <select id="themeChromeTextColor">
+              <option value="#ffffff" selected>White</option>
+              <option value="#eef3ff">Soft white</option>
+              <option value="#111111">Black</option>
+              <option value="#f7f1e3">Warm cream</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="themeSidebarWidth">Sidebar width</label>
+            <input id="themeSidebarWidth" type="number" min="72" max="220" step="2" value="118" />
+          </div>
+          <div class="field">
+            <label for="themeTitleCaps">Title casing</label>
+            <select id="themeTitleCaps">
+              <option value="0" selected>Normal case</option>
+              <option value="1">Uppercase-style titles</option>
+            </select>
+          </div>
+          <div class="field full">
+            <div class="row">
+              <button class="btn mini" type="button" id="applyStyleBuilderBtn">Apply builder to master theme</button>
+              <button class="btn mini" type="button" id="randomizeStyleBtn">Generate variant</button>
+            </div>
+            <div class="help" style="margin-top:.4rem">Generate and apply Beamer-like slide chrome deck-wide.</div>
           </div>
         </div>
       </div>
-
-      <div class="subpane" data-subpane="styles:builder">
-        <div class="panel" style="padding:.95rem">
-          <div class="smallcaps">Style generator tools</div>
-          <div class="field-grid style-tools-grid" style="margin-top:.7rem">
-            <div class="field">
-              <label for="themeBeamerStyle">Style family</label>
-              <select id="themeBeamerStyle">
-                <option value="classic" selected>Classic / minimal</option>
-                <option value="berkeley">Berkeley-style sidebar</option>
-                <option value="madrid">Madrid-style bars</option>
-                <option value="annarbor">AnnArbor-style warm chrome</option>
-                <option value="cambridgeus">CambridgeUS-style formal bar</option>
-                <option value="pittsburgh">Pittsburgh-style accent rule</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="themeChromeColor">Chrome color</label>
-              <input id="themeChromeColor" type="color" value="#17365d" />
-            </div>
-            <div class="field">
-              <label for="themeChromeTextColor">Chrome text color</label>
-              <select id="themeChromeTextColor">
-                <option value="#ffffff" selected>White</option>
-                <option value="#eef3ff">Soft white</option>
-                <option value="#111111">Black</option>
-                <option value="#f7f1e3">Warm cream</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="themeSidebarWidth">Sidebar width</label>
-              <input id="themeSidebarWidth" type="number" min="72" max="220" step="2" value="118" />
-            </div>
-            <div class="field">
-              <label for="themeTitleCaps">Title casing</label>
-              <select id="themeTitleCaps">
-                <option value="0" selected>Normal case</option>
-                <option value="1">Uppercase-style titles</option>
-              </select>
-            </div>
-            <div class="field full">
-              <div class="row">
-                <button class="btn mini" id="applyStyleBuilderBtn">Apply builder to master theme</button>
-                <button class="btn mini" id="randomizeStyleBtn">Generate variant</button>
-              </div>
-              <div class="help" style="margin-top:.4rem">Use this pane to generate your own master slide chrome from Beamer-like families, then apply it deck-wide.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
 
     <div class="left-pane" data-left-pane="tools">
@@ -1139,34 +1152,42 @@ function normalizeTheme(theme){
     titleCaps: String(t.titleCaps || '0')
   };
 }
+function themeFieldValue(name, fallback=''){
+  const el = themeFields[name];
+  return el ? el.value : fallback;
+}
+function setThemeFieldValue(name, value){
+  const el = themeFields[name];
+  if(el) el.value = value;
+}
 function currentThemeFromFields(){
   return normalizeTheme({
-    name: themeFields.name.value,
-    bgColor: themeFields.bgColor.value,
-    fontColor: themeFields.fontColor.value,
-    accentColor: themeFields.accentColor.value,
-    panelRadius: themeFields.panelRadius.value,
-    titleScale: themeFields.titleScale.value,
-    beamerStyle: themeFields.beamerStyle.value,
-    chromeColor: themeFields.chromeColor.value,
-    chromeTextColor: themeFields.chromeTextColor.value,
-    sidebarWidth: themeFields.sidebarWidth.value,
-    titleCaps: themeFields.titleCaps.value
+    name: themeFieldValue('name', 'Default theme'),
+    bgColor: themeFieldValue('bgColor', '#ffffff'),
+    fontColor: themeFieldValue('fontColor', '#111111'),
+    accentColor: themeFieldValue('accentColor', '#2f6fed'),
+    panelRadius: themeFieldValue('panelRadius', '22'),
+    titleScale: themeFieldValue('titleScale', '1'),
+    beamerStyle: themeFieldValue('beamerStyle', 'classic'),
+    chromeColor: themeFieldValue('chromeColor', '#17365d'),
+    chromeTextColor: themeFieldValue('chromeTextColor', '#ffffff'),
+    sidebarWidth: themeFieldValue('sidebarWidth', '118'),
+    titleCaps: themeFieldValue('titleCaps', '0')
   });
 }
 function applyThemeToForm(theme){
   const t = normalizeTheme(theme);
-  themeFields.name.value = t.name;
-  themeFields.bgColor.value = t.bgColor;
-  themeFields.fontColor.value = t.fontColor;
-  themeFields.accentColor.value = t.accentColor;
-  themeFields.panelRadius.value = String(t.panelRadius);
-  themeFields.titleScale.value = String(t.titleScale);
-  themeFields.beamerStyle.value = t.beamerStyle;
-  themeFields.chromeColor.value = t.chromeColor;
-  themeFields.chromeTextColor.value = t.chromeTextColor;
-  themeFields.sidebarWidth.value = String(t.sidebarWidth);
-  themeFields.titleCaps.value = String(t.titleCaps);
+  setThemeFieldValue('name', t.name);
+  setThemeFieldValue('bgColor', t.bgColor);
+  setThemeFieldValue('fontColor', t.fontColor);
+  setThemeFieldValue('accentColor', t.accentColor);
+  setThemeFieldValue('panelRadius', String(t.panelRadius));
+  setThemeFieldValue('titleScale', String(t.titleScale));
+  setThemeFieldValue('beamerStyle', t.beamerStyle);
+  setThemeFieldValue('chromeColor', t.chromeColor);
+  setThemeFieldValue('chromeTextColor', t.chromeTextColor);
+  setThemeFieldValue('sidebarWidth', String(t.sidebarWidth));
+  setThemeFieldValue('titleCaps', String(t.titleCaps));
 }
 function currentStyleClass(){
   const t = currentThemeFromFields();
@@ -1183,7 +1204,6 @@ function buildSlideStyle(slide){
   const titleLetterSpacing = String(theme.titleCaps) === '1' ? '.04em' : 'normal';
   return 'background:' + bg + ';color:' + font + ';--text:' + font + ';--muted:' + muted + ';--line:' + line + ';--accent:' + theme.accentColor + ';--radius:' + theme.panelRadius + 'px;--title-scale:' + theme.titleScale + ';--chrome-fill:' + theme.chromeColor + ';--chrome-text:' + theme.chromeTextColor + ';--sidebar-width:' + theme.sidebarWidth + 'px;--title-transform:' + titleTransform + ';--title-letter-spacing:' + titleLetterSpacing + ';';
 }
-
 function beamerPresetTheme(name){
   const id = String(name || 'classic').toLowerCase();
   const presets = {
@@ -1200,6 +1220,7 @@ function applyStylePreset(name){
   const merged = normalizeTheme({...currentThemeFromFields(), ...beamerPresetTheme(name)});
   applyThemeToForm(merged);
   buildPreview();
+  renderDeckList();
   scheduleAutosave('Autosaved after style preset change.');
   showToast('Applied ' + merged.name + ' style.');
 }
@@ -1211,19 +1232,22 @@ function applyStyleBuilder(){
   const merged = currentThemeFromFields();
   applyThemeToForm(merged);
   buildPreview();
+  renderDeckList();
   scheduleAutosave('Autosaved after style builder update.');
   showToast('Updated master style.');
 }
 function randomizeStyleBuilder(){
   const styles = ['classic','berkeley','madrid','annarbor','cambridgeus','pittsburgh'];
-  themeFields.beamerStyle.value = styles[Math.floor(Math.random() * styles.length)];
-  themeFields.chromeColor.value = randomHexColor();
-  themeFields.accentColor.value = randomHexColor();
-  themeFields.titleCaps.value = Math.random() > 0.5 ? '1' : '0';
+  setThemeFieldValue('beamerStyle', styles[Math.floor(Math.random() * styles.length)]);
+  setThemeFieldValue('chromeColor', randomHexColor());
+  setThemeFieldValue('accentColor', randomHexColor());
+  setThemeFieldValue('titleCaps', Math.random() > 0.5 ? '1' : '0');
   buildPreview();
+  renderDeckList();
   scheduleAutosave('Autosaved after generating style variant.');
   showToast('Generated style variant.');
 }
+
 function parseStructuredText(raw, meta){
   const text = String(raw ?? '').replace(/\r\n/g, '\n').trim();
   if(!text) return '';
@@ -3682,8 +3706,8 @@ document.querySelectorAll('[data-subtab]').forEach(btn=>{
 
 document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset)));
 document.querySelectorAll('[data-style-preset]').forEach(btn=>btn.addEventListener('click', ()=>applyStylePreset(btn.dataset.stylePreset)));
-document.getElementById('applyStyleBuilderBtn').addEventListener('click', applyStyleBuilder);
-document.getElementById('randomizeStyleBtn').addEventListener('click', randomizeStyleBuilder);
+document.getElementById('applyStyleBuilderBtn')?.addEventListener('click', applyStyleBuilder);
+document.getElementById('randomizeStyleBtn')?.addEventListener('click', randomizeStyleBuilder);
 document.querySelectorAll('[data-block-template]').forEach(btn=>btn.addEventListener('click', ()=>{
   const kind = btn.dataset.blockTemplate;
   const block = defaultReusableBlock(kind);
