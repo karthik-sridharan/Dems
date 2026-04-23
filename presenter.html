@@ -720,10 +720,8 @@ window.MathJax = {
       <button class="btn" id="copyMathJaxBtn">Copy MathJax helper</button>
       <button class="btn" id="downloadStandaloneBtn">Save current slide</button>
       <button class="btn" id="saveCurrentSlideJsonBtn">Save current slide JSON</button>
-      <button class="btn" id="loadDeckBtn">Load HTML presentation</button>
-      <input id="loadDeckInput" type="file" accept=".html,text/html" hidden />
-      <button class="btn" id="loadPresentationJsonBtn">Load presentation JSON</button>
-      <input id="loadPresentationJsonInput" type="file" accept=".json,application/json" hidden />
+      <button class="btn" id="loadDeckBtn">Load generated HTML</button>
+      <input id="loadDeckInput" type="file" accept=".html,text/html,.json,application/json" hidden />
       <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
       <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
     </div>
@@ -901,6 +899,7 @@ let slides = [];
 let activeIndex = -1;
 let draftBlocks = { left: [], right: [] };
 let selectedBlock = { left: -1, right: -1 };
+let syncingPreviewFigures = false;
 const AUTOSAVE_KEY = 'html-presentation-generator-autosave-v5';
 const BLOCK_LIBRARY_KEY = 'html-presentation-generator-block-library-v1';
 let autosaveTimer = null;
@@ -1302,6 +1301,7 @@ function blankBlock(mode='panel'){
   return { mode, title:'', content:'' };
 }
 function currentDraftSlide(){
+  if(!syncingPreviewFigures) syncPreviewFiguresToDraft(false);
   const leftBlocks = clone(draftBlocks.left);
   const rightBlocks = clone(draftBlocks.right);
   const name = currentColumnName();
@@ -1378,7 +1378,20 @@ function currentBlockFromEditor(){
     content: blockFields.content.value
   };
 }
+function syncPreviewFiguresToDraft(updateSnippet = true){
+  if(syncingPreviewFigures) return;
+  syncingPreviewFigures = true;
+  try{
+    Array.from((preview || document).querySelectorAll('.figure-embed[data-column]')).forEach(embed=>saveFigureEmbedToDraft(embed));
+    if(updateSnippet){
+      snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+    }
+  } finally {
+    syncingPreviewFigures = false;
+  }
+}
 function saveCurrentBlockToDraft(){
+  if(!syncingPreviewFigures) syncPreviewFiguresToDraft(false);
   const name = currentColumnName();
   const arr = blockArray(name);
   const idx = selectedIndex(name);
@@ -1387,6 +1400,7 @@ function saveCurrentBlockToDraft(){
   }
 }
 function saveCurrentSlideToDeck(){
+  if(!syncingPreviewFigures) syncPreviewFiguresToDraft(false);
   if(activeIndex >= 0 && activeIndex < slides.length){
     slides[activeIndex] = currentDraftSlide();
   }
@@ -1400,6 +1414,7 @@ function currentDeckData(){
 }
 function persistAutosaveNow(reason='Autosaved.'){
   try{
+    syncPreviewFiguresToDraft(false);
     saveCurrentBlockToDraft();
     saveCurrentSlideToDeck();
     const payload = {
@@ -1415,6 +1430,9 @@ function persistAutosaveNow(reason='Autosaved.'){
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
     autosaveDirtyCount = 0;
     setAutosaveStatus(reason);
+    if(!syncingPreviewFigures){
+      snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+    }
   }catch(err){
     console.error(err);
     setAutosaveStatus('Autosave failed.');
@@ -1487,6 +1505,7 @@ function addBlock(){
   scheduleAutosave('Autosaved after block add.');
 }
 function updateBlock(){
+  syncPreviewFiguresToDraft(false);
   const name = currentColumnName();
   const arr = blockArray(name);
   const idx = selectedIndex(name);
@@ -1494,8 +1513,8 @@ function updateBlock(){
   arr[idx] = currentBlockFromEditor();
   renderBlockList();
   buildPreview();
+  persistAutosaveNow('Autosaved after block update.');
   showToast('Updated block.');
-  scheduleAutosave('Autosaved after block update.');
 }
 function duplicateBlock(){
   const name = currentColumnName();
@@ -1558,13 +1577,14 @@ function insertFigureAsNewCustomBlock(html){
   const name = currentColumnName();
   const arr = blockArray(name);
   const idx = selectedIndex(name);
-  const block = { mode:'custom', title:'Figure', content: html };
+  const block = { mode:'plain', title:'Figure', content: wrapFigureHtml(String(html || '').trim()) };
   const insertAt = idx >= 0 ? idx + 1 : arr.length;
   arr.splice(insertAt, 0, block);
   setSelectedIndex(name, insertAt);
   loadSelectedBlockIntoEditor();
   buildPreview();
-  showToast('Added figure as a new custom block.');
+  persistAutosaveNow('Autosaved after inserting figure.');
+  showToast('Added figure as a new block.');
 }
 function insertFigureHtml(html){
   const clean = String(html || '').trim();
@@ -1572,13 +1592,17 @@ function insertFigureHtml(html){
   const mode = currentFigureMode();
   if(mode === 'custom'){
     insertTextAtCursor(blockFields.content, (blockFields.content.value && !blockFields.content.value.endsWith('\n') ? '\n' : '') + clean + '\n');
+    saveCurrentBlockToDraft();
     buildPreview();
+    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into custom HTML block.');
     return;
   }
   if(mode === 'panel' || mode === 'plain'){
     insertTextAtCursor(blockFields.content, wrapFigureHtml(clean));
+    saveCurrentBlockToDraft();
     buildPreview();
+    persistAutosaveNow('Autosaved after inserting figure.');
     showToast('Inserted figure into the current block.');
     return;
   }
@@ -2018,7 +2042,9 @@ function saveFigureEmbedToDraft(embed){
   if(currentColumnName() === column && selectedIndex(column) === blockIndex){
     blockFields.content.value = arr[blockIndex].content;
   }
-  snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+  if(!syncingPreviewFigures){
+    snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
+  }
 }
 function getSelectedFigureBoxes(root){
   return Array.from((root || preview).querySelectorAll('.figure-box.selected'));
@@ -2080,6 +2106,7 @@ function saveSelectedFigures(){
     const embed = box.closest('.figure-embed[data-column]');
     if(embed) saveFigureEmbedToDraft(embed);
   });
+  syncPreviewFiguresToDraft(false);
   saveCurrentBlockToDraft();
   saveCurrentSlideToDeck();
   persistAutosaveNow('Autosaved after figure edit.');
@@ -2373,14 +2400,16 @@ function initFigureInteractions(root){
       if(!active) return;
       if(active.box) active.box.style.cursor = 'grab';
       saveFigureEmbedToDraft(active.embed);
-      scheduleAutosave('Autosaved after figure edit.');
+      syncPreviewFiguresToDraft(false);
+      persistAutosaveNow('Autosaved after figure edit.');
       active = null;
     }, { passive:true });
     window.addEventListener('pointercancel', ()=>{
       if(!active) return;
       if(active.box) active.box.style.cursor = 'grab';
       saveFigureEmbedToDraft(active.embed);
-      scheduleAutosave('Autosaved after figure edit.');
+      syncPreviewFiguresToDraft(false);
+      persistAutosaveNow('Autosaved after figure edit.');
       active = null;
     }, { passive:true });
   }
@@ -3164,19 +3193,7 @@ async function loadDeckFromFile(file){
     if(!match) throw new Error('This file does not contain an editable deck-source block.');
     payload = JSON.parse(match[1]);
   }
-  if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this file.');
-  fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
-  if(payload.theme) applyThemeToForm(payload.theme);
-  slides = payload.slides.map(normalizeSlide);
-  activeIndex = slides.length ? 0 : -1;
-  if(activeIndex >= 0) applySlideToForm(slides[0]); else clearForm(false);
-  buildPreview();
-  renderDeckList();
-}
-async function loadPresentationJsonFromFile(file){
-  const text = await file.text();
-  const payload = JSON.parse(text);
-  if(!payload || !Array.isArray(payload.slides)) throw new Error('This JSON file does not contain a presentation with a slides array.');
+  if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this HTML file.');
   fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   if(payload.theme) applyThemeToForm(payload.theme);
   slides = payload.slides.map(normalizeSlide);
@@ -3395,22 +3412,9 @@ document.getElementById('loadDeckInput').addEventListener('change', async (e)=>{
   if(!file) return;
   try{
     await loadDeckFromFile(file);
-    showToast('Loaded HTML presentation.');
+    showToast('Loaded editable presentation.');
   }catch(err){
     alert(err.message || 'Could not load this HTML file.');
-  }finally{
-    e.target.value = '';
-  }
-});
-document.getElementById('loadPresentationJsonBtn').addEventListener('click', ()=>document.getElementById('loadPresentationJsonInput').click());
-document.getElementById('loadPresentationJsonInput').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
-  if(!file) return;
-  try{
-    await loadPresentationJsonFromFile(file);
-    showToast('Loaded presentation JSON.');
-  }catch(err){
-    alert(err.message || 'Could not load this presentation JSON file.');
   }finally{
     e.target.value = '';
   }
