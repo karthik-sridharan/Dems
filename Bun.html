@@ -1996,6 +1996,7 @@ function openSimpleDiagramEditor(){
     <option value="mouse">Mouse only</option>
   </select>
   <input id="textInput" type="text" placeholder="Text for text tool" value="Label" />
+  <label style="display:flex;align-items:center;gap:.35rem">Color <input id="drawColor" type="color" value="#111111" style="padding:0;width:44px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:#fff;cursor:pointer" /></label>
   <button id="undoBtn">Undo</button>
   <button id="deleteBtn">Delete selected</button>
   <button id="clearBtn">Clear</button>
@@ -2010,6 +2011,7 @@ const svg = document.getElementById('svg');
 const toolEl = document.getElementById('tool');
 const pointerSourceEl = document.getElementById('pointerSource');
 const textInput = document.getElementById('textInput');
+const drawColorInput = document.getElementById('drawColor');
 let drawing = null;
 let selected = null;
 let dragOffset = null;
@@ -2027,10 +2029,20 @@ function allowedPointer(evt){
   const type = evt.pointerType || 'mouse';
   return type === pref;
 }
+function currentDrawColor(){
+  return (drawColorInput && drawColorInput.value) ? drawColorInput.value : '#111111';
+}
+function applyColorToSelected(){
+  if(!selected) return;
+  const tag = selected.tagName.toLowerCase();
+  const color = currentDrawColor();
+  if(tag === 'text') selected.setAttribute('fill', color);
+  else selected.setAttribute('stroke', color);
+}
 function baseStyle(el, evt){
   const pressure = evt && typeof evt.pressure === 'number' && evt.pressure > 0 ? evt.pressure : 0.5;
   const width = evt && evt.pointerType === 'pen' ? (2 + pressure * 4).toFixed(2) : '3';
-  el.setAttribute('stroke', '#111');
+  el.setAttribute('stroke', currentDrawColor());
   el.setAttribute('stroke-width', width);
   el.setAttribute('fill', 'transparent');
   el.style.vectorEffect = 'non-scaling-stroke';
@@ -2142,7 +2154,7 @@ svg.addEventListener('pointerdown', (evt)=>{
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x', p.x);
     t.setAttribute('y', p.y);
-    t.setAttribute('fill', '#111');
+    t.setAttribute('fill', currentDrawColor());
     t.setAttribute('font-size', '28');
     t.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
     t.setAttribute('pointer-events', 'all');
@@ -2207,6 +2219,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   made.length = 0;
   clearSelection();
 });
+if(drawColorInput) drawColorInput.addEventListener('input', applyColorToSelected);
 function trimmedSvgMarkup(){
   clearSelection();
   const clone = svg.cloneNode(true);
