@@ -153,7 +153,63 @@ function updateShape(evt){if(!drawingState.drawing || drawingSlideIndex!==active
 function endShape(){if(!drawingState.drawing) return; drawingState.drawing=false; drawingState.start=null; drawingState.el=null; saveSurface(active);}
 function enterDrawingMode(slideIndex){if(!liveDrawEnabled) return; drawingMode=true; drawingSlideIndex=slideIndex; if(drawSessionToolbar) drawSessionToolbar.hidden=false; render(); hideLaserPointer();}
 function exitDrawingMode(){drawingMode=false; drawingSlideIndex=-1; drawingState.drawing=false; drawingState.start=null; drawingState.el=null; if(drawSessionToolbar) drawSessionToolbar.hidden=true; render();}
-function downloadAnnotatedSlides(){const payload=JSON.parse(document.getElementById('deck-source').textContent);payload.presentationOptions=payload.presentationOptions||{};payload.presentationOptions.enableLiveDraw=liveDrawEnabled;payload.presentationOptions.seedAnnotations=liveDrawAnnotations;const json=JSON.stringify(payload).replace(/<\/script>/gi,'<\\/script>');const clone=document.documentElement.cloneNode(true);const scriptNode=clone.querySelector('#deck-source');if(scriptNode) scriptNode.textContent=json;const text='<!DOCTYPE html>\n'+clone.outerHTML;const blob=new Blob([text],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=((payload.deckTitle||'annotated_presentation').replace(/[^\w\-]+/g,'_')||'annotated_presentation')+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function downloadAnnotatedSlides(){
+  renderLiveDrawAnnotations();
+  if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){
+    try{
+      if(typeof window.MathJax.typesetClear==='function') window.MathJax.typesetClear(slideEls);
+      await window.MathJax.typesetPromise(slideEls);
+    }catch(err){
+      console.error(err);
+    }
+  }
+
+  const payload=JSON.parse(document.getElementById('deck-source').textContent);
+  payload.presentationOptions=payload.presentationOptions||{};
+  payload.presentationOptions.enableLiveDraw=liveDrawEnabled;
+  payload.presentationOptions.seedAnnotations=liveDrawAnnotations;
+
+  const styleText=Array.from(document.querySelectorAll('style')).map(s=>s.textContent||'').join('
+');
+  const slidesHtml=slideEls.map((slideEl,idx)=>{
+    const node=slideEl.cloneNode(true);
+    node.classList.add('active');
+    node.querySelectorAll('.slide-actions').forEach(el=>el.remove());
+    node.querySelectorAll('.slide-draw-surface').forEach(el=>el.classList.remove('active'));
+    node.querySelectorAll('.slides-button,.draw-button,.export-annotated-button').forEach(el=>el.remove());
+    return node.outerHTML;
+  }).join('
+');
+
+  const out='<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" />'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1.0" />'
+    + '<title>'+escapeHtml((payload.deckTitle||'Annotated presentation')+' — annotated slides')+'</title>'
+    + '<style>'+styleText+'
+'
+    + 'html,body{margin:0;min-height:100%;background:#eef2f7;color:#111;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}'
+    + '.annotated-shell{max-width:1400px;margin:0 auto;padding:24px;}'
+    + '.annotated-header{margin:0 0 20px 0;color:#111;}'
+    + '.annotated-header h1{margin:0 0 8px 0;font-size:2rem;line-height:1.1;}'
+    + '.annotated-header p{margin:0;color:rgba(17,17,17,.68);font-size:1rem;}'
+    + '.annotated-deck{display:grid;gap:28px;}'
+    + '.annotated-deck .deck-slide{display:block !important;position:relative !important;inset:auto !important;overflow:hidden !important;width:min(1280px,96vw);aspect-ratio:16/9;height:auto !important;min-height:0 !important;margin:0 auto;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.18);background:#fff;}'
+    + '.annotated-deck .slide-map,.annotated-deck .deck-toolbar,.annotated-deck .laser-pointer,.annotated-deck .draw-session-toolbar,.annotated-deck .slide-actions{display:none !important;}'
+    + '.annotated-deck .slide-annotation-layer{pointer-events:none !important;}'
+    + '.annotated-deck .slide-draw-surface{pointer-events:none !important;}'
+    + '</style></head><body><div class="annotated-shell"><div class="annotated-header"><h1>'
+    + escapeHtml(payload.deckTitle||'Annotated presentation')
+    + '</h1><p>Exported annotated slides. All slide drawings are baked into this file.</p></div><div class="annotated-deck">'
+    + slidesHtml
+    + '</div></div></body></html>';
+
+  const blob=new Blob([out],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=((payload.deckTitle||'annotated_presentation').replace(/[^\w\-]+/g,'_')||'annotated_presentation')+'_annotated.html';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
 function hideLaserPointer(){if(laserPointer)laserPointer.style.display='none';slideEls.forEach(el=>el.classList.remove('laser-active'));}
 function updateLaserPointer(evt){if(!laserPointer || !slideEls[active]) return;const slide = slideEls[active];const mapOpen = !!(slideMap && slideMap.classList.contains('open'));if(drawingMode || mapOpen){ hideLaserPointer(); return; }const r = slide.getBoundingClientRect();const inside = evt.clientX >= r.left && evt.clientX <= r.right && evt.clientY >= r.top && evt.clientY <= r.bottom;if(!inside){ hideLaserPointer(); return; }slide.classList.add('laser-active');laserPointer.style.display='block';laserPointer.style.transform='translate('+evt.clientX+'px,'+evt.clientY+'px)';}
 function render(){slideEls.forEach((el,i)=>{el.classList.toggle('active',i===active);if(i!==active) el.classList.remove('laser-active');});renderLiveDrawAnnotations();hideLaserPointer();if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
