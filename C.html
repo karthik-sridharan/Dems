@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>My HTML Presentation</title>
-<script id="deck-source" type="application/json">{"deckTitle":"My HTML Presentation","theme":{"name":"Default theme","bgColor":"#ffffff","fontColor":"#111111","accentColor":"#2f6fed","panelRadius":22,"titleScale":1,"beamerStyle":"classic","chromeColor":"#17365d","chromeTextColor":"#ffffff","sidebarWidth":118,"titleCaps":"0"},"presentationOptions":{"enableLiveDraw":true},"slides":[{"slideType":"title-center","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"CCC","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"Main points","content":"\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""},{"slideType":"single","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Concept slide","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"Main points","content":"\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""}]}</script>
+<script id="deck-source" type="application/json">{"deckTitle":"My HTML Presentation","theme":{"name":"Default theme","bgColor":"#ffffff","fontColor":"#111111","accentColor":"#2f6fed","panelRadius":22,"titleScale":1,"beamerStyle":"classic","chromeColor":"#17365d","chromeTextColor":"#ffffff","sidebarWidth":118,"titleCaps":"0"},"presentationOptions":{"enableLiveDraw":true},"slides":[{"slideType":"title-center","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"SSS","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"Main points","content":"\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""},{"slideType":"single","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Concept slide","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"Main points","content":"\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""}]}</script>
 <style>
 :root{--deck-bg:#060a16;--deck-panel:rgba(10,16,32,.82);--deck-text:#eef3ff}
 *{box-sizing:border-box}
@@ -48,9 +48,19 @@ body{color:var(--deck-text);overflow:hidden}
 .slide.style-annarbor,.deck-slide.style-annarbor{padding-top:4.8rem;padding-bottom:5rem}.slide.style-annarbor::before,.deck-slide.style-annarbor::before{content:'';position:absolute;left:0;top:0;right:0;height:64px;background:var(--chrome-fill,#c99a06)}.slide.style-annarbor::after,.deck-slide.style-annarbor::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--accent,#7a4f01)}.slide.style-annarbor h1,.slide.style-annarbor h2,.deck-slide.style-annarbor h1,.deck-slide.style-annarbor h2{color:#5b3c00}
 .slide.style-cambridgeus,.deck-slide.style-cambridgeus{padding-top:4.7rem;padding-bottom:5rem}.slide.style-cambridgeus::before,.deck-slide.style-cambridgeus::before{content:'';position:absolute;left:0;top:0;right:0;height:56px;background:linear-gradient(90deg,var(--accent,#c53030) 0 18px,var(--chrome-fill,#0f4c81) 18px 100%)}.slide.style-cambridgeus::after,.deck-slide.style-cambridgeus::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--chrome-fill,#0f4c81)}.slide.style-cambridgeus h1,.slide.style-cambridgeus h2,.deck-slide.style-cambridgeus h1,.deck-slide.style-cambridgeus h2{color:var(--chrome-fill,#0f4c81)}
 .slide.style-pittsburgh,.deck-slide.style-pittsburgh{padding-top:4.2rem}.slide.style-pittsburgh::before,.deck-slide.style-pittsburgh::before{content:'';position:absolute;left:0;top:0;right:0;height:16px;background:var(--chrome-fill,#2f6fed)}.slide.style-pittsburgh h1,.slide.style-pittsburgh h2,.deck-slide.style-pittsburgh h1,.deck-slide.style-pittsburgh h2{color:var(--chrome-fill,#2f6fed)}
-.slide-actions{position:absolute;top:1.2rem;right:1.2rem;display:flex;gap:.55rem;z-index:10}
-.slides-button,.draw-button,.export-annotated-button{border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.88);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
+.slide-actions{position:absolute;top:1.2rem;right:1.2rem;display:flex;gap:.55rem;z-index:10;flex-wrap:wrap;justify-content:flex-end}
+.slides-button,.draw-button,.export-annotated-button,.pdf-button{border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.88);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
 .slide-number{position:absolute;bottom:1.15rem;right:1.4rem;font-size:1rem;color:rgba(17,17,17,.62)}
+.pdf-modal[hidden]{display:none !important}
+.pdf-modal{position:fixed;inset:0;background:rgba(7,11,23,.46);display:grid;place-items:center;z-index:58;padding:1rem}
+.pdf-dialog{width:min(420px,92vw);background:#fff;color:#111;border-radius:18px;border:1px solid rgba(17,17,17,.14);box-shadow:0 24px 70px rgba(0,0,0,.28);padding:1rem;display:grid;gap:.85rem}
+.pdf-dialog h3{margin:0;font-size:1.2rem;color:#111}
+.pdf-dialog p{margin:0;color:rgba(17,17,17,.72);font-size:.95rem;line-height:1.45}
+.pdf-dialog select{font:inherit;padding:.55rem .7rem;border-radius:10px;border:1px solid rgba(17,17,17,.18);background:#fff}
+.pdf-dialog .row{display:flex;gap:.6rem;justify-content:flex-end}
+.pdf-dialog button{border:1px solid rgba(17,17,17,.16);background:#fff;color:#111;border-radius:10px;padding:.58rem .85rem;font:inherit;font-weight:700;cursor:pointer}
+.pdf-dialog button.primary{background:#17365d;color:#fff;border-color:#17365d}
+.pdf-status{min-height:1.2rem;font-size:.9rem;color:rgba(17,17,17,.7)}
 .slide-annotation-layer{position:absolute;inset:0;pointer-events:none;z-index:9}
 .slide-draw-surface{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
 .slide-draw-surface.active{pointer-events:auto;cursor:crosshair}
@@ -78,6 +88,8 @@ body{color:var(--deck-text);overflow:hidden}
 window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="deck-toolbar"><button class="nav-btn" id="prevBtn">◀</button><button class="nav-btn" id="nextBtn">▶</button></div>
@@ -96,6 +108,26 @@ window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$
   <label>Width <input id="drawWidth" type="range" min="1" max="16" value="3" /></label>
   <button type="button" id="drawClearBtn">Clear slide</button>
   <button type="button" class="primary" id="drawExitBtn">Exit drawing</button>
+</div>
+<div class="pdf-modal" id="pdfModal" hidden>
+  <div class="pdf-dialog">
+    <h3>Generate PDF</h3>
+    <p>Choose how many slides to place on each page. Slides containing custom HTML blocks will be skipped.</p>
+    <label>
+      <div style="font-weight:700;margin-bottom:.35rem">Slides per page</div>
+      <select id="pdfSlidesPerPage">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4" selected>4</option>
+        <option value="6">6</option>
+      </select>
+    </label>
+    <div class="pdf-status" id="pdfStatus">Ready.</div>
+    <div class="row">
+      <button type="button" id="pdfCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="pdfGenerateBtn">Generate PDF</button>
+    </div>
+  </div>
 </div>
 <div class="laser-pointer" id="laserPointer" aria-hidden="true"></div>
 <div class="deck" id="deck"></div>
@@ -130,7 +162,7 @@ function renderBlock(block,placeholderText){const resolvedMode=block.mode||'pane
 function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
 function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<div class="preview-title" data-preview-role="title" style="'+titleWrapperStyle(slide.titleStyle,heading)+'"><'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\n/g,'<br>')+'</'+heading+'></div>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='section-divider')return '<div class="section-divider-wrap"><div><div class="divider-kicker">'+escapeHtml(s.kicker||'Section')+'</div>'+titleHtml+'<div class="divider-line"></div><div class="divider-lede">'+escapeHtml(s.lede||'')+'</div></div></div>';if(['two-col','title-two-callouts','title-figure-explanation','comparison','image-left-text-right'].includes(s.slideType)){const layoutClass={ 'two-col':'layout-two-col','title-two-callouts':'layout-two-callouts','title-figure-explanation':'layout-figure-explanation','comparison':'layout-comparison','image-left-text-right':'layout-image-left-text-right'}[s.slideType]||'layout-two-col';const leftHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.leftBlocks[0]&&s.leftBlocks[0].title)||'Left')+'</div>':'';const rightHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.rightBlocks[0]&&s.rightBlocks[0].title)||'Right')+'</div>':'';return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body '+layoutClass+'"><div class="col">'+leftHead+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+rightHead+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}if(s.slideType==='theorem-proof'){const theorem=s.leftBlocks[0]||{mode:'panel',content:'\paragraph{Theorem} State the result here.'};const proof=s.leftBlocks[1]||{mode:'panel',content:'\paragraph{Proof sketch} Add the argument here.'};return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col theorem-proof-wrap"><div class="named-box"><div class="named-box-head">'+escapeHtml(theorem.title||'Theorem')+'</div><div class="named-box-body">'+renderBlock({...theorem,title:''},'Theorem')+'</div></div><div class="named-box"><div class="named-box-head">'+escapeHtml(proof.title||'Proof')+'</div><div class="named-box-body">'+renderBlock({...proof,title:''},'Proof')+'</div></div></div></div>';}if(s.slideType==='algorithm-layout'){const algo=s.leftBlocks[0]||{mode:'pseudocode',content:'Algorithm goes here'};const notes=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col algorithm-wrap">'+renderBlock(algo,'Algorithm')+(notes.length?renderBlocks(notes,'Notes'):'')+'</div></div>';}if(s.slideType==='full-width-figure-caption'){const fig=s.leftBlocks[0]||{mode:'placeholder',content:'Add a figure block'};const captionBlocks=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col full-figure-wrap">'+renderBlock(fig,'Figure')+(captionBlocks.length?'<div class="figure-caption">'+renderBlocks(captionBlocks,'Caption')+'</div>':'')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
 const deck=document.getElementById('deck');const slideMap=document.getElementById('slideMap');const slideMapList=document.getElementById('slideMapList');const laserPointer=document.getElementById('laserPointer');document.getElementById('deckTitle').textContent=deckPayload.deckTitle||'Slides';
-deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');const styleCls=' style-'+String((deckPayload.theme&&deckPayload.theme.beamerStyle)||'classic').replace(/[^a-z0-9_-]/gi,'').toLowerCase();const actionHtml='<div class="slide-actions"><button class="slides-button" type="button">Slides</button>'+(liveDrawEnabled?'<button class="draw-button" type="button">Draw</button><button class="export-annotated-button" type="button">Export annotated slides</button>':'')+'</div>';return '<section class="'+cls+styleCls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'">'+actionHtml+'<div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'<div class="slide-annotation-layer" data-annotation-layer="'+idx+'"><svg class="slide-draw-surface" data-draw-surface="'+idx+'" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-label="Slide annotation layer"></svg></div></section>';}).join('\n');
+deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');const styleCls=' style-'+String((deckPayload.theme&&deckPayload.theme.beamerStyle)||'classic').replace(/[^a-z0-9_-]/gi,'').toLowerCase();const actionHtml='<div class="slide-actions"><button class="slides-button" type="button">Slides</button>'+(liveDrawEnabled?'<button class="draw-button" type="button">Draw</button><button class="export-annotated-button" type="button">Export annotated slides</button>':'')+'<button class="pdf-button" type="button">Generate PDF</button></div>';return '<section class="'+cls+styleCls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'">'+actionHtml+'<div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'<div class="slide-annotation-layer" data-annotation-layer="'+idx+'"><svg class="slide-draw-surface" data-draw-surface="'+idx+'" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-label="Slide annotation layer"></svg></div></section>';}).join('\n');
 slideMapList.innerHTML=deckPayload.slides.map((slide,idx)=>'<button type="button" class="slide-map-item" data-go="'+idx+'"><span>'+(idx+1)+'.</span><span>'+escapeHtml(slide.title||('Slide '+(idx+1)))+'</span></button>').join('\n');
 let active=0;
 let drawingMode=false;
@@ -143,6 +175,11 @@ const drawColor=document.getElementById('drawColor');
 const drawWidth=document.getElementById('drawWidth');
 const drawClearBtn=document.getElementById('drawClearBtn');
 const drawExitBtn=document.getElementById('drawExitBtn');
+const pdfModal=document.getElementById('pdfModal');
+const pdfSlidesPerPage=document.getElementById('pdfSlidesPerPage');
+const pdfCancelBtn=document.getElementById('pdfCancelBtn');
+const pdfGenerateBtn=document.getElementById('pdfGenerateBtn');
+const pdfStatus=document.getElementById('pdfStatus');
 function fitFiguresInSlide(slideEl){if(!slideEl)return;const figures=Array.from(slideEl.querySelectorAll('.figure-embed'));if(!figures.length)return;const isManual=embed=>{const box=embed&&embed.querySelector('.figure-box');return !!(box&&(box.dataset.userMoved==='1'||box.dataset.userSized==='1'));};figures.forEach(embed=>{if(isManual(embed))return;embed.style.maxHeight='';embed.style.maxWidth='';embed.style.height='';embed.style.width='';const media=embed.querySelector('img,svg,canvas,iframe');if(media){media.style.maxHeight='';media.style.maxWidth='';media.style.height='';media.style.width='';}});const maxHeight=slideEl.clientHeight||window.innerHeight||900;let guard=0;while(slideEl.scrollHeight>maxHeight+2&&guard<16){const overflow=slideEl.scrollHeight-maxHeight;const candidates=figures.map(embed=>{if(isManual(embed))return null;const media=embed.querySelector('img,svg,canvas,iframe');const rect=(media||embed).getBoundingClientRect();return {embed,media,h:rect.height||0};}).filter(x=>x&&x.h>40).sort((a,b)=>b.h-a.h);if(!candidates.length)break;const c=candidates[0];const current=parseFloat((c.media&&c.media.style.maxHeight)||c.h);const reduce=Math.min(Math.max(overflow+8,24),current*0.35);const next=Math.max(70,current-reduce);c.embed.style.maxHeight=(next+12)+'px';if(c.media)c.media.style.maxHeight=next+'px';guard+=1;}}
 function fitFiguresIn(root){(root||document).querySelectorAll('.deck-slide.active,.print-cell .slide,.slide').forEach(fitFiguresInSlide);}
 function getDrawSurface(slideIndex){return document.querySelector('.slide-draw-surface[data-draw-surface="'+slideIndex+'"]');}
@@ -154,6 +191,120 @@ function updateShape(evt){if(!drawingState.drawing || drawingSlideIndex!==active
 function endShape(){if(!drawingState.drawing) return; drawingState.drawing=false; drawingState.start=null; drawingState.el=null; saveSurface(active);}
 function enterDrawingMode(slideIndex){if(!liveDrawEnabled) return; drawingMode=true; drawingSlideIndex=slideIndex; if(drawSessionToolbar) drawSessionToolbar.hidden=false; render(); hideLaserPointer();}
 function exitDrawingMode(){drawingMode=false; drawingSlideIndex=-1; drawingState.drawing=false; drawingState.start=null; drawingState.el=null; if(drawSessionToolbar) drawSessionToolbar.hidden=true; render();}
+
+function slideHasCustomHtml(slide){
+  const s = normalizeSlide(slide);
+  const all = [].concat(s.leftBlocks || [], s.rightBlocks || []);
+  return all.some(block => String((block && block.mode) || 'panel') === 'custom');
+}
+function getEligiblePdfSlideIndices(){
+  return (deckPayload.slides || []).map((slide, idx) => slideHasCustomHtml(slide) ? null : idx).filter(idx => idx !== null);
+}
+function getPdfLayout(slidesPerPage){
+  const n = Number(slidesPerPage) || 1;
+  if(n === 2) return { rows: 1, cols: 2 };
+  if(n === 4) return { rows: 2, cols: 2 };
+  if(n === 6) return { rows: 2, cols: 3 };
+  return { rows: 1, cols: 1 };
+}
+function setPdfStatus(msg){ if(pdfStatus) pdfStatus.textContent = msg; }
+function openPdfModal(){ if(pdfModal){ setPdfStatus('Ready.'); pdfModal.hidden = false; } }
+function closePdfModal(){ if(pdfModal){ pdfModal.hidden = true; setPdfStatus('Ready.'); } }
+async function ensurePdfLibraries(){
+  const start = Date.now();
+  while(Date.now() - start < 8000){
+    if(window.html2canvas && window.jspdf && window.jspdf.jsPDF) return true;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return false;
+}
+async function generatePdfFromSlides(slidesPerPage){
+  if(drawingMode) exitDrawingMode();
+  closePdfModal();
+  const ok = await ensurePdfLibraries();
+  if(!ok){ alert('PDF libraries did not load. Check your internet connection and try again.'); return; }
+
+  const eligible = getEligiblePdfSlideIndices();
+  if(!eligible.length){ alert('No slides are eligible for PDF export. Slides with custom HTML blocks are skipped.'); return; }
+
+  renderLiveDrawAnnotations();
+  if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+    try{
+      if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear(slideEls);
+      await window.MathJax.typesetPromise(slideEls);
+    }catch(err){ console.error(err); }
+  }
+
+  const stage = document.createElement('div');
+  stage.style.position = 'fixed';
+  stage.style.left = '-20000px';
+  stage.style.top = '0';
+  stage.style.width = '1600px';
+  stage.style.pointerEvents = 'none';
+  stage.style.zIndex = '-1';
+  document.body.appendChild(stage);
+
+  const canvases = [];
+  try{
+    for(let i = 0; i < eligible.length; i += 1){
+      const slideIndex = eligible[i];
+      setPdfStatus('Rendering slide ' + (i + 1) + ' of ' + eligible.length + '…');
+      const clone = slideEls[slideIndex].cloneNode(true);
+      clone.classList.add('active');
+      clone.style.display = 'block';
+      clone.style.position = 'relative';
+      clone.style.inset = 'auto';
+      clone.style.width = '1600px';
+      clone.style.height = '900px';
+      clone.style.minHeight = '900px';
+      clone.style.overflow = 'hidden';
+      clone.querySelectorAll('.slide-actions,.slide-map,.deck-toolbar,.laser-pointer,.draw-session-toolbar,.pdf-modal').forEach(el => el.remove());
+      clone.querySelectorAll('.slide-draw-surface').forEach(el => el.classList.remove('active'));
+      stage.innerHTML = '';
+      stage.appendChild(clone);
+      if(window.MathJax && typeof window.MathJax.typesetPromise === 'function'){
+        try{
+          if(typeof window.MathJax.typesetClear === 'function') window.MathJax.typesetClear([clone]);
+          await window.MathJax.typesetPromise([clone]);
+        }catch(err){ console.error(err); }
+      }
+      const canvas = await window.html2canvas(clone, {backgroundColor:'#ffffff', scale:2, useCORS:true});
+      canvases.push(canvas);
+    }
+  } finally {
+    stage.remove();
+  }
+
+  setPdfStatus('Building PDF…');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'letter', compress:true });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 18;
+  const gap = 12;
+  const layout = getPdfLayout(slidesPerPage);
+  const cellW = (pageW - 2 * margin - (layout.cols - 1) * gap) / layout.cols;
+  const cellH = (pageH - 2 * margin - (layout.rows - 1) * gap) / layout.rows;
+
+  canvases.forEach((canvas, idx) => {
+    if(idx > 0 && idx % (Number(slidesPerPage) || 1) === 0) doc.addPage('letter', 'landscape');
+    const slot = idx % (Number(slidesPerPage) || 1);
+    const row = Math.floor(slot / layout.cols);
+    const col = slot % layout.cols;
+    let drawW = cellW;
+    let drawH = drawW * 9 / 16;
+    if(drawH > cellH){
+      drawH = cellH;
+      drawW = drawH * 16 / 9;
+    }
+    const x = margin + col * (cellW + gap) + (cellW - drawW) / 2;
+    const y = margin + row * (cellH + gap) + (cellH - drawH) / 2;
+    doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
+  });
+
+  const filename = ((deckPayload.deckTitle || 'presentation').replace(/[^w-]+/g,'_') || 'presentation') + '_' + String(slidesPerPage || 1) + 'up.pdf';
+  doc.save(filename);
+}
 async function downloadAnnotatedSlides(){
   const payload=JSON.parse(document.getElementById('deck-source').textContent);
   payload.presentationOptions=payload.presentationOptions||{};
@@ -188,7 +339,7 @@ function hideLaserPointer(){if(laserPointer)laserPointer.style.display='none';sl
 function updateLaserPointer(evt){if(!laserPointer || !slideEls[active]) return;const slide = slideEls[active];const mapOpen = !!(slideMap && slideMap.classList.contains('open'));if(drawingMode || mapOpen){ hideLaserPointer(); return; }const r = slide.getBoundingClientRect();const inside = evt.clientX >= r.left && evt.clientX <= r.right && evt.clientY >= r.top && evt.clientY <= r.bottom;if(!inside){ hideLaserPointer(); return; }slide.classList.add('laser-active');laserPointer.style.display='block';laserPointer.style.transform='translate('+evt.clientX+'px,'+evt.clientY+'px)';}
 function render(){slideEls.forEach((el,i)=>{el.classList.toggle('active',i===active);if(i!==active) el.classList.remove('laser-active');});renderLiveDrawAnnotations();hideLaserPointer();if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
 function go(i){if(i<0||i>=slideEls.length)return;active=i;if(drawingMode) drawingSlideIndex=active;render();slideMap.classList.remove('open');}
-document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));if(liveDrawEnabled){document.querySelectorAll('.draw-button').forEach((btn,idx)=>btn.addEventListener('click',()=>{ if(drawingMode && drawingSlideIndex===idx) exitDrawingMode(); else { active=idx; enterDrawingMode(idx); } }));document.querySelectorAll('.export-annotated-button').forEach(btn=>btn.addEventListener('click',downloadAnnotatedSlides));}document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));if(drawClearBtn) drawClearBtn.addEventListener('click',()=>{ const svg=getDrawSurface(active); if(svg){ svg.innerHTML=''; saveSurface(active); } });if(drawExitBtn) drawExitBtn.addEventListener('click',()=>exitDrawingMode());deck.addEventListener('pointerdown',evt=>{if(!drawingMode) return;const svg=getDrawSurface(active);if(!svg) return;const hitShape=evt.target.closest('[data-draw-shape]');if(drawTool.value==='erase' && hitShape){ beginShape(evt); return; }if(evt.target===svg) beginShape(evt);});window.addEventListener('pointermove',evt=>{ if(drawingMode && drawingState.drawing){ updateShape(evt); return; } updateLaserPointer(evt); });window.addEventListener('pointerup',()=>endShape());window.addEventListener('pointercancel',()=>endShape());window.addEventListener('mousemove', updateLaserPointer);window.addEventListener('mouseleave', hideLaserPointer);window.addEventListener('blur', ()=>{ endShape(); hideLaserPointer(); });slideMap.addEventListener('mouseenter', hideLaserPointer);document.querySelectorAll('.deck-slide').forEach(slide=>slide.addEventListener('mouseleave', ()=>{ if(!drawingMode) hideLaserPointer(); }));window.addEventListener('keydown',e=>{if(e.key==='Escape' && drawingMode){ e.preventDefault(); exitDrawingMode(); return; }if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape') slideMap.classList.remove('open');});render();
+document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));if(liveDrawEnabled){document.querySelectorAll('.draw-button').forEach((btn,idx)=>btn.addEventListener('click',()=>{ if(drawingMode && drawingSlideIndex===idx) exitDrawingMode(); else { active=idx; enterDrawingMode(idx); } }));document.querySelectorAll('.export-annotated-button').forEach(btn=>btn.addEventListener('click',downloadAnnotatedSlides));}document.querySelectorAll('.pdf-button').forEach(btn=>btn.addEventListener('click',openPdfModal));if(pdfCancelBtn) pdfCancelBtn.addEventListener('click',closePdfModal);if(pdfGenerateBtn) pdfGenerateBtn.addEventListener('click',()=>generatePdfFromSlides(Number(pdfSlidesPerPage && pdfSlidesPerPage.value || 4)));document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));if(drawClearBtn) drawClearBtn.addEventListener('click',()=>{ const svg=getDrawSurface(active); if(svg){ svg.innerHTML=''; saveSurface(active); } });if(drawExitBtn) drawExitBtn.addEventListener('click',()=>exitDrawingMode());deck.addEventListener('pointerdown',evt=>{if(pdfModal && !pdfModal.hidden && evt.target===pdfModal) closePdfModal(); if(!drawingMode) return;const svg=getDrawSurface(active);if(!svg) return;const hitShape=evt.target.closest('[data-draw-shape]');if(drawTool.value==='erase' && hitShape){ beginShape(evt); return; }if(evt.target===svg) beginShape(evt);});window.addEventListener('pointermove',evt=>{ if(drawingMode && drawingState.drawing){ updateShape(evt); return; } updateLaserPointer(evt); });window.addEventListener('pointerup',()=>endShape());window.addEventListener('pointercancel',()=>endShape());window.addEventListener('mousemove', updateLaserPointer);window.addEventListener('mouseleave', hideLaserPointer);window.addEventListener('blur', ()=>{ endShape(); hideLaserPointer(); });slideMap.addEventListener('mouseenter', hideLaserPointer);document.querySelectorAll('.deck-slide').forEach(slide=>slide.addEventListener('mouseleave', ()=>{ if(!drawingMode) hideLaserPointer(); }));window.addEventListener('keydown',e=>{if(e.key==='Escape' && drawingMode){ e.preventDefault(); exitDrawingMode(); return; }if(e.key==='Escape' && pdfModal && !pdfModal.hidden){ e.preventDefault(); closePdfModal(); return; }if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape') slideMap.classList.remove('open');});render();
 </script>
 </body>
 </html>
