@@ -371,7 +371,25 @@
   }
   .subpane{display:none}
   .subpane.active{display:grid;gap:1rem}
-  @media (max-width:1150px){ .page{grid-template-columns:1fr} }
+
+  .editor-shell{max-height:calc(100svh - 1.2rem);overflow:hidden}
+  .editor-intro h1{font-size:2rem}
+  .editor-intro .help{max-width:58ch;margin-top:.35rem}
+  .mode-bar{position:sticky;top:0;z-index:6;padding:.15rem 0 .2rem;background:linear-gradient(180deg, rgba(10,16,32,.98), rgba(10,16,32,.92))}
+  .mode-bar .left-tab{border-radius:999px;padding:.58rem .95rem}
+  .editor-shell>.left-pane.active{overflow:auto;padding-right:.15rem}
+  .slide-rail-shell{margin-top:.35rem;border-top:1px solid rgba(255,255,255,.10);padding-top:.85rem;display:grid;gap:.7rem}
+  .slide-rail-header{display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+  .slide-rail-content{display:grid;gap:.7rem;max-height:280px;overflow:auto;padding-right:.15rem}
+  .slide-rail-shell.collapsed .slide-rail-content{display:none}
+  .slide-rail-shell .panel{margin:0}
+  .panel.preview-wrap{display:grid;gap:.95rem}
+  .panel.preview-wrap>.panel{margin:0}
+  .preview-header h2{font-size:1.15rem}
+  .preview-wrap .smallcaps{color:var(--blue)}
+  .subtabs{position:sticky;top:3.5rem;background:linear-gradient(180deg, rgba(10,16,32,.98), rgba(10,16,32,.88));padding:.15rem 0 .2rem;z-index:5}
+
+  @media (max-width:1150px){ .page{grid-template-columns:1fr} .editor-shell{max-height:none} .subtabs{top:0} }
   @media (max-width:900px){
     .slide{min-height:0;padding:1.5rem 1.2rem 2rem}
     .slide.two-col .slide-body{grid-template-columns:1fr}
@@ -394,30 +412,29 @@ window.MathJax = {
 </head>
 <body data-beamer-style="${escapeHtml((payload.theme&&payload.theme.beamerStyle)||"classic")}">
 <div class="page">
-  <div class="panel stack">
-    <div>
+  <div class="panel stack editor-shell">
+    <div class="editor-intro">
       <div class="smallcaps">Presentation generator</div>
-      <h1>Build slides or a full deck</h1>
-      <p class="help">Full editor with dropdowns, presets, live preview, slide list, <b>Load generated HTML</b>, custom HTML isolation, and <code>pseudocode-latex</code>. New: each column can now contain <b>multiple stacked content boxes</b>.</p>
+      <h1>Deck editor</h1>
+      <p class="help">Work in focused modes on the left, keep preview and inspector on the right, and use the slide rail for quick deck navigation.</p>
     </div>
 
 
-    <div class="left-tabs" id="leftTabs">
-      <button class="left-tab active" type="button" data-left-tab="edit">Edit</button>
-      <button class="left-tab" type="button" data-left-tab="presets">Presets</button>
-      <button class="left-tab" type="button" data-left-tab="slides">Slides</button>
-      <button class="left-tab" type="button" data-left-tab="styles">Styles</button>
-      <button class="left-tab" type="button" data-left-tab="animate">Animate</button>
-      <button class="left-tab" type="button" data-left-tab="tools">Tools</button>
+    <div class="left-tabs mode-bar" id="leftTabs">
       <button class="left-tab" type="button" data-left-tab="files">Files</button>
+      <button class="left-tab active" type="button" data-left-tab="edit">Slides</button>
+      <button class="left-tab" type="button" data-left-tab="presets">Insert</button>
+      <button class="left-tab" type="button" data-left-tab="styles">Design</button>
+      <button class="left-tab" type="button" data-left-tab="tools">Present</button>
+      <button class="left-tab" type="button" data-left-tab="slides">Organize</button>
       <button class="left-tab" type="button" data-left-tab="help">Help</button>
     </div>
 
     <div class="left-pane active" data-left-pane="edit">
 
       <div class="subtabs" data-subtab-group="edit">
-        <button class="subtab active" type="button" data-subtab="edit:slide">Slide setup</button>
-        <button class="subtab" type="button" data-subtab="edit:blocks">Content blocks</button>
+        <button class="subtab active" type="button" data-subtab="edit:slide">Slide</button>
+        <button class="subtab" type="button" data-subtab="edit:blocks">Content</button>
       </div>
       <div class="subpane active" data-subpane="edit:slide">
 <div class="field-grid">
@@ -595,9 +612,9 @@ window.MathJax = {
     <div class="left-pane" data-left-pane="slides">
 
       <div class="subtabs" data-subtab-group="slides">
-        <button class="subtab active" type="button" data-subtab="slides:deck">Deck</button>
-        <button class="subtab" type="button" data-subtab="slides:snippet">Snippet</button>
-        <button class="subtab" type="button" data-subtab="slides:theme">Master theme</button>
+        <button class="subtab active" type="button" data-subtab="slides:deck">Actions</button>
+        <button class="subtab" type="button" data-subtab="slides:snippet">JSON</button>
+        <button class="subtab" type="button" data-subtab="slides:theme">Theme</button>
       </div>
       <div class="subpane active" data-subpane="slides:deck">
 <div class="panel" style="padding:.95rem">
@@ -614,7 +631,7 @@ window.MathJax = {
       </div>
 <div class="panel" style="padding:.9rem">
       <div class="preview-header">
-        <h2>Deck slides</h2>
+        <h2>Slide rail</h2>
         <span class="badge" id="deckCount">0 slides</span>
       </div>
       <div class="deck-list" id="deckList"></div>
@@ -763,52 +780,6 @@ window.MathJax = {
       </div>
     </div>
 
-    
-    <div class="left-pane" data-left-pane="animate">
-      <div class="panel" style="padding:.95rem">
-        <div class="smallcaps">Animation tools</div>
-        <div class="help" style="margin-top:.45rem">Select a title, text block, or figure in the preview, then apply build-in / build-out settings. For text blocks, you can also reveal items one at a time on click in the exported presentation.</div>
-        <div class="field-grid" style="margin-top:.7rem">
-          <div class="field full">
-            <label for="animateTargetLabel">Selected object</label>
-            <input id="animateTargetLabel" value="No object selected" readonly />
-          </div>
-          <div class="field">
-            <label for="animateBuildIn">Build in</label>
-            <select id="animateBuildIn">
-              <option value="none" selected>None</option>
-              <option value="appear">Appear</option>
-              <option value="fade">Fade in</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="animateBuildOut">Build out</label>
-            <select id="animateBuildOut">
-              <option value="none" selected>None</option>
-              <option value="disappear">Disappear</option>
-              <option value="fade">Fade out</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="animateStepMode">Reveal mode</label>
-            <select id="animateStepMode">
-              <option value="all" selected>Whole object</option>
-              <option value="by-item">One item at a time</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="animateOrder">Animation order</label>
-            <input id="animateOrder" type="number" min="0" step="1" value="0" />
-          </div>
-        </div>
-        <div class="row" style="margin-top:.75rem">
-          <button class="btn mini" type="button" id="applyAnimationBtn">Apply animation</button>
-          <button class="btn mini" type="button" id="clearAnimationBtn">Clear animation</button>
-        </div>
-        <div class="help" style="margin-top:.55rem">In the exported presentation, clicking the slide or pressing Space / Right Arrow will reveal the next animated item before moving to the next slide.</div>
-      </div>
-    </div>
-
     <div class="left-pane" data-left-pane="tools">
 
       <div class="subtabs" data-subtab-group="tools">
@@ -935,6 +906,17 @@ window.MathJax = {
 
     </div>
 
+    <div class="slide-rail-shell" id="slideRailShell">
+      <div class="slide-rail-header">
+        <div>
+          <div class="smallcaps">Slide rail</div>
+          <div class="help" style="margin-top:.15rem">Quick navigation, reorder, and selection.</div>
+        </div>
+        <button class="btn mini" type="button" id="toggleSlideRailBtn">Hide rail</button>
+      </div>
+      <div class="slide-rail-content" id="slideRailMount"></div>
+    </div>
+
   <div class="panel preview-wrap">
     <div class="preview-header">
       <div>
@@ -946,11 +928,11 @@ window.MathJax = {
     <div class="preview-viewport"><div class="preview-stage"><div class="preview-frame" id="previewFrame"><div class="preview-grid-overlay" id="previewGridOverlay"></div><div class="preview-margin-overlay" id="previewMarginOverlay"><div class="preview-margin-box"></div><div class="preview-center-v"></div><div class="preview-center-h"></div></div><div class="preview-scale" id="previewScale"><div id="preview"></div></div></div></div></div>
 
     <div class="panel" style="padding:.95rem">
-      <div class="smallcaps">Selected block properties</div>
+      <div class="smallcaps">Selected item inspector</div>
       <div class="help" style="margin-top:.45rem">Click any content block in the preview to edit its style. Custom HTML inside iframes may not fully honor typography changes.</div>
       <div class="preview-block-props" style="margin-top:.7rem">
         <div class="field">
-          <label for="previewBlockLabel">Selected block</label>
+          <label for="previewBlockLabel">Selected item</label>
           <input id="previewBlockLabel" value="No block selected" readonly />
         </div>
         <div class="field-grid">
@@ -1095,19 +1077,12 @@ const previewBlockFontScale = document.getElementById('previewBlockFontScale');
 const previewBlockFontFamily = document.getElementById('previewBlockFontFamily');
 const previewBlockFontColor = document.getElementById('previewBlockFontColor');
 const previewBlockBulletType = document.getElementById('previewBlockBulletType');
-const animateTargetLabel = document.getElementById('animateTargetLabel');
-const animateBuildIn = document.getElementById('animateBuildIn');
-const animateBuildOut = document.getElementById('animateBuildOut');
-const animateStepMode = document.getElementById('animateStepMode');
-const animateOrder = document.getElementById('animateOrder');
 
 let slides = [];
 let activeIndex = -1;
 let draftBlocks = { left: [], right: [] };
 let draftTitleStyle = normalizeBlockStyle();
-let draftTitleAnimation = normalizeAnimation();
 let selectedBlock = { left: -1, right: -1 };
-let selectedPreviewBlockRef = null;
 let syncingPreviewFigures = false;
 const AUTOSAVE_KEY = 'html-presentation-generator-autosave-v5';
 const BLOCK_LIBRARY_KEY = 'html-presentation-generator-block-library-v1';
@@ -1555,18 +1530,6 @@ function normalizeBlockStyle(style){
     bulletType: s.bulletType || 'disc'
   };
 }
-function normalizeAnimation(anim){
-  const a = anim || {};
-  const buildIn = ['none','appear','fade'].includes(a.buildIn) ? a.buildIn : 'none';
-  const buildOut = ['none','disappear','fade'].includes(a.buildOut) ? a.buildOut : 'none';
-  const stepMode = ['all','by-item'].includes(a.stepMode) ? a.stepMode : 'all';
-  const order = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
-  return { buildIn, buildOut, stepMode, order };
-}
-function animationDataAttrs(anim){
-  const a = normalizeAnimation(anim);
-  return ' data-build-in="' + escapeAttr(a.buildIn) + '" data-build-out="' + escapeAttr(a.buildOut) + '" data-step-mode="' + escapeAttr(a.stepMode) + '" data-anim-order="' + escapeAttr(String(a.order)) + '"';
-}
 function blockWrapperStyle(block){
   const s = normalizeBlockStyle((block && block.style) || {});
   return '--block-font-scale:' + s.fontScale + ';--block-font-family:' + escapeAttr(s.fontFamily) + ';--block-font-color:' + s.fontColor + ';--block-bullet-type:' + s.bulletType + ';';
@@ -1583,16 +1546,14 @@ function normalizeBlock(block){
       mode: 'custom',
       title: block.title || 'Legacy diagram',
       content: diagramStandaloneDocument(block.content || diagramMarkup()),
-      style: normalizeBlockStyle(block.style),
-      animation: normalizeAnimation(block.animation)
+      style: normalizeBlockStyle(block.style)
     };
   }
   return {
     mode: mode,
     title: block.title || '',
     content: block.content || '',
-    style: normalizeBlockStyle(block.style),
-    animation: normalizeAnimation(block.animation)
+    style: normalizeBlockStyle(block.style)
   };
 }
 function normalizeSlide(slide){
@@ -1609,8 +1570,6 @@ function normalizeSlide(slide){
   }
   out.leftBlocks = leftBlocks;
   out.rightBlocks = rightBlocks;
-  out.titleStyle = normalizeBlockStyle(out.titleStyle);
-  out.titleAnimation = normalizeAnimation(out.titleAnimation);
   return out;
 }
 function renderBlock(block, placeholderText, meta){
@@ -1629,7 +1588,7 @@ function renderBlock(block, placeholderText, meta){
     inner = '<div class="rich">' + parseStructuredText(raw, richMeta) + '</div>';
   }
   const attrs = meta ? ' data-column="' + escapeAttr(meta.column || 'left') + '" data-block-index="' + meta.blockIndex + '" data-block-mode="' + escapeAttr(resolvedMode) + '"' : '';
-  return '<div class="preview-block"' + attrs + animationDataAttrs(block.animation) + ' style="' + blockWrapperStyle(block) + '">' + inner + '</div>';
+  return '<div class="preview-block"' + attrs + ' style="' + blockWrapperStyle(block) + '">' + inner + '</div>';
 }
 function renderBlocks(blocks, placeholder, columnName){
   const list = blocks && blocks.length ? blocks : [{ mode:'placeholder', content: placeholder || 'Add a block' }];
@@ -1637,7 +1596,7 @@ function renderBlocks(blocks, placeholder, columnName){
 }
 function buildSlideInner(slide){
   const heading = slide.headingLevel || 'h2';
-  const titleHtml = '<div class="preview-title" data-preview-role="title"' + animationDataAttrs(slide.titleAnimation) + ' style="' + titleWrapperStyle(slide.titleStyle, heading) + '"><' + heading + '>' + escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>') + '</' + heading + '></div>';
+  const titleHtml = '<div class="preview-title" data-preview-role="title" style="' + titleWrapperStyle(slide.titleStyle, heading) + '"><' + heading + '>' + escapeHtml(slide.title || 'Untitled slide').replace(/\n/g,'<br>') + '</' + heading + '></div>';
   const kickerHtml = slide.kicker ? '<div class="kicker">' + escapeHtml(slide.kicker) + '</div>' : '';
   const ledeHtml = slide.lede ? '<div class="lede">' + escapeHtml(slide.lede) + '</div>' : '';
   const s = normalizeSlide(slide);
@@ -1675,7 +1634,6 @@ function currentDraftSlide(){
     kicker: fields.kicker.value,
     lede: fields.lede.value,
     titleStyle: clone(draftTitleStyle),
-    titleAnimation: clone(draftTitleAnimation),
     leftBlocks: leftBlocks,
     rightBlocks: fields.slideType.value === 'two-col' ? rightBlocks : [],
     notesTitle: fields.notesTitle.value,
@@ -1695,7 +1653,6 @@ function applySlideToForm(slide){
   fields.notesTitle.value = s.notesTitle || 'Speaker notes';
   fields.notesBody.value = s.notesBody || '';
   draftTitleStyle = normalizeBlockStyle(s.titleStyle);
-  draftTitleAnimation = normalizeAnimation(s.titleAnimation);
   draftBlocks = { left: clone(s.leftBlocks || []), right: clone(s.rightBlocks || []) };
   selectedBlock = { left: draftBlocks.left.length ? 0 : -1, right: draftBlocks.right.length ? 0 : -1 };
   if(fields.slideType.value !== 'two-col') selectedBlock.right = -1;
@@ -1740,8 +1697,7 @@ function currentBlockFromEditor(){
     mode: blockFields.mode.value,
     title: blockFields.title.value,
     content: blockFields.content.value,
-    style: normalizeBlockStyle(existing && existing.style),
-    animation: normalizeAnimation(existing && existing.animation)
+    style: normalizeBlockStyle(existing && existing.style)
   };
 }
 function syncPreviewFiguresToDraft(updateSnippet = true){
@@ -2439,7 +2395,7 @@ function serializeFigureBox(box){
       const objFit = escapeAttr((img.style.objectFit || imageFigure.dataset.objectFit || 'contain'));
       const safeSrc = escapeAttr(img.getAttribute('src') || '');
       const safeAlt = escapeAttr(img.getAttribute('alt') || '');
-      return '<figure data-figure-kind="image" data-box-x="' + escapeAttr(String(Math.round(t.x))) + '" data-box-y="' + escapeAttr(String(Math.round(t.y))) + '" data-box-w="' + escapeAttr(String(Math.round(w))) + '" data-box-h="' + escapeAttr(String(Math.round(h))) + '" data-original-w="' + escapeAttr(String(Math.round(ow))) + '" data-original-h="' + escapeAttr(String(Math.round(oh))) + '" data-lock-aspect="' + lockAspect + '" data-user-moved="' + userMoved + '" data-user-sized="' + userSized + '" data-crop="' + crop + '" data-z-index="' + escapeAttr(z) + '" data-object-fit="' + objFit + '" data-build-in="' + escapeAttr(box.dataset.buildIn || 'none') + '" data-build-out="' + escapeAttr(box.dataset.buildOut || 'none') + '" data-step-mode="' + escapeAttr(box.dataset.stepMode || 'all') + '" data-anim-order="' + escapeAttr(box.dataset.animOrder || '0') + '"><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
+      return '<figure data-figure-kind="image" data-box-x="' + escapeAttr(String(Math.round(t.x))) + '" data-box-y="' + escapeAttr(String(Math.round(t.y))) + '" data-box-w="' + escapeAttr(String(Math.round(w))) + '" data-box-h="' + escapeAttr(String(Math.round(h))) + '" data-original-w="' + escapeAttr(String(Math.round(ow))) + '" data-original-h="' + escapeAttr(String(Math.round(oh))) + '" data-lock-aspect="' + lockAspect + '" data-user-moved="' + userMoved + '" data-user-sized="' + userSized + '" data-crop="' + crop + '" data-z-index="' + escapeAttr(z) + '" data-object-fit="' + objFit + '"><img src="' + safeSrc + '" alt="' + safeAlt + '" /></figure>';
     }
   }
   const clean = box.cloneNode(true);
@@ -2475,10 +2431,6 @@ function applySerializedImageState(box){
   box.dataset.crop = fig.dataset.crop || '0';
   box.dataset.zIndex = fig.dataset.zIndex || '1';
   box.style.zIndex = box.dataset.zIndex;
-  box.dataset.buildIn = fig.dataset.buildIn || 'none';
-  box.dataset.buildOut = fig.dataset.buildOut || 'none';
-  box.dataset.stepMode = fig.dataset.stepMode || 'all';
-  box.dataset.animOrder = fig.dataset.animOrder || '0';
   box.style.overflow = box.dataset.crop === '1' ? 'hidden' : 'visible';
   img.style.objectFit = fig.dataset.objectFit || (box.dataset.crop === '1' ? 'cover' : 'contain');
   img.style.width = '100%';
@@ -2518,13 +2470,11 @@ function updatePreviewGuides(){
 }
 function refreshFigureToolState(){
   const boxes = getSelectedFigureBoxes();
-  if(selectedFiguresStatus){
-    selectedFiguresStatus.textContent = boxes.length ? (boxes.length + ' figure' + (boxes.length===1?'':'s') + ' selected.') : 'No figure selected.';
-  }
+  if(!selectedFiguresStatus) return;
+  selectedFiguresStatus.textContent = boxes.length ? (boxes.length + ' figure' + (boxes.length===1?'':'s') + ' selected.') : 'No figure selected.';
   if(boxes.length === 1 && lockAspectToggle){
     lockAspectToggle.checked = boxes[0].dataset.lockAspect === '1';
   }
-  updateAnimationControls();
 }
 function getSlideMetricsForBox(box){
   const slide = box.closest('.slide, .deck-slide, .print-slide');
@@ -2939,24 +2889,19 @@ function updatePreviewBlockSelectionUI(){
   }
   if(selectedPreviewBlockRef && selectedPreviewBlockRef.type === 'title') populatePreviewTitleStyleEditor();
   else populatePreviewBlockStyleEditor(block);
-  updateAnimationControls();
 }
 function selectPreviewBlock(column, index){
   const block = getDraftBlock(column, index);
   if(!block) return;
-  getSelectedFigureBoxes().forEach(box=>box.classList.remove('selected'));
   selectedPreviewBlockRef = { type:'block', column, index };
   blockFields.column.value = column === 'right' ? 'right' : 'left';
   setSelectedIndex(column, index);
   loadSelectedBlockIntoEditor();
-  refreshFigureToolState();
   updatePreviewBlockSelectionUI();
 }
 function selectPreviewTitle(){
   saveCurrentBlockToDraft();
-  getSelectedFigureBoxes().forEach(box=>box.classList.remove('selected'));
   selectedPreviewBlockRef = { type:'title' };
-  refreshFigureToolState();
   updatePreviewBlockSelectionUI();
 }
 function applySelectedPreviewBlockStyle(patch){
@@ -2979,95 +2924,6 @@ function applySelectedPreviewBlockStyle(patch){
 function resetSelectedPreviewBlockStyle(){
   if(!selectedPreviewBlockRef) return;
   applySelectedPreviewBlockStyle({ fontScale:1, fontFamily:'inherit', fontColor:'#111111', bulletType:'disc' });
-}
-function selectedAnimationTargetInfo(){
-  const boxes = getSelectedFigureBoxes();
-  if(boxes.length){
-    const box = boxes[0];
-    return { type:'figure', multi: boxes.length > 1, label: boxes.length > 1 ? (boxes.length + ' figures') : 'Selected figure', animation: normalizeAnimation({ buildIn: box.dataset.buildIn, buildOut: box.dataset.buildOut, stepMode: box.dataset.stepMode, order: box.dataset.animOrder }) };
-  }
-  if(selectedPreviewBlockRef && selectedPreviewBlockRef.type === 'title'){
-    return { type:'title', label:'Slide title', animation: normalizeAnimation(draftTitleAnimation) };
-  }
-  const block = selectedPreviewBlock();
-  if(block && selectedPreviewBlockRef){
-    return { type:'block', label:(selectedPreviewBlockRef.column === 'right' ? 'Right' : 'Left') + ' block ' + (selectedPreviewBlockRef.index + 1), animation: normalizeAnimation(block.animation) };
-  }
-  return null;
-}
-function updateAnimationControls(){
-  const info = selectedAnimationTargetInfo();
-  if(animateTargetLabel) animateTargetLabel.value = info ? info.label : 'No object selected';
-  const anim = info ? info.animation : normalizeAnimation();
-  if(animateBuildIn) animateBuildIn.value = anim.buildIn;
-  if(animateBuildOut) animateBuildOut.value = anim.buildOut;
-  if(animateStepMode) animateStepMode.value = anim.stepMode;
-  if(animateOrder) animateOrder.value = String(anim.order);
-}
-function applySelectedAnimation(){
-  const patch = normalizeAnimation({
-    buildIn: animateBuildIn ? animateBuildIn.value : 'none',
-    buildOut: animateBuildOut ? animateBuildOut.value : 'none',
-    stepMode: animateStepMode ? animateStepMode.value : 'all',
-    order: animateOrder ? animateOrder.value : 0
-  });
-  const boxes = getSelectedFigureBoxes();
-  if(boxes.length){
-    boxes.forEach(box=>{
-      box.dataset.buildIn = patch.buildIn;
-      box.dataset.buildOut = patch.buildOut;
-      box.dataset.stepMode = patch.stepMode;
-      box.dataset.animOrder = String(patch.order);
-    });
-    saveSelectedFigures();
-    buildPreview();
-    scheduleAutosave('Autosaved after figure animation change.');
-    return;
-  }
-  if(selectedPreviewBlockRef && selectedPreviewBlockRef.type === 'title'){
-    draftTitleAnimation = patch;
-    snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
-    buildPreview();
-    scheduleAutosave('Autosaved after title animation change.');
-    return;
-  }
-  const block = selectedPreviewBlock();
-  if(block){
-    block.animation = patch;
-    snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
-    buildPreview();
-    scheduleAutosave('Autosaved after block animation change.');
-  }
-}
-function clearSelectedAnimation(){
-  const patch = normalizeAnimation();
-  const boxes = getSelectedFigureBoxes();
-  if(boxes.length){
-    boxes.forEach(box=>{
-      box.dataset.buildIn = patch.buildIn;
-      box.dataset.buildOut = patch.buildOut;
-      box.dataset.stepMode = patch.stepMode;
-      box.dataset.animOrder = String(patch.order);
-    });
-    saveSelectedFigures();
-    buildPreview();
-    scheduleAutosave('Autosaved after figure animation clear.');
-    return;
-  }
-  if(selectedPreviewBlockRef && selectedPreviewBlockRef.type === 'title'){
-    draftTitleAnimation = patch;
-    snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
-    buildPreview();
-    scheduleAutosave('Autosaved after title animation clear.');
-    return;
-  }
-  const block = selectedPreviewBlock();
-  if(block){
-    block.animation = patch;
-    snippetOutput.value = JSON.stringify(slideForSnippet(currentDraftSlide()), null, 2);
-    buildPreview();
-    scheduleAutosave('Autosaved after block animation clear.');
-  }
 }
 function initPreviewBlockSelection(){
   if(preview.__blockSelectionBound) return;
@@ -3282,7 +3138,6 @@ body{color:var(--deck-text);overflow:hidden}
 .slide.style-annarbor,.deck-slide.style-annarbor{padding-top:4.8rem;padding-bottom:5rem}.slide.style-annarbor::before,.deck-slide.style-annarbor::before{content:'';position:absolute;left:0;top:0;right:0;height:64px;background:var(--chrome-fill,#c99a06)}.slide.style-annarbor::after,.deck-slide.style-annarbor::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--accent,#7a4f01)}.slide.style-annarbor h1,.slide.style-annarbor h2,.deck-slide.style-annarbor h1,.deck-slide.style-annarbor h2{color:#5b3c00}
 .slide.style-cambridgeus,.deck-slide.style-cambridgeus{padding-top:4.7rem;padding-bottom:5rem}.slide.style-cambridgeus::before,.deck-slide.style-cambridgeus::before{content:'';position:absolute;left:0;top:0;right:0;height:56px;background:linear-gradient(90deg,var(--accent,#c53030) 0 18px,var(--chrome-fill,#0f4c81) 18px 100%)}.slide.style-cambridgeus::after,.deck-slide.style-cambridgeus::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--chrome-fill,#0f4c81)}.slide.style-cambridgeus h1,.slide.style-cambridgeus h2,.deck-slide.style-cambridgeus h1,.deck-slide.style-cambridgeus h2{color:var(--chrome-fill,#0f4c81)}
 .slide.style-pittsburgh,.deck-slide.style-pittsburgh{padding-top:4.2rem}.slide.style-pittsburgh::before,.deck-slide.style-pittsburgh::before{content:'';position:absolute;left:0;top:0;right:0;height:16px;background:var(--chrome-fill,#2f6fed)}.slide.style-pittsburgh h1,.slide.style-pittsburgh h2,.deck-slide.style-pittsburgh h1,.deck-slide.style-pittsburgh h2{color:var(--chrome-fill,#2f6fed)}
-.anim-frag{transition:opacity .35s ease,transform .35s ease,visibility .35s ease}.anim-hidden{opacity:0 !important;visibility:hidden !important;transform:translateY(8px)}
 .slide-actions{position:absolute;top:1.2rem;right:1.2rem;display:flex;gap:.55rem;z-index:10;flex-wrap:wrap;justify-content:flex-end}
 .slides-button,.draw-button,.export-annotated-button,.pdf-button{border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.88);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
 .slide-number{position:absolute;bottom:1.15rem;right:1.4rem;font-size:1rem;color:rgba(17,17,17,.62)}
@@ -3391,11 +3246,11 @@ function parseStructuredText(raw){const text=String(raw??'').replace(/\\r\\n/g,'
 for(let i=0;i<lines.length;i+=1){const line=lines[i].trim();if(!line){flushParagraph();flushList();continue;}const paragraphMatch=line.match(/^\\\\paragraph\\{([\\s\\S]*)\\}$/);if(paragraphMatch){flushParagraph();flushList();parts.push('<p>'+safeWithMath(paragraphMatch[1].trim())+'</p>');continue;}if(/^\\\\begin\\{itemize\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{itemize\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ul>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ul>');continue;}if(/^\\\\begin\\{enumerate\\}$/i.test(line)){flushParagraph();flushList();const items=[];i+=1;while(i<lines.length&&!/^\\\\end\\{enumerate\\}$/i.test(lines[i].trim())){const itemLine=lines[i].trim();if(itemLine){const itemMatch=itemLine.match(/^\\\\item\\s+([\\s\\S]*)$/);if(itemMatch)items.push(itemMatch[1].trim());}i+=1;}parts.push('<ol>'+items.map(item=>'<li>'+safeWithMath(item)+'</li>').join('')+'</ol>');continue;}if(/^\\\\begin\\{equation\\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{equation\\}$/i,i+1);parts.push('<div class="display-math">\\\\[\\\\begin{aligned}'+escapeHtml(collected.body)+'\\\\end{aligned}\\\\]</div>');i=collected.endIndex;continue;}const cardBegin=line.match(/^\\\\begin\\{card\\}\\{([\\s\\S]*)\\}$/i);if(cardBegin){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{card\\}$/i,i+1);parts.push('<div class="bullet-card"><b>'+safeWithMath(cardBegin[1].trim())+'</b><div>'+simpleCardBody(collected.body)+'</div></div>');i=collected.endIndex;continue;}if(/^\\\\begin\\{figurehtml\\}$/i.test(line)){flushParagraph();flushList();const collected=collectUntil(/^\\\\end\\{figurehtml\\}$/i,i+1);parts.push('<div class="figure-embed">'+collected.body+'</div>');i=collected.endIndex;continue;}if(/^UL:/i.test(line)){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.replace(/^UL:/i,'').trim());continue;}if(line.startsWith('- ')){flushParagraph();if(listType&&listType!=='itemize')flushList();listType='itemize';listItems.push(line.slice(2).trim());continue;}flushList();if(line.startsWith('### ')){flushParagraph();parts.push('<h3>'+safeWithMath(line.slice(4).trim())+'</h3>');continue;}if(/^P:/i.test(line)){flushParagraph();parts.push('<p>'+safeWithMath(line.replace(/^P:/i,'').trim())+'</p>');continue;}if(/^EQ:/i.test(line)){flushParagraph();parts.push('<div class="display-math">'+safeWithMath(line.replace(/^EQ:/i,'').trim())+'</div>');continue;}if(/^CARD:/i.test(line)){flushParagraph();const payload=line.replace(/^CARD:/i,'').trim();const pieces=payload.split('|');const cardTitle=pieces.shift()||'';const cardBody=pieces.join('|');parts.push('<div class="bullet-card"><b>'+safeWithMath(cardTitle)+'</b><div><p>'+safeWithMath(cardBody)+'</p></div></div>');continue;}paragraph.push(line);}flushParagraph();flushList();return parts.join('\\n');}
 function diagramMarkup(){return '<div class="diag"><svg class="diagram" viewBox="0 0 760 430" role="img" aria-label="Tiny neural network diagram placeholder"><line x1="145" y1="145" x2="355" y2="125" class="edge"/><line x1="145" y1="145" x2="355" y2="295" class="edge"/><line x1="145" y1="285" x2="355" y2="125" class="edge"/><line x1="145" y1="285" x2="355" y2="295" class="edge"/><line x1="405" y1="125" x2="615" y2="215" class="edge"/><line x1="405" y1="295" x2="615" y2="215" class="edge"/><circle cx="115" cy="145" r="34" class="node"/><circle cx="115" cy="285" r="34" class="node"/><circle cx="375" cy="125" r="34" class="node"/><circle cx="375" cy="295" r="34" class="node"/><circle cx="645" cy="215" r="34" class="node"/><text x="88" y="153" class="label">x₁</text><text x="88" y="293" class="label">x₂</text><text x="350" y="133" class="label">h₁</text><text x="350" y="303" class="label">h₂</text><text x="632" y="223" class="label">ŷ</text></svg></div>';}
 function customFrameMarkup(raw){const html=String(raw||'').trim();if(!html)return '<div class="placeholder">Paste custom HTML here.</div>';return '<div class="custom-frame-wrap"><iframe class="custom-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer" srcdoc="'+escapeAttr(html)+'"></iframe></div>';}
-function normalizeBlockStyle(style){const s=style||{};const fontScale=Number.isFinite(Number(s.fontScale))?Number(s.fontScale):1;return {fontScale:Math.max(.6,Math.min(2.5,fontScale)),fontFamily:s.fontFamily||'inherit',fontColor:s.fontColor||'#111111',bulletType:s.bulletType||'disc'};}function normalizeAnimation(anim){const a=anim||{};const buildIn=['none','appear','fade'].includes(a.buildIn)?a.buildIn:'none';const buildOut=['none','disappear','fade'].includes(a.buildOut)?a.buildOut:'none';const stepMode=['all','by-item'].includes(a.stepMode)?a.stepMode:'all';const order=Number.isFinite(Number(a.order))?Number(a.order):0;return {buildIn,buildOut,stepMode,order};}function animationDataAttrs(anim){const a=normalizeAnimation(anim);return ' data-build-in="'+escapeAttr(a.buildIn)+'" data-build-out="'+escapeAttr(a.buildOut)+'" data-step-mode="'+escapeAttr(a.stepMode)+'" data-anim-order="'+escapeAttr(String(a.order))+'"';}function blockWrapperStyle(block){const s=normalizeBlockStyle((block&&block.style)||{});return '--block-font-scale:'+s.fontScale+';--block-font-family:'+escapeAttr(s.fontFamily)+';--block-font-color:'+s.fontColor+';--block-bullet-type:'+s.bulletType+';';}function titleWrapperStyle(style,heading){const s=normalizeBlockStyle(style||{});const baseMap={h1:'5.6rem',h2:'3.1rem',h3:'2.45rem',h4:'2.1rem',h5:'1.8rem',h6:'1.55rem'};return '--block-font-scale:'+s.fontScale+';--block-font-family:'+escapeAttr(s.fontFamily)+';--block-font-color:'+s.fontColor+';--title-base-size:'+(baseMap[String(heading||'h2').toLowerCase()]||'3.1rem')+';';}function normalizeBlock(block){const mode=block.mode||'panel';if(mode==='diagram'){return {mode:'custom',title:block.title||'Legacy diagram',content:'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><style>html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}</style></head><body>'+(block.content||diagramMarkup())+'</body></html>',style:normalizeBlockStyle(block.style),animation:normalizeAnimation(block.animation)};}return {mode:mode,title:block.title||'',content:block.content||'',style:normalizeBlockStyle(block.style),animation:normalizeAnimation(block.animation)};}
-function normalizeSlide(slide){const out=JSON.parse(JSON.stringify(slide||{}));let leftBlocks=Array.isArray(out.leftBlocks)?out.leftBlocks.map(normalizeBlock):null;let rightBlocks=Array.isArray(out.rightBlocks)?out.rightBlocks.map(normalizeBlock):null;if(!leftBlocks){leftBlocks=[{mode:out.leftMode||'panel',title:'',content:out.leftHtml||''}];}if(!rightBlocks){rightBlocks=isTwoColType(out.slideType)?[{mode:out.rightMode||'panel',title:'',content:out.rightHtml||''}]:[];}out.leftBlocks=leftBlocks;out.rightBlocks=rightBlocks;out.titleStyle=normalizeBlockStyle(out.titleStyle);out.titleAnimation=normalizeAnimation(out.titleAnimation);out.inheritTheme=out.inheritTheme!==false;return out;}
-function renderBlock(block,placeholderText){const resolvedMode=block.mode||'panel';const raw=block.content||'';let inner='';if(resolvedMode==='diagram')inner=diagramMarkup();else if(resolvedMode==='custom')inner=customFrameMarkup(raw);else if(resolvedMode==='placeholder')inner='<div class="placeholder">'+escapeHtml(raw||placeholderText||'Placeholder')+'</div>';else if(resolvedMode==='pseudocode')inner='<pre class="pseudo-block">'+escapeHtml(raw)+'</pre>';else if(resolvedMode==='pseudocode-latex'){const p=preserveMathTokens(raw);inner='<div class="pseudo-latex-block">'+restoreMathTokens(escapeHtml(p.out),p.tokens)+'</div>';}else inner='<div class="rich">'+parseStructuredText(raw)+'</div>';return '<div class="preview-block"'+animationDataAttrs(block.animation)+' style="'+blockWrapperStyle(block)+'">'+inner+'</div>';}
+function normalizeBlockStyle(style){const s=style||{};const fontScale=Number.isFinite(Number(s.fontScale))?Number(s.fontScale):1;return {fontScale:Math.max(.6,Math.min(2.5,fontScale)),fontFamily:s.fontFamily||'inherit',fontColor:s.fontColor||'#111111',bulletType:s.bulletType||'disc'};}function blockWrapperStyle(block){const s=normalizeBlockStyle((block&&block.style)||{});return '--block-font-scale:'+s.fontScale+';--block-font-family:'+escapeAttr(s.fontFamily)+';--block-font-color:'+s.fontColor+';--block-bullet-type:'+s.bulletType+';';}function titleWrapperStyle(style,heading){const s=normalizeBlockStyle(style||{});const baseMap={h1:'5.6rem',h2:'3.1rem',h3:'2.45rem',h4:'2.1rem',h5:'1.8rem',h6:'1.55rem'};return '--block-font-scale:'+s.fontScale+';--block-font-family:'+escapeAttr(s.fontFamily)+';--block-font-color:'+s.fontColor+';--title-base-size:'+(baseMap[String(heading||'h2').toLowerCase()]||'3.1rem')+';';}function normalizeBlock(block){const mode=block.mode||'panel';if(mode==='diagram'){return {mode:'custom',title:block.title||'Legacy diagram',content:'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><style>html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}.diag{display:grid;place-items:center;padding:.9rem}.diagram{width:100%;max-width:680px;height:auto}.diagram .edge{stroke:currentColor;stroke-opacity:.32;stroke-width:6;stroke-linecap:round}.diagram .node{fill:none;stroke:currentColor;stroke-width:6}.diagram .label{fill:currentColor;font:700 28px Inter,system-ui,sans-serif}</style></head><body>'+(block.content||diagramMarkup())+'</body></html>',style:normalizeBlockStyle(block.style)};}return {mode:mode,title:block.title||'',content:block.content||'',style:normalizeBlockStyle(block.style)};}
+function normalizeSlide(slide){const out=JSON.parse(JSON.stringify(slide||{}));let leftBlocks=Array.isArray(out.leftBlocks)?out.leftBlocks.map(normalizeBlock):null;let rightBlocks=Array.isArray(out.rightBlocks)?out.rightBlocks.map(normalizeBlock):null;if(!leftBlocks){leftBlocks=[{mode:out.leftMode||'panel',title:'',content:out.leftHtml||''}];}if(!rightBlocks){rightBlocks=isTwoColType(out.slideType)?[{mode:out.rightMode||'panel',title:'',content:out.rightHtml||''}]:[];}out.leftBlocks=leftBlocks;out.rightBlocks=rightBlocks;out.titleStyle=normalizeBlockStyle(out.titleStyle);out.inheritTheme=out.inheritTheme!==false;return out;}
+function renderBlock(block,placeholderText){const resolvedMode=block.mode||'panel';const raw=block.content||'';let inner='';if(resolvedMode==='diagram')inner=diagramMarkup();else if(resolvedMode==='custom')inner=customFrameMarkup(raw);else if(resolvedMode==='placeholder')inner='<div class="placeholder">'+escapeHtml(raw||placeholderText||'Placeholder')+'</div>';else if(resolvedMode==='pseudocode')inner='<pre class="pseudo-block">'+escapeHtml(raw)+'</pre>';else if(resolvedMode==='pseudocode-latex'){const p=preserveMathTokens(raw);inner='<div class="pseudo-latex-block">'+restoreMathTokens(escapeHtml(p.out),p.tokens)+'</div>';}else inner='<div class="rich">'+parseStructuredText(raw)+'</div>';return '<div class="preview-block" style="'+blockWrapperStyle(block)+'">'+inner+'</div>';}
 function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
-function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<div class="preview-title" data-preview-role="title"'+animationDataAttrs(slide.titleAnimation)+' style="'+titleWrapperStyle(slide.titleStyle,heading)+'"><'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\\n/g,'<br>')+'</'+heading+'></div>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='section-divider')return '<div class="section-divider-wrap"><div><div class="divider-kicker">'+escapeHtml(s.kicker||'Section')+'</div>'+titleHtml+'<div class="divider-line"></div><div class="divider-lede">'+escapeHtml(s.lede||'')+'</div></div></div>';if(['two-col','title-two-callouts','title-figure-explanation','comparison','image-left-text-right'].includes(s.slideType)){const layoutClass={ 'two-col':'layout-two-col','title-two-callouts':'layout-two-callouts','title-figure-explanation':'layout-figure-explanation','comparison':'layout-comparison','image-left-text-right':'layout-image-left-text-right'}[s.slideType]||'layout-two-col';const leftHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.leftBlocks[0]&&s.leftBlocks[0].title)||'Left')+'</div>':'';const rightHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.rightBlocks[0]&&s.rightBlocks[0].title)||'Right')+'</div>':'';return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body '+layoutClass+'"><div class="col">'+leftHead+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+rightHead+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}if(s.slideType==='theorem-proof'){const theorem=s.leftBlocks[0]||{mode:'panel',content:'\\paragraph{Theorem} State the result here.'};const proof=s.leftBlocks[1]||{mode:'panel',content:'\\paragraph{Proof sketch} Add the argument here.'};return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col theorem-proof-wrap"><div class="named-box"><div class="named-box-head">'+escapeHtml(theorem.title||'Theorem')+'</div><div class="named-box-body">'+renderBlock({...theorem,title:''},'Theorem')+'</div></div><div class="named-box"><div class="named-box-head">'+escapeHtml(proof.title||'Proof')+'</div><div class="named-box-body">'+renderBlock({...proof,title:''},'Proof')+'</div></div></div></div>';}if(s.slideType==='algorithm-layout'){const algo=s.leftBlocks[0]||{mode:'pseudocode',content:'Algorithm goes here'};const notes=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col algorithm-wrap">'+renderBlock(algo,'Algorithm')+(notes.length?renderBlocks(notes,'Notes'):'')+'</div></div>';}if(s.slideType==='full-width-figure-caption'){const fig=s.leftBlocks[0]||{mode:'placeholder',content:'Add a figure block'};const captionBlocks=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col full-figure-wrap">'+renderBlock(fig,'Figure')+(captionBlocks.length?'<div class="figure-caption">'+renderBlocks(captionBlocks,'Caption')+'</div>':'')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
+function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<div class="preview-title" data-preview-role="title" style="'+titleWrapperStyle(slide.titleStyle,heading)+'"><'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\\n/g,'<br>')+'</'+heading+'></div>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='section-divider')return '<div class="section-divider-wrap"><div><div class="divider-kicker">'+escapeHtml(s.kicker||'Section')+'</div>'+titleHtml+'<div class="divider-line"></div><div class="divider-lede">'+escapeHtml(s.lede||'')+'</div></div></div>';if(['two-col','title-two-callouts','title-figure-explanation','comparison','image-left-text-right'].includes(s.slideType)){const layoutClass={ 'two-col':'layout-two-col','title-two-callouts':'layout-two-callouts','title-figure-explanation':'layout-figure-explanation','comparison':'layout-comparison','image-left-text-right':'layout-image-left-text-right'}[s.slideType]||'layout-two-col';const leftHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.leftBlocks[0]&&s.leftBlocks[0].title)||'Left')+'</div>':'';const rightHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.rightBlocks[0]&&s.rightBlocks[0].title)||'Right')+'</div>':'';return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body '+layoutClass+'"><div class="col">'+leftHead+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+rightHead+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}if(s.slideType==='theorem-proof'){const theorem=s.leftBlocks[0]||{mode:'panel',content:'\\paragraph{Theorem} State the result here.'};const proof=s.leftBlocks[1]||{mode:'panel',content:'\\paragraph{Proof sketch} Add the argument here.'};return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col theorem-proof-wrap"><div class="named-box"><div class="named-box-head">'+escapeHtml(theorem.title||'Theorem')+'</div><div class="named-box-body">'+renderBlock({...theorem,title:''},'Theorem')+'</div></div><div class="named-box"><div class="named-box-head">'+escapeHtml(proof.title||'Proof')+'</div><div class="named-box-body">'+renderBlock({...proof,title:''},'Proof')+'</div></div></div></div>';}if(s.slideType==='algorithm-layout'){const algo=s.leftBlocks[0]||{mode:'pseudocode',content:'Algorithm goes here'};const notes=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col algorithm-wrap">'+renderBlock(algo,'Algorithm')+(notes.length?renderBlocks(notes,'Notes'):'')+'</div></div>';}if(s.slideType==='full-width-figure-caption'){const fig=s.leftBlocks[0]||{mode:'placeholder',content:'Add a figure block'};const captionBlocks=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col full-figure-wrap">'+renderBlock(fig,'Figure')+(captionBlocks.length?'<div class="figure-caption">'+renderBlocks(captionBlocks,'Caption')+'</div>':'')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
 const deck=document.getElementById('deck');const slideMap=document.getElementById('slideMap');const slideMapList=document.getElementById('slideMapList');const laserPointer=document.getElementById('laserPointer');document.getElementById('deckTitle').textContent=deckPayload.deckTitle||'Slides';
 deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');const styleCls=' style-'+String((deckPayload.theme&&deckPayload.theme.beamerStyle)||'classic').replace(/[^a-z0-9_-]/gi,'').toLowerCase();const actionHtml='<div class="slide-actions"><button class="slides-button" type="button">Slides</button>'+(liveDrawEnabled?'<button class="draw-button" type="button">Draw</button><button class="export-annotated-button" type="button">Export annotated slides</button>':'')+'<button class="pdf-button" type="button">Generate PDF</button></div>';return '<section class="'+cls+styleCls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'">'+actionHtml+'<div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'<div class="slide-annotation-layer" data-annotation-layer="'+idx+'"><svg class="slide-draw-surface" data-draw-surface="'+idx+'" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-label="Slide annotation layer"></svg></div></section>';}).join('\\n');
 slideMapList.innerHTML=deckPayload.slides.map((slide,idx)=>'<button type="button" class="slide-map-item" data-go="'+idx+'"><span>'+(idx+1)+'.</span><span>'+escapeHtml(slide.title||('Slide '+(idx+1)))+'</span></button>').join('\\n');
@@ -3419,64 +3274,7 @@ function fitFiguresInSlide(slideEl){if(!slideEl)return;const figures=Array.from(
 function fitFiguresIn(root){(root||document).querySelectorAll('.deck-slide.active,.print-cell .slide,.slide').forEach(fitFiguresInSlide);}
 function getDrawSurface(slideIndex){return document.querySelector('.slide-draw-surface[data-draw-surface="'+slideIndex+'"]');}
 function renderLiveDrawAnnotations(){slideEls.forEach((slideEl,idx)=>{const svg=getDrawSurface(idx);if(!svg)return;svg.innerHTML=String(liveDrawAnnotations[idx]||'');svg.classList.toggle('active', drawingMode && drawingSlideIndex===idx);});}
-function saveSurface(slideIndex){const svg=getDrawSurface(slideIndex);if(!svg)return;liveDrawAnnotations[slideIndex]=svg.innerHTML||'';persistLiveDrawAnnotations();}function collectAnimationFragments(target, stepMode){
-  if(stepMode!=='by-item') return [target];
-  const items=Array.from(target.querySelectorAll('.rich li, .rich p, .rich h3, .bullet-card, .display-math, .pseudo-block, .pseudo-latex-block, .placeholder'));
-  return items.length ? items : [target];
-}
-function setAnimHidden(el, hidden){
-  if(!el) return;
-  el.classList.add('anim-frag');
-  el.classList.toggle('anim-hidden', !!hidden);
-}
-function initializeSlideAnimations(slideEl){
-  if(!slideEl) return;
-  const targets=Array.from(slideEl.querySelectorAll('.preview-title, .preview-block, .figure-box, .figure-embed figure[data-figure-kind="image"]')).filter(el=>{
-    const buildIn=el.dataset.buildIn || 'none';
-    const buildOut=el.dataset.buildOut || 'none';
-    const stepMode=el.dataset.stepMode || 'all';
-    return buildIn !== 'none' || buildOut !== 'none' || stepMode === 'by-item';
-  });
-  const steps=[];
-  targets.forEach((target, idx)=>{
-    const buildIn=target.dataset.buildIn || 'none';
-    const buildOut=target.dataset.buildOut || 'none';
-    const stepMode=target.dataset.stepMode || 'all';
-    const order=Number(target.dataset.animOrder || '0') || 0;
-    const fragments=collectAnimationFragments(target, stepMode);
-    if(stepMode==='by-item' || buildIn !== 'none'){
-      fragments.forEach(f=>setAnimHidden(f, true));
-      fragments.forEach((fragment, fragIdx)=>{
-        steps.push({phase:'in', order, dom:idx, frag:fragIdx, target, fragment, kind:buildIn || 'appear'});
-      });
-    } else {
-      fragments.forEach(f=>setAnimHidden(f, false));
-    }
-    if(buildOut !== 'none'){
-      steps.push({phase:'out', order, dom:idx, frag:9999, target, kind:buildOut});
-    }
-  });
-  steps.sort((a,b)=> (a.order-b.order) || ((a.phase==='in'?0:1)-(b.phase==='in'?0:1)) || (a.dom-b.dom) || (a.frag-b.frag));
-  slideEl.__animSteps=steps;
-  slideEl.__animIndex=0;
-}
-function advanceSlideAnimation(slideEl){
-  if(!slideEl || !Array.isArray(slideEl.__animSteps)) return false;
-  if(slideEl.__animIndex >= slideEl.__animSteps.length) return false;
-  const step=slideEl.__animSteps[slideEl.__animIndex++];
-  if(step.phase==='in'){
-    setAnimHidden(step.fragment, false);
-  }else if(step.phase==='out'){
-    const frags=collectAnimationFragments(step.target, step.target.dataset.stepMode || 'all');
-    frags.forEach(f=>setAnimHidden(f, true));
-  }
-  return true;
-}
-function activeSlideHasPendingAnimations(){
-  const slide=slideEls[active];
-  return !!(slide && Array.isArray(slide.__animSteps) && slide.__animIndex < slide.__animSteps.length);
-}
-
+function saveSurface(slideIndex){const svg=getDrawSurface(slideIndex);if(!svg)return;liveDrawAnnotations[slideIndex]=svg.innerHTML||'';persistLiveDrawAnnotations();}
 function slidePoint(evt, svg){const pt=svg.createSVGPoint();pt.x=evt.clientX;pt.y=evt.clientY;const m=svg.getScreenCTM();return m?pt.matrixTransform(m.inverse()):{x:0,y:0};}
 function beginShape(evt){if(!drawingMode || drawingSlideIndex!==active) return;const svg=getDrawSurface(active); if(!svg) return;const tool=drawTool.value;if(tool==='erase'){const hit=evt.target.closest('[data-draw-shape]');if(hit && svg.contains(hit)){ hit.remove(); saveSurface(active); }return;}evt.preventDefault();const p=slidePoint(evt, svg);drawingState.tool=tool; drawingState.drawing=true; drawingState.start=p; drawingState.el=null;let el=null;if(tool==='pen'){el=document.createElementNS('http://www.w3.org/2000/svg','polyline');el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-linejoin','round');el.setAttribute('points',p.x+','+p.y);}else if(tool==='line'){el=document.createElementNS('http://www.w3.org/2000/svg','line');el.setAttribute('x1',p.x);el.setAttribute('y1',p.y);el.setAttribute('x2',p.x);el.setAttribute('y2',p.y);el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);el.setAttribute('stroke-linecap','round');}else if(tool==='rect'){el=document.createElementNS('http://www.w3.org/2000/svg','rect');el.setAttribute('x',p.x);el.setAttribute('y',p.y);el.setAttribute('width',1);el.setAttribute('height',1);el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);}else if(tool==='ellipse'){el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');el.setAttribute('cx',p.x);el.setAttribute('cy',p.y);el.setAttribute('rx',1);el.setAttribute('ry',1);el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);}if(!el) return;el.setAttribute('data-draw-shape','1');svg.appendChild(el);drawingState.el=el;}
 function updateShape(evt){if(!drawingState.drawing || drawingSlideIndex!==active) return;const svg=getDrawSurface(active); if(!svg || !drawingState.el) return;const p=slidePoint(evt, svg);const el=drawingState.el;if(drawingState.tool==='pen'){el.setAttribute('points',(el.getAttribute('points')||'')+' '+p.x+','+p.y);}else if(drawingState.tool==='line'){el.setAttribute('x2',p.x);el.setAttribute('y2',p.y);}else if(drawingState.tool==='rect'){const x=Math.min(drawingState.start.x,p.x),y=Math.min(drawingState.start.y,p.y),w=Math.abs(p.x-drawingState.start.x),h=Math.abs(p.y-drawingState.start.y);el.setAttribute('x',x);el.setAttribute('y',y);el.setAttribute('width',w);el.setAttribute('height',h);}else if(drawingState.tool==='ellipse'){el.setAttribute('cx',(drawingState.start.x+p.x)/2);el.setAttribute('cy',(drawingState.start.y+p.y)/2);el.setAttribute('rx',Math.abs(p.x-drawingState.start.x)/2);el.setAttribute('ry',Math.abs(p.y-drawingState.start.y)/2);}saveSurface(active);}
@@ -3629,47 +3427,9 @@ async function downloadAnnotatedSlides(){
 }
 function hideLaserPointer(){if(laserPointer)laserPointer.style.display='none';slideEls.forEach(el=>el.classList.remove('laser-active'));}
 function updateLaserPointer(evt){if(!laserPointer || !slideEls[active]) return;const slide = slideEls[active];const mapOpen = !!(slideMap && slideMap.classList.contains('open'));if(drawingMode || mapOpen){ hideLaserPointer(); return; }const r = slide.getBoundingClientRect();const inside = evt.clientX >= r.left && evt.clientX <= r.right && evt.clientY >= r.top && evt.clientY <= r.bottom;if(!inside){ hideLaserPointer(); return; }slide.classList.add('laser-active');laserPointer.style.display='block';laserPointer.style.transform='translate('+evt.clientX+'px,'+evt.clientY+'px)';}
-function render(){slideEls.forEach((el,i)=>{el.classList.toggle('active',i===active);if(i!==active) el.classList.remove('laser-active');});renderLiveDrawAnnotations();const initActive=()=>{initializeSlideAnimations(slideEls[active]);hideLaserPointer();fitFiguresIn(document);};if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(initActive).catch(initActive);}else{initActive();}}
+function render(){slideEls.forEach((el,i)=>{el.classList.toggle('active',i===active);if(i!==active) el.classList.remove('laser-active');});renderLiveDrawAnnotations();hideLaserPointer();if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
 function go(i){if(i<0||i>=slideEls.length)return;active=i;if(drawingMode) drawingSlideIndex=active;render();slideMap.classList.remove('open');}
-function advanceOrGoNext(){ if(activeSlideHasPendingAnimations()){ advanceSlideAnimation(slideEls[active]); return; } go(active+1); }
-document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));
-document.getElementById('nextBtn').addEventListener('click',()=>advanceOrGoNext());
-document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));
-document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));
-if(liveDrawEnabled){
-  document.querySelectorAll('.draw-button').forEach((btn,idx)=>btn.addEventListener('click',()=>{ if(drawingMode && drawingSlideIndex===idx) exitDrawingMode(); else { active=idx; enterDrawingMode(idx); } }));
-  document.querySelectorAll('.export-annotated-button').forEach(btn=>btn.addEventListener('click',downloadAnnotatedSlides));
-}
-document.querySelectorAll('.pdf-button').forEach(btn=>btn.addEventListener('click',openPdfModal));
-if(pdfCancelBtn) pdfCancelBtn.addEventListener('click',closePdfModal);
-if(pdfGenerateBtn) pdfGenerateBtn.addEventListener('click',()=>generatePdfFromSlides(Number(pdfSlidesPerPage && pdfSlidesPerPage.value || 4)));
-document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));
-if(drawClearBtn) drawClearBtn.addEventListener('click',()=>{ const svg=getDrawSurface(active); if(svg){ svg.innerHTML=''; saveSurface(active); } });
-if(drawExitBtn) drawExitBtn.addEventListener('click',()=>exitDrawingMode());
-deck.addEventListener('pointerdown',evt=>{
-  if(pdfModal && !pdfModal.hidden && evt.target===pdfModal) closePdfModal();
-  if(drawingMode){
-    const svg=getDrawSurface(active);
-    if(!svg) return;
-    const hitShape=evt.target.closest('[data-draw-shape]');
-    if(drawTool.value==='erase' && hitShape){ beginShape(evt); return; }
-    if(evt.target===svg) beginShape(evt);
-    return;
-  }
-  if(slideMap.classList.contains('open')) return;
-  if(evt.target.closest('.slide-actions') || evt.target.closest('.deck-toolbar') || evt.target.closest('.pdf-modal')) return;
-  const activeSlide=slideEls[active];
-  if(activeSlide && activeSlide.contains(evt.target)){ advanceOrGoNext(); }
-});
-window.addEventListener('pointermove',evt=>{ if(drawingMode && drawingState.drawing){ updateShape(evt); return; } updateLaserPointer(evt); });
-window.addEventListener('pointerup',()=>endShape());
-window.addEventListener('pointercancel',()=>endShape());
-window.addEventListener('mousemove', updateLaserPointer);
-window.addEventListener('mouseleave', hideLaserPointer);
-window.addEventListener('blur', ()=>{ endShape(); hideLaserPointer(); });
-slideMap.addEventListener('mouseenter', hideLaserPointer);
-document.querySelectorAll('.deck-slide').forEach(slide=>slide.addEventListener('mouseleave', ()=>{ if(!drawingMode) hideLaserPointer(); }));
-window.addEventListener('keydown',e=>{if(e.key==='Escape' && drawingMode){ e.preventDefault(); exitDrawingMode(); return; }if(e.key==='Escape' && pdfModal && !pdfModal.hidden){ e.preventDefault(); closePdfModal(); return; }if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();advanceOrGoNext();}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape') slideMap.classList.remove('open');});render();
+document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));if(liveDrawEnabled){document.querySelectorAll('.draw-button').forEach((btn,idx)=>btn.addEventListener('click',()=>{ if(drawingMode && drawingSlideIndex===idx) exitDrawingMode(); else { active=idx; enterDrawingMode(idx); } }));document.querySelectorAll('.export-annotated-button').forEach(btn=>btn.addEventListener('click',downloadAnnotatedSlides));}document.querySelectorAll('.pdf-button').forEach(btn=>btn.addEventListener('click',openPdfModal));if(pdfCancelBtn) pdfCancelBtn.addEventListener('click',closePdfModal);if(pdfGenerateBtn) pdfGenerateBtn.addEventListener('click',()=>generatePdfFromSlides(Number(pdfSlidesPerPage && pdfSlidesPerPage.value || 4)));document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));if(drawClearBtn) drawClearBtn.addEventListener('click',()=>{ const svg=getDrawSurface(active); if(svg){ svg.innerHTML=''; saveSurface(active); } });if(drawExitBtn) drawExitBtn.addEventListener('click',()=>exitDrawingMode());deck.addEventListener('pointerdown',evt=>{if(pdfModal && !pdfModal.hidden && evt.target===pdfModal) closePdfModal(); if(!drawingMode) return;const svg=getDrawSurface(active);if(!svg) return;const hitShape=evt.target.closest('[data-draw-shape]');if(drawTool.value==='erase' && hitShape){ beginShape(evt); return; }if(evt.target===svg) beginShape(evt);});window.addEventListener('pointermove',evt=>{ if(drawingMode && drawingState.drawing){ updateShape(evt); return; } updateLaserPointer(evt); });window.addEventListener('pointerup',()=>endShape());window.addEventListener('pointercancel',()=>endShape());window.addEventListener('mousemove', updateLaserPointer);window.addEventListener('mouseleave', hideLaserPointer);window.addEventListener('blur', ()=>{ endShape(); hideLaserPointer(); });slideMap.addEventListener('mouseenter', hideLaserPointer);document.querySelectorAll('.deck-slide').forEach(slide=>slide.addEventListener('mouseleave', ()=>{ if(!drawingMode) hideLaserPointer(); }));window.addEventListener('keydown',e=>{if(e.key==='Escape' && drawingMode){ e.preventDefault(); exitDrawingMode(); return; }if(e.key==='Escape' && pdfModal && !pdfModal.hidden){ e.preventDefault(); closePdfModal(); return; }if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape') slideMap.classList.remove('open');});render();
 <\/script>
 </body>
 </html>`;
@@ -4482,6 +4242,23 @@ if(loadPresentationJsonBtn && loadPresentationJsonInput){
     }
   });
 }
+
+function initUiCleanupLayout(){
+  const railShell=document.getElementById('slideRailShell');
+  const railMount=document.getElementById('slideRailMount');
+  const deckPanel=document.getElementById('deckList')?.closest('.panel');
+  if(railMount && deckPanel && !railMount.contains(deckPanel)){
+    railMount.appendChild(deckPanel);
+  }
+  const toggleBtn=document.getElementById('toggleSlideRailBtn');
+  if(toggleBtn && railShell && !toggleBtn.dataset.bound){
+    toggleBtn.dataset.bound='1';
+    toggleBtn.addEventListener('click', ()=>{
+      railShell.classList.toggle('collapsed');
+      toggleBtn.textContent = railShell.classList.contains('collapsed') ? 'Show rail' : 'Hide rail';
+    });
+  }
+}
 document.querySelectorAll('[data-left-tab]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     const tab = btn.dataset.leftTab;
@@ -4512,8 +4289,6 @@ previewBlockFontFamily?.addEventListener('change', ()=>applySelectedPreviewBlock
 previewBlockFontColor?.addEventListener('input', ()=>applySelectedPreviewBlockStyle({ fontColor: previewBlockFontColor.value || '#111111' }));
 previewBlockBulletType?.addEventListener('change', ()=>applySelectedPreviewBlockStyle({ bulletType: previewBlockBulletType.value || 'disc' }));
 document.getElementById('resetPreviewBlockStyleBtn')?.addEventListener('click', resetSelectedPreviewBlockStyle);
-document.getElementById('applyAnimationBtn')?.addEventListener('click', applySelectedAnimation);
-document.getElementById('clearAnimationBtn')?.addEventListener('click', clearSelectedAnimation);
 document.querySelectorAll('[data-block-template]').forEach(btn=>btn.addEventListener('click', ()=>{
   const kind = btn.dataset.blockTemplate;
   const block = defaultReusableBlock(kind);
@@ -4553,7 +4328,8 @@ if(!restoreAutosave()){
   applyThemeToForm(normalizeTheme({}));
   applyPreset('concept');
   buildPreview();
-  renderDeckList();
+  initUiCleanupLayout();
+renderDeckList();
 }
 window.addEventListener('beforeunload', ()=>{ try{ persistAutosaveNow('Autosaved.'); }catch(e){} });
 window.addEventListener('resize', ()=>updatePreviewScale());
