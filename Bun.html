@@ -130,8 +130,8 @@
   .tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
   .tool-grid .btn{width:100%}
   .tool-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .inline-checks{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
-  .inline-checks label{display:flex;gap:.45rem;align-items:center}
+  .inline-checks{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start}
+  .inline-checks label{display:flex;gap:.45rem;align-items:flex-start;white-space:normal;line-height:1.35;max-width:100%}
 
   .copy-toast{
     position:fixed;right:1rem;bottom:1rem;background:rgba(15,22,48,.96);border:1px solid rgba(255,255,255,.16);
@@ -916,8 +916,10 @@ window.MathJax = {
       </div>
       <div class="slide-rail-content" id="slideRailMount"></div>
     </div>
+  </div>
 
-  <div class="panel preview-wrap">
+  <div class="right-shell">
+    <div class="panel preview-wrap">
     <div class="preview-header">
       <div>
         <div class="smallcaps">Live preview</div>
