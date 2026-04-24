@@ -1488,7 +1488,7 @@ function parseStructuredText(raw, meta){
     paragraph.push(line);
   }
   flushParagraph(); flushList();
-  return parts.join('\n');
+  return parts.join('\\n');
 }
 
 function diagramMarkup(){
@@ -3246,7 +3246,7 @@ async function downloadAnnotatedSlides(){
   payload.presentationOptions.enableLiveDraw=liveDrawEnabled;
   payload.presentationOptions.seedAnnotations=liveDrawAnnotations;
 
-  const styleText=Array.from(document.querySelectorAll('style')).map(s=>s.textContent||'').join('\n');
+  const styleText=Array.from(document.querySelectorAll('style')).map(s=>s.textContent||'').join('\\n');
   const slidesHtml=slideEls.map((slideEl,idx)=>{
     const node=slideEl.cloneNode(true);
     node.classList.add('active');
@@ -3254,12 +3254,12 @@ async function downloadAnnotatedSlides(){
     node.querySelectorAll('.slide-draw-surface').forEach(el=>el.classList.remove('active'));
     node.querySelectorAll('.slides-button,.draw-button,.export-annotated-button').forEach(el=>el.remove());
     return node.outerHTML;
-  }).join('\n');
+  }).join('\\n');
 
-  const out='<!DOCTYPE html>\n<html lang="en"><head><meta charset="UTF-8" />'
+  const out='<!DOCTYPE html>\\n<html lang="en"><head><meta charset="UTF-8" />'
     + '<meta name="viewport" content="width=device-width, initial-scale=1.0" />'
     + '<title>'+escapeHtml((payload.deckTitle||'Annotated presentation')+' — annotated slides')+'</title>'
-    + '<style>'+styleText+'\n'
+    + '<style>'+styleText+'\\n'
     + 'html,body{margin:0;min-height:100%;background:#eef2f7;color:#111;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}'
     + '.annotated-shell{max-width:1400px;margin:0 auto;padding:24px;}'
     + '.annotated-header{margin:0 0 20px 0;color:#111;}'
