@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Convolutional Neural Networks</title>
-<script id="deck-source" type="application/json">{"deckTitle":"Convolutional Neural Networks","theme":{"name":"Default theme","bgColor":"#ffffff","fontColor":"#111111","accentColor":"#2f6fed","panelRadius":22,"titleScale":1,"beamerStyle":"classic","chromeColor":"#17365d","chromeTextColor":"#ffffff","sidebarWidth":118,"titleCaps":"0"},"presentationOptions":{"enableLiveDraw":true},"slides":[{"slideType":"title-center","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Concept slide","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"Main points","content":"\\paragraph{Core idea}\n\n\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third point\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""}]}</script>
+<script id="deck-source" type="application/json">{"deckTitle":"Convolutional Neural Networks","theme":{"name":"Default theme","bgColor":"#ffffff","fontColor":"#111111","accentColor":"#2f6fed","panelRadius":22,"titleScale":1,"beamerStyle":"classic","chromeColor":"#17365d","chromeTextColor":"#ffffff","sidebarWidth":118,"titleCaps":"0"},"presentationOptions":{"enableLiveDraw":true},"slides":[{"slideType":"single","headingLevel":"h2","bgColor":"#ffffff","fontColor":"#111111","title":"Concept slide","kicker":"","lede":"Introduce the main idea in one short sentence.","titleStyle":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"},"leftBlocks":[{"mode":"panel","title":"","content":"\\paragraph{frfrfr}\n\\begin{itemize}\n\\item fff\n\\item fff\n\\end{itemize}\n\n\\begin{itemize}\n\\item fff\n\\item fff\n\\end{itemize}","style":{"fontScale":1,"fontFamily":"inherit","fontColor":"#111111","bulletType":"disc"}}],"rightBlocks":[],"notesTitle":"Speaker notes","notesBody":""}]}</script>
 <style>
 :root{--deck-bg:#060a16;--deck-panel:rgba(10,16,32,.82);--deck-text:#eef3ff}
 *{box-sizing:border-box}
@@ -159,7 +159,7 @@ async function downloadAnnotatedSlides(){
   payload.presentationOptions.enableLiveDraw=liveDrawEnabled;
   payload.presentationOptions.seedAnnotations=JSON.parse(JSON.stringify(liveDrawAnnotations||{}));
 
-  const escapedJson=JSON.stringify(payload).replace(/</script>/gi,'<\/script>');
+  const escapedJson=JSON.stringify(payload).replace(/<\/script>/gi,'<\/script>');
 
   const clone=document.documentElement.cloneNode(true);
   const sourceNode=clone.querySelector('#deck-source');
@@ -175,8 +175,7 @@ async function downloadAnnotatedSlides(){
     svg.classList.remove('active');
   });
 
-  const text='<!DOCTYPE html>
-'+clone.outerHTML;
+  const text='<!DOCTYPE html>\n'+clone.outerHTML;
   const blob=new Blob([text],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
