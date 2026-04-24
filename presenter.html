@@ -845,6 +845,12 @@ window.MathJax = {
       <button class="btn" id="savePresentationJsonBtn">Save presentation JSON</button>
       <button class="btn primary" id="downloadDeckBtn">Save full presentation</button>
     </div>
+          <div class="inline-checks" style="margin-top:.75rem">
+            <label><input type="checkbox" id="enableLiveDrawExport" /> In generated presentation, add a <b>Draw</b> button on every slide</label>
+          </div>
+          <div class="help" style="margin-top:.45rem">
+            When enabled, the saved presentation includes a live drawing popup. Drawings are inserted on the current slide and autosaved in this browser for that presentation.
+          </div>
         </div>
       </div>
       <div class="subpane" data-subpane="files:handout">
@@ -1272,6 +1278,16 @@ function applyThemeToForm(theme){
   setThemeFieldValue('chromeTextColor', t.chromeTextColor);
   setThemeFieldValue('sidebarWidth', String(t.sidebarWidth));
   setThemeFieldValue('titleCaps', String(t.titleCaps));
+}
+function currentPresentationOptions(){
+  const liveDrawEl = document.getElementById('enableLiveDrawExport');
+  return {
+    enableLiveDraw: !!(liveDrawEl && liveDrawEl.checked)
+  };
+}
+function applyPresentationOptions(options){
+  const liveDrawEl = document.getElementById('enableLiveDrawExport');
+  if(liveDrawEl) liveDrawEl.checked = !!(options && options.enableLiveDraw);
 }
 function currentStyleClass(){
   const t = currentThemeFromFields();
@@ -1715,6 +1731,7 @@ function currentDeckData(){
   return {
     deckTitle: fields.deckTitle.value || 'My HTML Presentation',
     theme: currentThemeFromFields(),
+    presentationOptions: currentPresentationOptions(),
     slides: slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()]
   };
 }
@@ -1726,6 +1743,7 @@ function persistAutosaveNow(reason='Autosaved.'){
     const payload = {
       deckTitle: fields.deckTitle.value || 'My HTML Presentation',
       theme: currentThemeFromFields(),
+      presentationOptions: currentPresentationOptions(),
       slides: slides.length ? slides.map(normalizeSlide) : [currentDraftSlide()],
       activeIndex,
       draftSlide: currentDraftSlide(),
@@ -1757,6 +1775,7 @@ function restoreAutosave(){
     const payload = JSON.parse(raw);
     if(payload.deckTitle) fields.deckTitle.value = payload.deckTitle;
     if(payload.theme) applyThemeToForm(payload.theme);
+    if(payload.presentationOptions) applyPresentationOptions(payload.presentationOptions);
     slides = Array.isArray(payload.slides) ? payload.slides.map(normalizeSlide) : [];
     activeIndex = typeof payload.activeIndex === 'number' ? payload.activeIndex : (slides.length ? 0 : -1);
     if(activeIndex >= 0 && activeIndex < slides.length){
@@ -3106,8 +3125,25 @@ body{color:var(--deck-text);overflow:hidden}
 .slide.style-annarbor,.deck-slide.style-annarbor{padding-top:4.8rem;padding-bottom:5rem}.slide.style-annarbor::before,.deck-slide.style-annarbor::before{content:'';position:absolute;left:0;top:0;right:0;height:64px;background:var(--chrome-fill,#c99a06)}.slide.style-annarbor::after,.deck-slide.style-annarbor::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--accent,#7a4f01)}.slide.style-annarbor h1,.slide.style-annarbor h2,.deck-slide.style-annarbor h1,.deck-slide.style-annarbor h2{color:#5b3c00}
 .slide.style-cambridgeus,.deck-slide.style-cambridgeus{padding-top:4.7rem;padding-bottom:5rem}.slide.style-cambridgeus::before,.deck-slide.style-cambridgeus::before{content:'';position:absolute;left:0;top:0;right:0;height:56px;background:linear-gradient(90deg,var(--accent,#c53030) 0 18px,var(--chrome-fill,#0f4c81) 18px 100%)}.slide.style-cambridgeus::after,.deck-slide.style-cambridgeus::after{content:'';position:absolute;left:0;right:0;bottom:0;height:18px;background:var(--chrome-fill,#0f4c81)}.slide.style-cambridgeus h1,.slide.style-cambridgeus h2,.deck-slide.style-cambridgeus h1,.deck-slide.style-cambridgeus h2{color:var(--chrome-fill,#0f4c81)}
 .slide.style-pittsburgh,.deck-slide.style-pittsburgh{padding-top:4.2rem}.slide.style-pittsburgh::before,.deck-slide.style-pittsburgh::before{content:'';position:absolute;left:0;top:0;right:0;height:16px;background:var(--chrome-fill,#2f6fed)}.slide.style-pittsburgh h1,.slide.style-pittsburgh h2,.deck-slide.style-pittsburgh h1,.deck-slide.style-pittsburgh h2{color:var(--chrome-fill,#2f6fed)}
-.slides-button{position:absolute;top:1.2rem;right:1.2rem;border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.85);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
+.slide-actions{position:absolute;top:1.2rem;right:1.2rem;display:flex;gap:.55rem;z-index:8}
+.slides-button,.draw-button{border:1px solid rgba(17,17,17,.18);background:rgba(255,255,255,.88);color:#111;border-radius:999px;padding:.55rem .95rem;font:inherit;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)}
 .slide-number{position:absolute;bottom:1.15rem;right:1.4rem;font-size:1rem;color:rgba(17,17,17,.62)}
+.slide-annotation-layer{position:absolute;inset:0;pointer-events:none;z-index:7}
+.live-draw-figure{position:absolute;pointer-events:none}
+.live-draw-figure-box{width:100%;height:100%;padding:8px;background:rgba(255,255,255,.96);border:1px solid rgba(17,17,17,.18);border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.12);overflow:hidden}
+.live-draw-figure svg{display:block;width:100%;height:100%}
+.draw-modal[hidden]{display:none !important}
+.draw-modal{position:fixed;inset:0;background:rgba(7,11,23,.6);display:grid;place-items:center;z-index:60;padding:1rem}
+.draw-shell{width:min(1100px,96vw);height:min(780px,92vh);background:#fff;color:#111;border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.28);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
+.draw-toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;padding:.9rem 1rem;border-bottom:1px solid rgba(17,17,17,.12);background:#f8fafc}
+.draw-toolbar label{display:flex;align-items:center;gap:.35rem;font-weight:600}
+.draw-toolbar input,.draw-toolbar select,.draw-toolbar button{font:inherit}
+.draw-toolbar button{border:1px solid rgba(17,17,17,.16);background:#fff;border-radius:10px;padding:.48rem .7rem;cursor:pointer}
+.draw-toolbar button.primary{background:#17365d;color:#fff;border-color:#17365d}
+.draw-stage-wrap{padding:1rem;background:#eef3f8;display:grid;place-items:center}
+.draw-stage{width:100%;height:100%;background:#fff;border:1px solid rgba(17,17,17,.14);border-radius:16px;touch-action:none}
+.draw-status{padding:.7rem 1rem;border-top:1px solid rgba(17,17,17,.12);font-size:.95rem;color:rgba(17,17,17,.72)}
+.draw-shape-selected{stroke-dasharray:10 6}
 .deck-toolbar{position:fixed;left:1rem;top:1rem;display:flex;gap:.65rem;z-index:30}
 .deck-toolbar button,.slide-map button,.nav-btn{border:1px solid rgba(255,255,255,.14);background:rgba(10,16,32,.82);color:#eef3ff;border-radius:14px;padding:.78rem .95rem;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 18px 45px rgba(0,0,0,.25)}
 .slide-map{position:fixed;top:0;right:0;height:100svh;width:min(420px,92vw);background:rgba(7,11,23,.96);border-left:1px solid rgba(255,255,255,.10);padding:1rem;display:none;z-index:35;overflow:auto}
@@ -3122,9 +3158,39 @@ window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],displayMath:[['$$'
 <body>
 <div class="deck-toolbar"><button class="nav-btn" id="prevBtn">◀</button><button class="nav-btn" id="nextBtn">▶</button></div>
 <div class="slide-map" id="slideMap"><button id="closeMapBtn" style="float:right;">Close</button><h3 id="deckTitle"></h3><div class="slide-map-list" id="slideMapList"></div></div>
+<div class="draw-modal" id="drawModal" hidden>
+  <div class="draw-shell">
+    <div class="draw-toolbar">
+      <label>Tool
+        <select id="drawTool">
+          <option value="pen">Pen</option>
+          <option value="line">Line</option>
+          <option value="rect">Rectangle</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="select">Select</option>
+        </select>
+      </label>
+      <label>Color <input id="drawColor" type="color" value="#111111" /></label>
+      <label>Width <input id="drawWidth" type="range" min="1" max="16" value="3" /></label>
+      <button type="button" id="drawDeleteBtn">Delete selected</button>
+      <button type="button" id="drawClearBtn">Clear</button>
+      <button type="button" id="drawCancelBtn">Cancel</button>
+      <button type="button" class="primary" id="drawSaveBtn">Insert on slide</button>
+    </div>
+    <div class="draw-stage-wrap">
+      <svg id="drawSvg" class="draw-stage" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" aria-label="Live drawing editor"></svg>
+    </div>
+    <div class="draw-status">Draw on the canvas, then click <b>Insert on slide</b>. Drawings are autosaved in this browser for this presentation.</div>
+  </div>
+</div>
 <div class="deck" id="deck"></div>
 <script>
 const deckPayload=JSON.parse(document.getElementById('deck-source').textContent);
+const liveDrawEnabled=!!(deckPayload.presentationOptions&&deckPayload.presentationOptions.enableLiveDraw);
+const annotationStorageKey='liveDraw:' + encodeURIComponent((deckPayload.deckTitle||'deck') + '|' + (Array.isArray(deckPayload.slides)?deckPayload.slides.length:0));
+let liveDrawAnnotations=loadLiveDrawAnnotations();
+function loadLiveDrawAnnotations(){try{return JSON.parse(localStorage.getItem(annotationStorageKey)||'{}');}catch(err){return {};}}
+function persistLiveDrawAnnotations(){try{localStorage.setItem(annotationStorageKey, JSON.stringify(liveDrawAnnotations));}catch(err){console.error(err);}}
 function escapeHtml(str){return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function escapeAttr(str){return escapeHtml(str).replace(/\\n/g,'&#10;');}
 function preserveMathTokens(str){const tokens=[];let out=String(str??'');const patterns=[/\\$\\$[\\s\\S]+?\\$\\$/g,/\\\\\\[[\\s\\S]+?\\\\\\]/g,/\\\\\\([\\s\\S]+?\\\\\\)/g,/\\$(?!\\s)[^$\\n]+?\\$/g];patterns.forEach(pattern=>{out=out.replace(pattern,m=>{const key='@@MATH'+tokens.length+'@@';tokens.push(m);return key;});});return {out,tokens};}
@@ -3142,14 +3208,44 @@ function renderBlock(block,placeholderText){const resolvedMode=block.mode||'pane
 function renderBlocks(blocks,placeholder){const list=blocks&&blocks.length?blocks:[{mode:'placeholder',content:placeholder||'Add a block'}];return '<div class="col-stack">'+list.map(block=>renderBlock(block,placeholder)).join('')+'</div>';}
 function buildSlideInner(slide){const heading=slide.headingLevel||'h2';const titleHtml='<div class="preview-title" data-preview-role="title" style="'+titleWrapperStyle(slide.titleStyle,heading)+'"><'+heading+'>'+escapeHtml(slide.title||'Untitled slide').replace(/\\n/g,'<br>')+'</'+heading+'></div>';const kickerHtml=slide.kicker?'<div class="kicker">'+escapeHtml(slide.kicker)+'</div>':'';const ledeHtml=slide.lede?'<div class="lede">'+escapeHtml(slide.lede)+'</div>':'';const s=normalizeSlide(slide);if(s.slideType==='title-center')return '<div class="title-center">'+titleHtml+kickerHtml+'</div>';if(s.slideType==='section-divider')return '<div class="section-divider-wrap"><div><div class="divider-kicker">'+escapeHtml(s.kicker||'Section')+'</div>'+titleHtml+'<div class="divider-line"></div><div class="divider-lede">'+escapeHtml(s.lede||'')+'</div></div></div>';if(['two-col','title-two-callouts','title-figure-explanation','comparison','image-left-text-right'].includes(s.slideType)){const layoutClass={ 'two-col':'layout-two-col','title-two-callouts':'layout-two-callouts','title-figure-explanation':'layout-figure-explanation','comparison':'layout-comparison','image-left-text-right':'layout-image-left-text-right'}[s.slideType]||'layout-two-col';const leftHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.leftBlocks[0]&&s.leftBlocks[0].title)||'Left')+'</div>':'';const rightHead=s.slideType==='comparison'?'<div class="comparison-head">'+escapeHtml((s.rightBlocks[0]&&s.rightBlocks[0].title)||'Right')+'</div>':'';return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body '+layoutClass+'"><div class="col">'+leftHead+renderBlocks(s.leftBlocks,'Left column')+'</div><div class="col">'+rightHead+renderBlocks(s.rightBlocks,'Right column')+'</div></div>';}if(s.slideType==='theorem-proof'){const theorem=s.leftBlocks[0]||{mode:'panel',content:'\\paragraph{Theorem} State the result here.'};const proof=s.leftBlocks[1]||{mode:'panel',content:'\\paragraph{Proof sketch} Add the argument here.'};return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col theorem-proof-wrap"><div class="named-box"><div class="named-box-head">'+escapeHtml(theorem.title||'Theorem')+'</div><div class="named-box-body">'+renderBlock({...theorem,title:''},'Theorem')+'</div></div><div class="named-box"><div class="named-box-head">'+escapeHtml(proof.title||'Proof')+'</div><div class="named-box-body">'+renderBlock({...proof,title:''},'Proof')+'</div></div></div></div>';}if(s.slideType==='algorithm-layout'){const algo=s.leftBlocks[0]||{mode:'pseudocode',content:'Algorithm goes here'};const notes=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col algorithm-wrap">'+renderBlock(algo,'Algorithm')+(notes.length?renderBlocks(notes,'Notes'):'')+'</div></div>';}if(s.slideType==='full-width-figure-caption'){const fig=s.leftBlocks[0]||{mode:'placeholder',content:'Add a figure block'};const captionBlocks=s.leftBlocks.slice(1);return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col full-figure-wrap">'+renderBlock(fig,'Figure')+(captionBlocks.length?'<div class="figure-caption">'+renderBlocks(captionBlocks,'Caption')+'</div>':'')+'</div></div>';}return titleHtml+kickerHtml+ledeHtml+'<div class="slide-body"><div class="col">'+renderBlocks(s.leftBlocks,'Main content')+'</div></div>';}
 const deck=document.getElementById('deck');const slideMap=document.getElementById('slideMap');const slideMapList=document.getElementById('slideMapList');document.getElementById('deckTitle').textContent=deckPayload.deckTitle||'Slides';
-deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');const styleCls=' style-'+String((deckPayload.theme&&deckPayload.theme.beamerStyle)||'classic').replace(/[^a-z0-9_-]/gi,'').toLowerCase();return '<section class="'+cls+styleCls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'"><button class="slides-button" type="button">Slides</button><div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'</section>';}).join('\\n');
+deck.innerHTML=deckPayload.slides.map((slide,idx)=>{const cls=slide.slideType==='title-center'?'deck-slide title-center':(slide.slideType==='two-col'?'deck-slide two-col':'deck-slide single');const styleCls=' style-'+String((deckPayload.theme&&deckPayload.theme.beamerStyle)||'classic').replace(/[^a-z0-9_-]/gi,'').toLowerCase();const actionHtml='<div class="slide-actions"><button class="slides-button" type="button">Slides</button>'+(liveDrawEnabled?'<button class="draw-button" type="button">Draw</button>':'')+'</div>';return '<section class="'+cls+styleCls+'" data-index="'+idx+'" style="'+buildSlideStyle(slide)+'">'+actionHtml+'<div class="slide-number">'+(idx+1)+' / '+deckPayload.slides.length+'</div>'+buildSlideInner(slide).trim()+'<div class="slide-annotation-layer" data-annotation-layer="'+idx+'"></div></section>';}).join('\\n');
 slideMapList.innerHTML=deckPayload.slides.map((slide,idx)=>'<button type="button" class="slide-map-item" data-go="'+idx+'"><span>'+(idx+1)+'.</span><span>'+escapeHtml(slide.title||('Slide '+(idx+1)))+'</span></button>').join('');
 let active=0;const slideEls=Array.from(document.querySelectorAll('.deck-slide'));
 function fitFiguresInSlide(slideEl){if(!slideEl)return;const figures=Array.from(slideEl.querySelectorAll('.figure-embed'));if(!figures.length)return;const isManual=embed=>{const box=embed&&embed.querySelector('.figure-box');return !!(box&&(box.dataset.userMoved==='1'||box.dataset.userSized==='1'));};figures.forEach(embed=>{if(isManual(embed))return;embed.style.maxHeight='';embed.style.maxWidth='';embed.style.height='';embed.style.width='';const media=embed.querySelector('img,svg,canvas,iframe');if(media){media.style.maxHeight='';media.style.maxWidth='';media.style.height='';media.style.width='';}});const maxHeight=slideEl.clientHeight||window.innerHeight||900;let guard=0;while(slideEl.scrollHeight>maxHeight+2&&guard<16){const overflow=slideEl.scrollHeight-maxHeight;const candidates=figures.map(embed=>{if(isManual(embed))return null;const media=embed.querySelector('img,svg,canvas,iframe');const rect=(media||embed).getBoundingClientRect();return {embed,media,h:rect.height||0};}).filter(x=>x&&x.h>40).sort((a,b)=>b.h-a.h);if(!candidates.length)break;const c=candidates[0];const current=parseFloat((c.media&&c.media.style.maxHeight)||c.h);const reduce=Math.min(Math.max(overflow+8,24),current*0.35);const next=Math.max(70,current-reduce);c.embed.style.maxHeight=(next+12)+'px';if(c.media)c.media.style.maxHeight=next+'px';guard+=1;}}
 function fitFiguresIn(root){(root||document).querySelectorAll('.deck-slide.active,.print-cell .slide,.slide').forEach(fitFiguresInSlide);}
-function render(){slideEls.forEach((el,i)=>el.classList.toggle('active',i===active));if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function renderLiveDrawAnnotations(){slideEls.forEach((slideEl,idx)=>{const layer=slideEl.querySelector('[data-annotation-layer]');if(!layer)return;layer.innerHTML='';const arr=Array.isArray(liveDrawAnnotations[idx])?liveDrawAnnotations[idx]:[];arr.forEach(item=>{const host=document.createElement('div');host.className='live-draw-figure';host.style.left=(100*(item.x ?? 0.58))+'%';host.style.top=(100*(item.y ?? 0.18))+'%';host.style.width=(100*(item.w ?? 0.28))+'%';host.style.height=(100*(item.h ?? 0.28))+'%';host.innerHTML='<div class="live-draw-figure-box">'+String(item.svg||'')+'</div>';layer.appendChild(host);});});}
+function render(){slideEls.forEach((el,i)=>el.classList.toggle('active',i===active));renderLiveDrawAnnotations();if(window.MathJax&&typeof window.MathJax.typesetPromise==='function'){if(typeof window.MathJax.typesetClear==='function')window.MathJax.typesetClear(slideEls);window.MathJax.typesetPromise(slideEls.filter(el=>el.classList.contains('active'))).then(()=>fitFiguresIn(document)).catch(()=>fitFiguresIn(document));}else{fitFiguresIn(document);}}
 function go(i){if(i<0||i>=slideEls.length)return;active=i;render();slideMap.classList.remove('open');}
-document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));window.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape')slideMap.classList.remove('open');});render();
+const drawModal=document.getElementById('drawModal');
+const drawSvg=document.getElementById('drawSvg');
+const drawTool=document.getElementById('drawTool');
+const drawColor=document.getElementById('drawColor');
+const drawWidth=document.getElementById('drawWidth');
+const drawDeleteBtn=document.getElementById('drawDeleteBtn');
+const drawClearBtn=document.getElementById('drawClearBtn');
+const drawCancelBtn=document.getElementById('drawCancelBtn');
+const drawSaveBtn=document.getElementById('drawSaveBtn');
+let drawSession={slideIndex:0,drawing:null,start:null,selected:null};
+function drawPoint(evt){const pt=drawSvg.createSVGPoint();pt.x=evt.clientX;pt.y=evt.clientY;const m=drawSvg.getScreenCTM();return m?pt.matrixTransform(m.inverse()):{x:0,y:0};}
+function selectDrawShape(el){if(drawSession.selected&&drawSession.selected.classList)drawSession.selected.classList.remove('draw-shape-selected');drawSession.selected=el||null;if(drawSession.selected&&drawSession.selected.classList)drawSession.selected.classList.add('draw-shape-selected');}
+function resetDrawEditor(){if(drawSvg)drawSvg.innerHTML='';selectDrawShape(null);drawSession.drawing=null;drawSession.start=null;}
+function openDrawModalForSlide(idx){if(!liveDrawEnabled||!drawModal)return;drawSession.slideIndex=idx;resetDrawEditor();drawModal.hidden=false;}
+function closeDrawModal(){if(drawModal)drawModal.hidden=true;resetDrawEditor();}
+function finishInsertedDrawing(){if(!drawSvg||!drawSvg.children.length){closeDrawModal();return;}const clone=drawSvg.cloneNode(true);clone.removeAttribute('id');clone.querySelectorAll('.draw-shape-selected').forEach(el=>el.classList.remove('draw-shape-selected'));clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('viewBox','0 0 1000 640');clone.setAttribute('preserveAspectRatio','xMidYMid meet');const arr=Array.isArray(liveDrawAnnotations[drawSession.slideIndex])?liveDrawAnnotations[drawSession.slideIndex]:[];const offset=Math.min(arr.length*.03,.18);arr.push({svg:clone.outerHTML,x:clamp(.58-offset,.18,.76),y:clamp(.18+offset,.08,.68),w:.28,h:.28,ts:Date.now()});liveDrawAnnotations[drawSession.slideIndex]=arr;persistLiveDrawAnnotations();closeDrawModal();renderLiveDrawAnnotations();}
+if(drawSvg){drawSvg.addEventListener('pointerdown',evt=>{const tool=drawTool.value;const p=drawPoint(evt);if(tool==='select'){const shape=evt.target.closest('[data-draw-shape]');selectDrawShape(shape&&drawSvg.contains(shape)?shape:null);return;}evt.preventDefault();drawSvg.setPointerCapture(evt.pointerId);let el=null;if(tool==='pen'){el=document.createElementNS('http://www.w3.org/2000/svg','polyline');el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-linejoin','round');el.setAttribute('points',p.x+','+p.y);}else if(tool==='line'){el=document.createElementNS('http://www.w3.org/2000/svg','line');el.setAttribute('x1',p.x);el.setAttribute('y1',p.y);el.setAttribute('x2',p.x);el.setAttribute('y2',p.y);el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);el.setAttribute('stroke-linecap','round');}else if(tool==='rect'){el=document.createElementNS('http://www.w3.org/2000/svg','rect');el.setAttribute('x',p.x);el.setAttribute('y',p.y);el.setAttribute('width',1);el.setAttribute('height',1);el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);}else if(tool==='ellipse'){el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');el.setAttribute('cx',p.x);el.setAttribute('cy',p.y);el.setAttribute('rx',1);el.setAttribute('ry',1);el.setAttribute('fill','none');el.setAttribute('stroke',drawColor.value);el.setAttribute('stroke-width',drawWidth.value);}if(!el)return;el.setAttribute('data-draw-shape','1');drawSvg.appendChild(el);drawSession.drawing=el;drawSession.start=p;selectDrawShape(el);});drawSvg.addEventListener('pointermove',evt=>{if(!drawSession.drawing)return;const p=drawPoint(evt);const el=drawSession.drawing;if(drawTool.value==='pen'){el.setAttribute('points',(el.getAttribute('points')||'')+' '+p.x+','+p.y);}else if(drawTool.value==='line'){el.setAttribute('x2',p.x);el.setAttribute('y2',p.y);}else if(drawTool.value==='rect'){const x=Math.min(drawSession.start.x,p.x),y=Math.min(drawSession.start.y,p.y),w=Math.abs(p.x-drawSession.start.x),h=Math.abs(p.y-drawSession.start.y);el.setAttribute('x',x);el.setAttribute('y',y);el.setAttribute('width',w);el.setAttribute('height',h);}else if(drawTool.value==='ellipse'){el.setAttribute('cx',(drawSession.start.x+p.x)/2);el.setAttribute('cy',(drawSession.start.y+p.y)/2);el.setAttribute('rx',Math.abs(p.x-drawSession.start.x)/2);el.setAttribute('ry',Math.abs(p.y-drawSession.start.y)/2);}});['pointerup','pointercancel','pointerleave'].forEach(type=>drawSvg.addEventListener(type,()=>{drawSession.drawing=null;drawSession.start=null;}));}
+if(drawDeleteBtn)drawDeleteBtn.addEventListener('click',()=>{if(drawSession.selected&&drawSession.selected.parentNode){drawSession.selected.parentNode.removeChild(drawSession.selected);selectDrawShape(null);}});
+if(drawClearBtn)drawClearBtn.addEventListener('click',()=>resetDrawEditor());
+if(drawCancelBtn)drawCancelBtn.addEventListener('click',()=>closeDrawModal());
+if(drawSaveBtn)drawSaveBtn.addEventListener('click',()=>finishInsertedDrawing());
+document.getElementById('prevBtn').addEventListener('click',()=>go(active-1));
+document.getElementById('nextBtn').addEventListener('click',()=>go(active+1));
+document.getElementById('closeMapBtn').addEventListener('click',()=>slideMap.classList.remove('open'));
+document.querySelectorAll('.slides-button').forEach(btn=>btn.addEventListener('click',()=>slideMap.classList.add('open')));
+if(liveDrawEnabled){document.querySelectorAll('.draw-button').forEach((btn,idx)=>btn.addEventListener('click',()=>openDrawModalForSlide(idx)));}
+document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.go))));
+window.addEventListener('keydown',e=>{if(drawModal&&!drawModal.hidden&&e.key==='Escape'){e.preventDefault();closeDrawModal();return;}if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(active+1);}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(active-1);}if(e.key==='Escape')slideMap.classList.remove('open');});
+render();
 <\/script>
 </body>
 </html>`;
@@ -3197,6 +3293,7 @@ function currentPayload(){
   return {
     deckTitle: fields.deckTitle.value || 'My HTML Presentation',
     theme: currentThemeFromFields(),
+    presentationOptions: currentPresentationOptions(),
     slides: slides.length ? slides : [currentDraftSlide()]
   };
 }
@@ -3692,6 +3789,7 @@ async function loadDeckFromFile(file){
   if(!payload || !Array.isArray(payload.slides)) throw new Error('Could not parse slides from this HTML file.');
   fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   if(payload.theme) applyThemeToForm(payload.theme);
+  if(payload.presentationOptions) applyPresentationOptions(payload.presentationOptions);
   slides = payload.slides.map(normalizeSlide);
   activeIndex = slides.length ? 0 : -1;
   if(activeIndex >= 0) applySlideToForm(slides[0]); else clearForm(false);
@@ -3704,6 +3802,7 @@ async function loadPresentationJsonFromFile(file){
   if(!payload || !Array.isArray(payload.slides)) throw new Error('This JSON file does not contain a presentation with a slides array.');
   fields.deckTitle.value = payload.deckTitle || 'My HTML Presentation';
   if(payload.theme) applyThemeToForm(payload.theme);
+  if(payload.presentationOptions) applyPresentationOptions(payload.presentationOptions);
   slides = payload.slides.map(normalizeSlide);
   activeIndex = slides.length ? 0 : -1;
   if(activeIndex >= 0) applySlideToForm(slides[0]); else clearForm(false);
