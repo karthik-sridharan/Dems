@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Untitled Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0f172a;font-family:Inter,ui-sans-serif,system-ui,sans-serif;overflow:hidden}
+.stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+.slide-wrap{position:relative;width:1600px;height:900px;transform-origin:center;flex-shrink:0}
+.slide{position:absolute;inset:0;width:1600px;height:900px}
+.nav-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:60;transition:opacity .22s}
+.nav-bar.hidden{opacity:0;pointer-events:none}
+.nb{font:700 .78rem Inter,sans-serif;padding:.46rem .85rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(10,16,32,.88);color:#f1f5f9;cursor:pointer;backdrop-filter:blur(10px);white-space:nowrap;transition:background .12s}
+.nb:hover{background:rgba(10,16,32,1)}
+.nb-sep{width:1px;height:20px;background:rgba(255,255,255,.14);margin:0 1px}
+.slide-ctr{font:.72rem Inter,sans-serif;color:rgba(255,255,255,.55);padding:.46rem .7rem;background:rgba(10,16,32,.7);border-radius:999px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px)}
+
+.draw-bar{position:fixed;top:14px;right:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:.65rem .85rem;background:rgba(255,255,255,.97);border:1px solid #dbe4ef;border-radius:16px;box-shadow:0 18px 45px rgba(0,0,0,.18);z-index:70;backdrop-filter:blur(12px);display:none}
+.draw-bar.open{display:flex}
+.draw-bar select,.draw-bar input[type=range]{font:inherit;border:1px solid #dbe4ef;border-radius:8px;padding:.3rem .4rem;cursor:pointer}
+.draw-bar input[type=color]{padding:1px;width:34px;height:30px;border-radius:8px;border:1px solid #dbe4ef;cursor:pointer}
+.db{font:700 .78rem Inter,sans-serif;padding:.4rem .7rem;border-radius:9px;border:1px solid #dbe4ef;background:#fff;cursor:pointer;color:#142033;transition:all .11s}
+.db:hover{background:#f1f5f9}
+.db.primary{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-color:transparent}
+.db.danger{color:#dc2626;border-color:#fecaca;background:#fff7f7}
+.draw-bar label{font:.76rem Inter,sans-serif;font-weight:700;color:#65748b;display:flex;align-items:center;gap:5px}
+body.draw-on .stage{cursor:crosshair}
+body.draw-on .anno-svg{pointer-events:auto}
+.laser{position:fixed;width:26px;height:26px;margin-left:-13px;margin-top:-13px;border-radius:999px;pointer-events:none;z-index:80;display:none;
+  --lr:255,59,48;--lb:100,0,0;
+  background:radial-gradient(circle,#fff 0 12%,rgb(var(--lr)) 13% 34%,rgba(var(--lr),.95) 35% 50%,rgba(var(--lr),.35) 51% 72%,rgba(var(--lr),0) 73% 100%);
+  border:1px solid rgba(var(--lb),.5);
+  box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 8px rgba(var(--lb),.4),0 0 18px rgba(var(--lr),.4),0 0 32px rgba(var(--lr),.2)}
+.laser[data-c=blue]{--lr:37,99,235;--lb:15,52,130}
+.laser[data-c=green]{--lr:22,163,74;--lb:12,94,43}
+.laser[data-c=pointer]{width:24px;height:34px;margin-left:0;margin-top:0;border-radius:0;background:transparent;border:0;box-shadow:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.laser[data-c=pointer]::before{content:"";position:absolute;inset:0;background:#fff;clip-path:polygon(0 0,0 28px,7px 21px,11px 32px,16px 30px,12px 19px,22px 19px)}
+.laser[data-c=pointer]::after{content:"";position:absolute;left:2px;top:3px;width:18px;height:26px;background:#111;clip-path:polygon(0 0,0 22px,6px 16px,10px 25px,13px 24px,9px 15px,18px 15px)}
+body.laser-on .stage{cursor:none}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:90;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal-box{background:#fff;border-radius:20px;box-shadow:0 32px 80px rgba(15,23,42,.25);padding:22px 24px;width:min(460px,92vw)}
+.modal-box h2{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-box p{font-size:.82rem;color:#65748b;margin-bottom:16px;line-height:1.5}
+.per-page-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.pp-opt{border:2px solid #dbe4ef;border-radius:12px;padding:10px 6px;cursor:pointer;text-align:center;transition:all .13s;background:#fff}
+.pp-opt:hover{border-color:#93c5fd;background:#eff6ff}
+.pp-opt.sel{border-color:#2563eb;background:#eff6ff}
+.pp-opt .pp-n{font-size:1.5rem;font-weight:900;color:#2563eb;display:block}
+.pp-opt .pp-lbl{font-size:.72rem;font-weight:700;color:#65748b;margin-top:2px;display:block}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.mb{font:700 .8rem Inter,sans-serif;padding:.48rem .9rem;border-radius:10px;border:1px solid #dbe4ef;background:#fff;color:#142033;cursor:pointer}
+.mb.primary{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-color:transparent}
+@media print{
+  html,body{background:#fff!important;overflow:visible!important;height:auto!important}
+  .nav-bar,.draw-bar,.laser,.modal-bg{display:none!important}
+  .stage{display:block!important;width:auto!important;height:auto!important}
+  .slide-wrap{display:none}
+  .print-sheet{display:block!important}
+  .slide{display:block!important;position:relative!important;break-inside:avoid;page-break-inside:avoid}
+  .anno-svg{display:none}
+  .print-cell{break-inside:avoid;page-break-inside:avoid}
+}
+.print-sheet{display:none}
+</style>
+</head><body>
+
+<div class="stage" id="stage">
+  <div class="slide-wrap" id="slideWrap"><div class="slide" data-idx="0" style="display:block;background:#ffffff"><div style="position:absolute;left:80px;top:80px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Welcome to Lumina</div><div style="position:absolute;left:80px;top:260px;width:1440px;height:200px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Click any block to edit it. Drag to move, drag the corner handle to resize.</div><svg class="anno-svg" data-slide="0" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="1" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Why Transformers Revolutionized Deep Learning</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Enable parallel processing of input data, boosting training speed significantly
+Capture long-range dependencies without recurrent structures or convolutions
+Provide a scalable architecture adaptable to various modalities and tasks
+Achieve state-of-the-art results in language understanding and generation
+Facilitate transfer learning through large pretrained models like BERT and GPT</div><svg class="anno-svg" data-slide="1" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="2" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Core Components of Transformer Architecture</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Input embeddings combine token and positional information for context
+Multi-head self-attention layers capture relationships from multiple perspectives
+Feed-forward neural networks apply non-linear transformations per position
+Layer normalization and residual connections improve training stability
+Encoder and decoder stacks work together for sequence-to-sequence tasks</div><svg class="anno-svg" data-slide="2" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="3" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">How Self-Attention Weighs Input Elements</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Computes query, key, and value vectors from input embeddings
+Generates attention scores by measuring query-key compatibility
+Applies softmax to normalize scores into probability weights
+Aggregates value vectors weighted by attention scores to form output
+Allows dynamic focus on relevant tokens regardless of position</div><svg class="anno-svg" data-slide="3" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="4" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Self-Attention Benefits in Natural Language Processing</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Improves context understanding by linking distant words effectively
+Enhances parallelization compared to sequential RNN processing
+Supports handling of variable-length inputs without fixed windows
+Enables better modeling of syntax and semantics simultaneously
+Facilitates fine-tuning on diverse NLP tasks with fewer modifications</div><svg class="anno-svg" data-slide="4" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="5" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Transformers in Real-World Applications</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Power conversational AI systems like chatbots and virtual assistants
+Drive machine translation with high accuracy across many languages
+Enhance text summarization by capturing key information efficiently
+Support code generation and completion in software development tools
+Enable image captioning and multimodal understanding in AI models</div><svg class="anno-svg" data-slide="5" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="6" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Key Takeaways and Future Transformer Trends</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Transformers redefine model efficiency and effectiveness across domains
+Research explores sparse attention and memory-optimized architectures
+Multimodal transformers integrate text, vision, and audio inputs seamlessly
+Continued scaling leads to emergent capabilities and better generalization
+Ethical use and model interpretability remain critical future focuses</div><svg class="anno-svg" data-slide="6" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="7" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Unlocking AI's Potential: The Power of Transformers</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Transformers revolutionized sequence processing, enabling breakthroughs in complex data analysis.
+They significantly advanced natural language understanding, powering modern AI applications.
+This architecture efficiently models long-range dependencies, overcoming previous sequential limitations.</div><svg class="anno-svg" data-slide="7" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="8" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Beyond Recurrence: Why Parallel Processing Became Essential</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Recurrent Neural Networks (RNNs) struggled with vanishing/exploding gradients in long sequences.
+Sequential processing created computational bottlenecks, hindering scalability for large datasets.
+The demand for faster training pushed innovation towards inherently parallel architectures.</div><svg class="anno-svg" data-slide="8" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="9" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Attention is All You Need: Demystifying Self-Attention</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Self-attention dynamically weighs input elements, identifying their relative importance for context.
+It captures global dependencies regardless of distance, unlike traditional recurrent connections.
+This mechanism allows parallel computation, drastically improving processing speed and efficiency.</div><svg class="anno-svg" data-slide="9" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="10" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Building Blocks of Intelligence: The Core Transformer Architecture</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">The architecture comprises encoder-decoder stacks, processing input and generating output sequences.
+Multi-head attention layers concurrently capture diverse relationships within the input data.
+Feed-forward networks apply non-linear transformations to each position independently after attention.
+Positional encodings provide crucial sequence order information, augmenting token embeddings.</div><svg class="anno-svg" data-slide="10" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="11" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">AI's New Era: Transformers' Transformative Impact Across Fields</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Transformers power state-of-the-art NLP models like GPT and BERT for language generation and understanding.
+They have achieved significant breakthroughs in computer vision, exemplified by Vision Transformers (ViT).
+Applications extend to speech recognition, drug discovery, and reinforcement learning environments.
+Their versatility continues to drive innovation across diverse scientific and technological domains.</div><svg class="anno-svg" data-slide="11" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div>
+<div class="slide" data-idx="12" style="display:none;background:#ffffff"><div style="position:absolute;left:80px;top:60px;width:1440px;height:130px;pointer-events:none;font-size:60px;font-weight:900;color:#142033;text-align:left;line-height:1.15;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">The Future is Attentive: Recap and Next Steps for Transformers</div><div style="position:absolute;left:80px;top:220px;width:1440px;height:560px;pointer-events:none;font-size:28px;font-weight:400;color:#334155;text-align:left;line-height:1.6;font-family:'Inter',sans-serif;overflow:hidden;word-break:break-word;white-space:pre-wrap">Transformers redefined AI by enabling efficient, parallel processing of sequential data.
+Self-attention proved a powerful mechanism for understanding complex contextual relationships.
+Ongoing research focuses on making Transformers more efficient, smaller, and accessible.
+Expect continued integration of attentive architectures across new and emerging AI challenges.</div><svg class="anno-svg" data-slide="12" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div></div>
+</div>
+<div class="print-sheet" id="printSheet"></div><div class="laser" id="laser" aria-hidden="true"></div><div class="draw-bar" id="drawBar">
+  <label>Tool<select id="dTool"><option value="pen">Pen</option><option value="line">Line</option><option value="rect">Rect</option><option value="ellipse">Ellipse</option><option value="erase">Erase</option></select></label>
+  <label>Color <input type="color" id="dColor" value="#e11d48"/></label>
+  <label>Width <input type="range" id="dWidth" min="1" max="20" value="3" style="width:70px"/></label>
+  <button class="db danger" id="dClear">Clear slide</button>
+  <button class="db primary" id="dExit">Done</button>
+</div><div class="modal-bg" id="pdfModal">
+  <div class="modal-box">
+    <h2>Print / Save as PDF</h2>
+    <p>Choose how many slides to print per page, then use your browser's Print &rarr; Save as PDF.</p>
+    <div class="per-page-grid">
+      <div class="pp-opt sel" data-pp="1"><span class="pp-n">1</span><span class="pp-lbl">per page</span></div>
+      <div class="pp-opt" data-pp="2"><span class="pp-n">2</span><span class="pp-lbl">per page</span></div>
+      <div class="pp-opt" data-pp="4"><span class="pp-n">4</span><span class="pp-lbl">per page</span></div>
+      <div class="pp-opt" data-pp="6"><span class="pp-n">6</span><span class="pp-lbl">per page</span></div>
+      <div class="pp-opt" data-pp="9"><span class="pp-n">9</span><span class="pp-lbl">per page</span></div>
+      <div class="pp-opt" data-pp="16"><span class="pp-n">16</span><span class="pp-lbl">per page</span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="mb" id="pdfCancel">Cancel</button>
+      <button class="mb primary" id="pdfPrint">Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+<div class="nav-bar" id="navBar">
+  <button class="nb" id="prevBtn">&larr; Prev</button>
+  <span class="slide-ctr" id="ctr">1 / 13</span>
+  <button class="nb" id="nextBtn">Next &rarr;</button>
+  <div class="nb-sep"></div><button class="nb" id="fsBtn" title="Fullscreen (F)">&#x26F6;</button><div class="nb-sep"></div><button class="nb" id="drawBtn">&#9998; Draw</button><label class="nb" style="cursor:pointer;gap:5px;display:flex;align-items:center">&#128308;<select id="laserSel" style="font:inherit;background:transparent;border:none;color:#f1f5f9;cursor:pointer;outline:none;padding:0"><option value="red" selected>Red laser</option><option value="blue">Blue laser</option><option value="green">Green laser</option><option value="pointer">Pointer</option><option value="none">No pointer</option></select></label><div class="nb-sep"></div><button class="nb" id="printBtn">&#128424; Print</button>
+</div>
+
+<script>
+'use strict';
+function shapeToSVG(b){const st=b.style??{};const fill=st.fill??'#2563eb';const stroke=st.stroke??'';const sw=Number(st.strokeWidth??0);const r=Number(st.radius??0);const op=Number(st.opacity??1);const hasSt=stroke&&sw>0;const stAttr=hasSt?'stroke="'+stroke+'" stroke-width="'+sw+'"':'stroke="none"';const shp=b.shape??'rect';if(shp==='rect'){const ins=hasSt?sw/2:0;const dim=hasSt?100-sw:100;return'<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><rect x="'+ins+'" y="'+ins+'" width="'+dim+'" height="'+dim+'" rx="'+r+'" fill="'+fill+'" '+stAttr+' opacity="'+op+'" vector-effect="non-scaling-stroke"/></svg>';}if(shp==='circle'){const ins=hasSt?sw/2:0;const rad=50-ins;return'<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><ellipse cx="50" cy="50" rx="'+rad+'" ry="'+rad+'" fill="'+fill+'" '+stAttr+' opacity="'+op+'" vector-effect="non-scaling-stroke"/></svg>';}if(shp==='line'){const lw=hasSt?sw:(Number(st.strokeWidth)||6);const lc=stroke||fill;return'<svg viewBox="0 0 100 10" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><line x1="0" y1="5" x2="100" y2="5" stroke="'+lc+'" stroke-width="'+lw+'" stroke-linecap="round" opacity="'+op+'" vector-effect="non-scaling-stroke"/></svg>';}return'';}
+const TOTAL=13;
+const slideEls=Array.from(document.querySelectorAll('.slide'));
+let cur=0;
+const annotations=new Array(TOTAL).fill('');
+
+function resize(){const s=Math.min(window.innerWidth/1600,window.innerHeight/900);document.getElementById('slideWrap').style.transform='scale('+s+')';}
+window.addEventListener('resize',resize);resize();
+
+const ctrEl=document.getElementById('ctr');
+function go(n){
+  slideEls[cur].style.display='none';
+  cur=((n%TOTAL)+TOTAL)%TOTAL;
+  slideEls[cur].style.display='block';
+  ctrEl.textContent=(cur+1)+' / '+TOTAL;
+  if(typeof renderAnnotations==='function')renderAnnotations();
+}
+document.getElementById('prevBtn').addEventListener('click',()=>go(cur-1));
+document.getElementById('nextBtn').addEventListener('click',()=>go(cur+1));
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(cur+1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();go(cur-1);}
+  else if(e.key==='f'||e.key==='F'){toggleFullscreen();}else if(e.key==='Escape'){exitDraw();}
+});
+
+let navTimer=null;
+let drawMode=false;
+function showNav(){
+  document.getElementById('navBar').classList.remove('hidden');
+  clearTimeout(navTimer);
+  navTimer=setTimeout(()=>{
+    if(!drawMode) document.getElementById('navBar').classList.add('hidden');
+  },2800);
+}
+document.addEventListener('mousemove',showNav);
+document.addEventListener('touchstart',showNav);
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
+document.getElementById('fsBtn').addEventListener('click',toggleFullscreen);
+
+const laserEl=document.getElementById('laser');
+const laserSel=document.getElementById('laserSel');
+let laserMode='red';
+function setLaser(mode){
+  laserMode=mode;laserEl.dataset.c=mode;
+  if(mode==='none'){laserEl.style.display='none';document.body.classList.remove('laser-on');}
+}
+setLaser('red');
+laserSel.addEventListener('change',()=>setLaser(laserSel.value));
+document.addEventListener('mousemove',e=>{
+  if(laserMode==='none'||drawMode) return;
+  laserEl.style.display='block';laserEl.style.left=e.clientX+'px';laserEl.style.top=e.clientY+'px';
+  document.body.classList.add('laser-on');
+});
+document.getElementById('stage').addEventListener('mouseleave',()=>{
+  laserEl.style.display='none';document.body.classList.remove('laser-on');
+});
+
+let drawing=false;let drawEl=null;
+function getAnnoSvg(idx){return document.querySelector('.anno-svg[data-slide="'+idx+'"]');}
+function renderAnnotations(){
+  for(let i=0;i<TOTAL;i++){const svg=getAnnoSvg(i);if(svg)svg.innerHTML=annotations[i]||'';}
+  const a=getAnnoSvg(cur);if(a)a.style.pointerEvents=drawMode?'auto':'none';
+}
+function enterDraw(){
+  drawMode=true;document.body.classList.add('draw-on');document.body.classList.remove('laser-on');
+  laserEl.style.display='none';
+  document.getElementById('drawBar').classList.add('open');
+  document.getElementById('navBar').classList.remove('hidden');clearTimeout(navTimer);
+  renderAnnotations();
+}
+function exitDraw(){
+  if(!drawMode)return;drawMode=false;drawing=false;drawEl=null;
+  document.body.classList.remove('draw-on');
+  document.getElementById('drawBar').classList.remove('open');
+  renderAnnotations();
+}
+document.getElementById('drawBtn').addEventListener('click',()=>drawMode?exitDraw():enterDraw());
+document.getElementById('dExit').addEventListener('click',exitDraw);
+document.getElementById('dClear').addEventListener('click',()=>{
+  annotations[cur]='';const svg=getAnnoSvg(cur);if(svg)svg.innerHTML='';
+});
+function svgPt(e,svg){
+  const r=svg.getBoundingClientRect();
+  const vw=parseFloat(svg.getAttribute('viewBox').split(' ')[2])||1600;
+  const vh=parseFloat(svg.getAttribute('viewBox').split(' ')[3])||900;
+  const cx=e.touches?e.touches[0].clientX:e.clientX;
+  const cy=e.touches?e.touches[0].clientY:e.clientY;
+  return{x:(cx-r.left)/r.width*vw,y:(cy-r.top)/r.height*vh};
+}
+function makeShape(tool,p,color,width){
+  const ns='http://www.w3.org/2000/svg';let el;
+  if(tool==='pen'||tool==='line'){
+    el=document.createElementNS(ns,tool==='pen'?'polyline':'line');
+    el.setAttribute('fill','none');el.setAttribute('stroke',color);el.setAttribute('stroke-width',width);
+    el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-linejoin','round');
+    if(tool==='pen')el.setAttribute('points',p.x+','+p.y);
+    else{el.setAttribute('x1',p.x);el.setAttribute('y1',p.y);el.setAttribute('x2',p.x);el.setAttribute('y2',p.y);}
+  }else if(tool==='rect'){
+    el=document.createElementNS(ns,'rect');el.setAttribute('fill','none');el.setAttribute('stroke',color);el.setAttribute('stroke-width',width);
+    el.setAttribute('x',p.x);el.setAttribute('y',p.y);el.setAttribute('width',1);el.setAttribute('height',1);
+    el.dataset.ox=p.x;el.dataset.oy=p.y;
+  }else if(tool==='ellipse'){
+    el=document.createElementNS(ns,'ellipse');el.setAttribute('fill','none');el.setAttribute('stroke',color);el.setAttribute('stroke-width',width);
+    el.setAttribute('cx',p.x);el.setAttribute('cy',p.y);el.setAttribute('rx',1);el.setAttribute('ry',1);
+    el.dataset.ox=p.x;el.dataset.oy=p.y;
+  }
+  if(el)el.setAttribute('vector-effect','non-scaling-stroke');
+  return el;
+}
+function onDrawDown(e){
+  if(!drawMode)return;const svg=getAnnoSvg(cur);if(!svg)return;
+  const tool=document.getElementById('dTool').value;
+  const color=document.getElementById('dColor').value;
+  const width=document.getElementById('dWidth').value;
+  if(tool==='erase'){const hit=e.target.closest('[vector-effect]');if(hit&&svg.contains(hit)){hit.remove();annotations[cur]=svg.innerHTML;}return;}
+  e.preventDefault();const p=svgPt(e,svg);drawEl=makeShape(tool,p,color,width);
+  if(drawEl){svg.appendChild(drawEl);drawing=true;}
+}
+function onDrawMove(e){
+  if(!drawing||!drawEl)return;e.preventDefault();
+  const svg=getAnnoSvg(cur);if(!svg)return;const p=svgPt(e,svg);
+  const tool=document.getElementById('dTool').value;
+  if(tool==='pen')drawEl.setAttribute('points',(drawEl.getAttribute('points')||'')+' '+p.x+','+p.y);
+  else if(tool==='line'){drawEl.setAttribute('x2',p.x);drawEl.setAttribute('y2',p.y);}
+  else if(tool==='rect'){
+    const ox=parseFloat(drawEl.dataset.ox),oy=parseFloat(drawEl.dataset.oy);
+    drawEl.setAttribute('x',Math.min(ox,p.x));drawEl.setAttribute('y',Math.min(oy,p.y));
+    drawEl.setAttribute('width',Math.abs(p.x-ox));drawEl.setAttribute('height',Math.abs(p.y-oy));
+  }else if(tool==='ellipse'){
+    const ox=parseFloat(drawEl.dataset.ox),oy=parseFloat(drawEl.dataset.oy);
+    drawEl.setAttribute('cx',(ox+p.x)/2);drawEl.setAttribute('cy',(oy+p.y)/2);
+    drawEl.setAttribute('rx',Math.abs(p.x-ox)/2);drawEl.setAttribute('ry',Math.abs(p.y-oy)/2);
+  }
+}
+function onDrawUp(){
+  if(!drawing)return;drawing=false;drawEl=null;const svg=getAnnoSvg(cur);if(svg)annotations[cur]=svg.innerHTML;
+}
+const stageEl=document.getElementById('stage');
+stageEl.addEventListener('pointerdown',onDrawDown);stageEl.addEventListener('pointermove',onDrawMove);
+stageEl.addEventListener('pointerup',onDrawUp);stageEl.addEventListener('pointercancel',onDrawUp);
+
+let perPage=1;const pdfModal=document.getElementById('pdfModal');
+document.querySelectorAll('.pp-opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{document.querySelectorAll('.pp-opt').forEach(o=>o.classList.remove('sel'));opt.classList.add('sel');perPage=Number(opt.dataset.pp);});
+});
+document.getElementById('printBtn').addEventListener('click',()=>pdfModal.classList.add('open'));
+document.getElementById('pdfCancel').addEventListener('click',()=>pdfModal.classList.remove('open'));
+document.getElementById('pdfPrint').addEventListener('click',()=>{pdfModal.classList.remove('open');buildPrintSheet(perPage);setTimeout(()=>window.print(),120);});
+function buildPrintSheet(n){
+  const sheet=document.getElementById('printSheet');
+  const cols=n<=1?1:n<=2?2:n<=4?2:3;
+  let html='<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;padding:8px">';
+  slideEls.forEach((sl,i)=>{
+    const bg=sl.style.background||'#fff';
+    const inner=Array.from(sl.children).filter(c=>!c.classList.contains('anno-svg')).map(c=>c.outerHTML).join('');
+    html+='<div class="print-cell" style="position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #dbe4ef;border-radius:6px;background:'+bg+'">'
+      +'<div style="position:absolute;top:0;left:0;width:1600px;height:900px;transform-origin:top left">'
+      +inner+'</div>'
+      +'<div style="position:absolute;bottom:4px;right:6px;font-size:10px;font-weight:700;color:#94a3b8">'+(i+1)+'</div>'
+      +'</div>';
+  });
+  html+='</div>';sheet.innerHTML=html;
+  sheet.querySelectorAll('.print-cell').forEach(cell=>{
+    const inner=cell.querySelector('div');if(!inner)return;
+    const s=(cell.offsetWidth||200)/1600;inner.style.transform='scale('+s+')';
+  });
+}
+showNav();
+renderAnnotations();
+</script>
+</body></html>
