@@ -115,24 +115,25 @@ body.laser-on .stage{cursor:none}
 <html lang=&quot;en&quot;>
 <head>
 <meta charset=&quot;UTF-8&quot; />
-<meta name=&quot;viewport&quot; content=&quot;width=700, height=400&quot; />
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, height=device-height&quot; />
 <title>Synthesis: ML Methodology Animation</title>
 <style>
   /* Reset & base */
   * {
     box-sizing: border-box;
   }
-  body, html {
-    margin: 0; padding: 0;
-    width: 700px; height: 400px;
-    font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, Oxygen,
+  html, body {
+    width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, Oxygen,
       Ubuntu, Cantarell, &quot;Open Sans&quot;, &quot;Helvetica Neue&quot;, sans-serif;
-    background: #f9fafb;
+    background: #ffffff;
+    color-scheme: light;
     color: #111827;
     user-select: none;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   #container {
     flex: 1;
@@ -141,9 +142,11 @@ body.laser-on .stage{cursor:none}
     border: 1px solid #d1d5db;
     border-radius: 8px;
     margin: 12px 16px 8px 16px;
-    padding: 24px 32px;
+    padding: 24px 32px 20px 32px;
     box-shadow: 0 4px 12px rgb(0 0 0 / 0.05);
     overflow: visible;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Title */
@@ -167,14 +170,16 @@ body.laser-on .stage{cursor:none}
   /* Canvas area */
   #visualArea {
     position: relative;
-    width: 620px;
+    width: 100%;
+    max-width: 620px;
     height: 240px;
-    margin-top: 8px;
+    margin-top: 0;
+    user-select: none;
   }
 
   svg {
-    width: 620px;
-    height: 240px;
+    width: 100%;
+    height: 100%;
     overflow: visible;
   }
 
@@ -190,6 +195,8 @@ body.laser-on .stage{cursor:none}
     cursor: pointer;
     transition: background-color 0.25s ease;
     user-select: none;
+    margin-bottom: 12px;
+    min-width: 110px;
   }
   #nextBtn:hover:not(:disabled) {
     background: #1e40af;
@@ -271,6 +278,7 @@ body.laser-on .stage{cursor:none}
           <polygon points=&quot;0 0, 10 3.5, 0 7&quot; fill=&quot;#374151&quot; />
         </marker>
       </defs>
+      <g id=&quot;content&quot;></g>
     </svg>
   </div>
 </div>
@@ -279,6 +287,7 @@ body.laser-on .stage{cursor:none}
 <script>
 (() => {
   const svg = document.getElementById('svgCanvas');
+  const content = document.getElementById('content');
   const stepText = document.getElementById('stepText');
   const nextBtn = document.getElementById('nextBtn');
 
@@ -349,45 +358,45 @@ body.laser-on .stage{cursor:none}
     {
       text: `Step 1: <strong>Raw Data Acquisition</strong><br>
         Paired single-cell RNA sequencing (scRNA-seq) data is collected from <em>blood</em> and <em>skin tissue</em> of 74 individuals (57 patients with Systemic Sclerosis and 17 controls). This generates <span class=&quot;highlight&quot;>192,809 cells</span> across <span class=&quot;highlight&quot;>53 annotated cell states</span>.`,
-      visualize(svg) {
-        svg.innerHTML = '';
+      visualize() {
+        content.innerHTML = '';
 
         // Background compartments
-        svg.appendChild(createRect(20, 50, 260, 150, '#dbeafe', 16)); // blood bg
-        svg.appendChild(createRect(340, 50, 260, 150, '#ede9fe', 16)); // skin bg
+        content.appendChild(createRect(20, 50, 260, 150, '#dbeafe', 16)); // blood bg
+        content.appendChild(createRect(340, 50, 260, 150, '#ede9fe', 16)); // skin bg
 
         // Labels
-        svg.appendChild(createText(60, 30, 'Blood (Peripheral)', 'label'));
-        svg.appendChild(createText(560, 30, 'Skin Tissue', 'label'));
+        content.appendChild(createText(60, 30, 'Blood (Peripheral)', 'label'));
+        content.appendChild(createText(560, 30, 'Skin Tissue', 'label'));
 
         // Cells in blood: scattered blue circles
         for (let i=0; i<80; i++) {
           const cx = 40 + Math.random()*230;
           const cy = 70 + Math.random()*120;
-          svg.appendChild(createCircle(cx, cy, 5, '#2563eb', 'cell'));
+          content.appendChild(createCircle(cx, cy, 5, '#2563eb', 'cell'));
         }
         // Cells in skin: scattered purple circles
         for (let i=0; i<80; i++) {
           const cx = 360 + Math.random()*230;
           const cy = 70 + Math.random()*120;
-          svg.appendChild(createCircle(cx, cy, 5, '#7c3aed', 'cell'));
+          content.appendChild(createCircle(cx, cy, 5, '#7c3aed', 'cell'));
         }
 
-        // Count labels
-        svg.appendChild(createText(60, 210, '~192,809 cells', 'subtitle'));
-        svg.appendChild(createText(60, 228, '53 annotated cell states', 'subtitle'));
+        // Count labels bottom left
+        content.appendChild(createText(60, 210, '~192,809 cells', 'subtitle'));
+        content.appendChild(createText(60, 228, '53 annotated cell states', 'subtitle'));
       }
     },
     {
       text: `Step 2: <strong>Feature Extraction</strong><br>
         From raw single-cell data, extract features such as <em>cell type proportions</em>, <em>gene expression signatures</em> (e.g., interferon-stimulated genes), and <em>subtype-specific molecular programs</em> for each sample. These features capture the <span class=&quot;highlight&quot;>distribution</span> and <span class=&quot;highlight&quot;>variation</span> within cell populations.`,
-      visualize(svg) {
-        svg.innerHTML = '';
+      visualize() {
+        content.innerHTML = '';
         // Compartments simplified
-        svg.appendChild(createRect(50, 50, 240, 140, '#dbeafe', 16)); // blood
-        svg.appendChild(createRect(330, 50, 240, 140, '#ede9fe', 16)); // skin
-        svg.appendChild(createText(60, 30, 'Blood Sample', 'label'));
-        svg.appendChild(createText(340, 30, 'Skin Tissue Sample', 'label'));
+        content.appendChild(createRect(50, 50, 240, 140, '#dbeafe', 16)); // blood
+        content.appendChild(createRect(330, 50, 240, 140, '#ede9fe', 16)); // skin
+        content.appendChild(createText(60, 30, 'Blood Sample', 'label'));
+        content.appendChild(createText(340, 30, 'Skin Tissue Sample', 'label'));
 
         // Blood clusters with distinct colors & labels
         const bloodClusters = [
@@ -399,9 +408,9 @@ body.laser-on .stage{cursor:none}
           for (let i=0; i<15; i++) {
             let jitterX = c.x + (Math.random()-0.5)*20;
             let jitterY = c.y + (Math.random()-0.5)*20;
-            svg.appendChild(createCircle(jitterX, jitterY, 6, c.color, 'cell'));
+            content.appendChild(createCircle(jitterX, jitterY, 6, c.color, 'cell'));
           }
-          svg.appendChild(createText(c.x-20, c.y-25, c.label, 'subtitle'));
+          content.appendChild(createText(c.x-20, c.y-25, c.label, 'subtitle'));
         });
 
         // Skin clusters
@@ -414,33 +423,33 @@ body.laser-on .stage{cursor:none}
           for (let i=0; i<15; i++) {
             let jitterX = c.x + (Math.random()-0.5)*20;
             let jitterY = c.y + (Math.random()-0.5)*20;
-            svg.appendChild(createCircle(jitterX, jitterY, 6, c.color, 'cell'));
+            content.appendChild(createCircle(jitterX, jitterY, 6, c.color, 'cell'));
           }
-          svg.appendChild(createText(c.x-30, c.y-25, c.label, 'subtitle'));
+          content.appendChild(createText(c.x-30, c.y-25, c.label, 'subtitle'));
         });
 
         // Arrows down to feature boxes
-        svg.appendChild(createArrow(170, 190, 170, 210));
-        svg.appendChild(createArrow(420, 190, 420, 210));
+        content.appendChild(createArrow(170, 190, 170, 210));
+        content.appendChild(createArrow(420, 190, 420, 210));
 
         // Feature boxes below clusters
-        svg.appendChild(createRect(110, 210, 120, 30, '#bfdbfe', 8));
-        svg.appendChild(createRect(370, 210, 120, 30, '#ddd6fe', 8));
-        svg.appendChild(createText(170, 230, 'Extract Features', 'label', 'middle'));
-        svg.appendChild(createText(430, 230, 'Extract Features', 'label', 'middle'));
+        content.appendChild(createRect(110, 210, 120, 30, '#bfdbfe', 8));
+        content.appendChild(createRect(370, 210, 120, 30, '#ddd6fe', 8));
+        content.appendChild(createText(170, 230, 'Extract Features', 'label', 'middle'));
+        content.appendChild(createText(430, 230, 'Extract Features', 'label', 'middle'));
       }
     },
     {
       text: `Step 3: <strong>Cross-Compartment Associations</strong><br>
         Compute correlations and associations between blood and skin features across pathways and cell types. For example, fibroblast programs in skin correlate with T-cell and monocyte axes in blood, revealing <span class=&quot;highlight&quot;>shared biological programs</span>.`,
-      visualize(svg) {
-        svg.innerHTML = '';
+      visualize() {
+        content.innerHTML = '';
 
         // Feature boxes for blood and skin
-        svg.appendChild(createRect(70, 80, 200, 140, '#bfdbfe', 16));
-        svg.appendChild(createRect(350, 80, 200, 140, '#ddd6fe', 16));
-        svg.appendChild(createText(170, 70, 'Blood Features', 'label', 'middle'));
-        svg.appendChild(createText(450, 70, 'Skin Features', 'label', 'middle'));
+        content.appendChild(createRect(70, 80, 200, 140, '#bfdbfe', 16));
+        content.appendChild(createRect(350, 80, 200, 140, '#ddd6fe', 16));
+        content.appendChild(createText(170, 70, 'Blood Features', 'label', 'middle'));
+        content.appendChild(createText(450, 70, 'Skin Features', 'label', 'middle'));
 
         // Blood features bars
         const bloodBars = [
@@ -450,8 +459,8 @@ body.laser-on .stage{cursor:none}
           { x: 200, h: 90, label: 'Interferon' }
         ];
         bloodBars.forEach(b => {
-          svg.appendChild(createRect(b.x, 210 - b.h, 18, b.h, '#2563eb', 6));
-          svg.appendChild(createText(b.x + 9, 220, b.label, 'subtitle', 'middle'));
+          content.appendChild(createRect(b.x, 210 - b.h, 18, b.h, '#2563eb', 6));
+          content.appendChild(createText(b.x + 9, 220, b.label, 'subtitle', 'middle'));
         });
 
         // Skin features bars
@@ -462,17 +471,17 @@ body.laser-on .stage{cursor:none}
           { x: 480, h: 110, label: 'Interferon' }
         ];
         skinBars.forEach(b => {
-          svg.appendChild(createRect(b.x, 210 - b.h, 18, b.h, '#7c3aed', 6));
-          svg.appendChild(createText(b.x + 9, 220, b.label, 'subtitle', 'middle'));
+          content.appendChild(createRect(b.x, 210 - b.h, 18, b.h, '#7c3aed', 6));
+          content.appendChild(createText(b.x + 9, 220, b.label, 'subtitle', 'middle'));
         });
 
         // Curved arrows showing cross-associations
-        svg.appendChild(createCurveArrow(140, 130, 420, 130));
-        svg.appendChild(createCurveArrow(170, 150, 450, 160));
-        svg.appendChild(createCurveArrow(200, 140, 480, 140));
+        content.appendChild(createCurveArrow(140, 130, 420, 130));
+        content.appendChild(createCurveArrow(170, 150, 450, 160));
+        content.appendChild(createCurveArrow(200, 140, 480, 140));
 
         // Explanatory label
-        svg.appendChild(createText(310, 30,
+        content.appendChild(createText(310, 30,
           'Cross-compartment associations (e.g., fibroblast programs route via T-cell, monocyte axes)', 
           'subtitle', 'middle'));
       }
@@ -480,25 +489,141 @@ body.laser-on .stage{cursor:none}
     {
       text: `Step 4: <strong>Patient-Level Classification</strong><br>
         Use extracted blood features to train classifiers that predict tissue-defined molecular states (e.g., fibroblast subtypes). Achieved Area Under Curve (AUC) ranges from <span class=&quot;highlight&quot;>0.62 to 0.79</span>, showing blood is predictive of tissue state.`,
-      visualize(svg) {
-        svg.innerHTML = '';
+      visualize() {
+        content.innerHTML = '';
 
         // Blood feature box left
-        svg.appendChild(createRect(70, 70, 200, 140, '#bfdbfe', 16));
-        svg.appendChild(createText(170, 60, 'Blood Features', 'label', 'middle'));
+        content.appendChild(createRect(70, 70, 200, 140, '#bfdbfe', 16));
+        content.appendChild(createText(170, 60, 'Blood Features', 'label', 'middle'));
 
         // Classifier box center
-        svg.appendChild(createRect(300, 110, 120, 80, '#a5b4fc', 16));
-        svg.appendChild(createText(360, 130, 'Classifier', 'label', 'middle'));
-        svg.appendChild(createText(360, 150, '(e.g. PLS, Autoencoder)', 'subtitle', 'middle'));
+        content.appendChild(createRect(300, 110, 120, 80, '#a5b4fc', 16));
+        content.appendChild(createText(360, 130, 'Classifier', 'label', 'middle'));
+        content.appendChild(createText(360, 150, '(e.g. PLS, Autoencoder)', 'subtitle', 'middle'));
 
         // Predicted tissue states box right
-        svg.appendChild(createRect(470, 70, 140, 140, '#ddd6fe', 16));
-        svg.appendChild(createText(540, 60, 'Predicted Tissue<br/>Molecular States', 'label', 'middle'));
+        content.appendChild(createRect(470, 70, 140, 140, '#ddd6fe', 16));
+        content.appendChild(createText(540, 60, 'Predicted Tissue<br/>Molecular States', 'label', 'middle'));
 
         // Arrows: blood -> classifier -> tissue
-        svg.appendChild(createArrow(270, 150, 300, 150));
-        svg.appendChild(createArrow(420," sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;display:block" frameborder="0"></iframe></div><svg class="anno-svg" data-slide="28" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div></div>
+        content.appendChild(createArrow(270, 150, 300, 150));
+        content.appendChild(createArrow(420, 150, 470, 150));
+      }
+    },
+    {
+      text: `Step 5: <strong>Shared Latent Space Learning</strong><br>
+        A paired multiview autoencoder is trained on module-level dependencies with contrastive alignment and cross-view reconstruction. This learns a shared latent geometry where blood-only projections align closely with matched tissue states, improving prediction of held-out tissue programs beyond simpler models.`,
+      visualize() {
+        content.innerHTML = '';
+
+        // Blood latent space ellipse left
+        content.appendChild(createEllipse(140, 140, 80, 50, '#bfdbfe', 0.7));
+        content.appendChild(createText(140, 140, 'Blood Feature\nLatent Space', 'label', 'middle'));
+
+        // Tissue latent space ellipse right
+        content.appendChild(createEllipse(480, 140, 80, 50, '#ddd6fe', 0.7));
+        content.appendChild(createText(480, 140, 'Tissue Feature\nLatent Space', 'label', 'middle'));
+
+        // Shared latent space center ellipse overlapping both
+        content.appendChild(createEllipse(310, 140, 90, 70, '#a5b4fc', 0.5));
+        content.appendChild(createText(310, 140, 'Shared Latent\nGeometry', 'label', 'middle'));
+
+        // Arrows connecting blood and tissue latent spaces to shared space
+        content.appendChild(createArrow(220, 140, 260, 140));
+        content.appendChild(createArrow(390, 140, 440, 140));
+
+        // Small circles inside shared latent representing samples
+        for(let i=0; i<12; i++) {
+          const angle = (i/12)*Math.PI*2;
+          const r = 50 + (Math.sin(i*3)*5);
+          const cx = 310 + r * Math.cos(angle);
+          const cy = 140 + (r/2) * Math.sin(angle);
+          content.appendChild(createCircle(cx, cy, 6, '#4f46e5', 'cell-highlight'));
+        }
+
+        // Explanatory text below
+        content.appendChild(createText(310, 230,
+          'Blood projections align closely with tissue states in the shared latent space', 'subtitle', 'middle'));
+      }
+    },
+    {
+      text: `Step 6: <strong>Clinical Utility and Scalability</strong><br>
+        The model recovers tissue-interferon-high patients at 86% precision in the top 20% screening threshold. The approach is scalable to larger cohorts and cross-indication models, positioning peripheral blood as a substrate for minimally invasive tissue-state inference in autoimmune disease clinical trials and care.`,
+      visualize() {
+        content.innerHTML = '';
+
+        // Left side: Patient cohort icon (simplified)
+        const baseX = 90;
+        const baseY = 100;
+        for(let row=0; row<5; row++) {
+          for(let col=0; col<8; col++) {
+            let cx = baseX + col*18 + (row%2)*9;
+            let cy = baseY + row*22;
+            let color = '#93c5fd';
+            content.appendChild(createCircle(cx, cy, 6, color, 'cell'));
+          }
+        }
+        content.appendChild(createText(baseX+65, baseY-20, 'Patient Cohort', 'label', 'middle'));
+
+        // Arrow right
+        content.appendChild(createArrow(170, 130, 230, 130));
+
+        // Middle: Blood sample abstraction (ellipse + dots)
+        content.appendChild(createEllipse(290, 130, 60, 40, '#bfdbfe', 0.7));
+        for(let i=0; i<12; i++) {
+          let angle = (i/12)*Math.PI*2;
+          let cx = 290 + 40 * Math.cos(angle);
+          let cy = 130 + 20 * Math.sin(angle);
+          content.appendChild(createCircle(cx, cy, 5, '#2563eb', 'cell'));
+        }
+        content.appendChild(createText(290, 80, 'Blood Sample', 'label', 'middle'));
+
+        // Arrow right
+        content.appendChild(createArrow(350, 130, 410, 130));
+
+        // Right side: Clinical precision gauge
+        content.appendChild(createRect(440, 90, 140, 100, '#ddd6fe', 16));
+        content.appendChild(createText(510, 70, 'Clinical Screening', 'label', 'middle'));
+        content.appendChild(createText(510, 120,
+          '<tspan x=&quot;510&quot; dy=&quot;1.2em&quot; class=&quot;highlight&quot;>86%</tspan> Precision\nTop 20% Threshold', 'subtitle', 'middle'));
+
+        // Gauge arc (partial circle)
+        const gauge = document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;,&quot;path&quot;);
+        gauge.setAttribute(&quot;stroke&quot;, &quot;#2563eb&quot;);
+        gauge.setAttribute(&quot;stroke-width&quot;, &quot;6&quot;);
+        gauge.setAttribute(&quot;fill&quot;, &quot;none&quot;);
+        gauge.setAttribute(&quot;d&quot;, &quot;M480 170 A40 40 0 1 1 540 170&quot;);
+        content.appendChild(gauge);
+
+        // Text below
+        content.appendChild(createText(510, 210,
+          'Scalable & cross-indication model enables\nminimally invasive tissue-state inference', 'subtitle', 'middle'));
+      }
+    }
+  ];
+
+  let currentStep = 0;
+
+  function renderStep(index) {
+    if (index < 0 || index >= steps.length) return;
+    currentStep = index;
+    stepText.innerHTML = steps[index].text;
+    steps[index].visualize();
+    // Disable button on last step
+    nextBtn.disabled = (currentStep === steps.length - 1);
+    nextBtn.textContent = (currentStep === steps.length - 1) ? 'Done' : 'Next';
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (currentStep < steps.length - 1) renderStep(currentStep + 1);
+  });
+
+  // Initial render
+  renderStep(0);
+})();
+</script>
+</body>
+</html>" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;display:block" frameborder="0"></iframe></div><svg class="anno-svg" data-slide="28" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none"></svg></div></div>
 </div>
 <div class="laser" id="laser" aria-hidden="true"></div><div class="draw-bar" id="drawBar">
   <label>Tool<select id="dTool"><option value="pen">Pen</option><option value="line">Line</option><option value="rect">Rect</option><option value="ellipse">Ellipse</option><option value="erase">Erase</option></select></label>
